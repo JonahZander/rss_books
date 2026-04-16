@@ -38,3 +38,25 @@ def test_get_article_detail(tmp_path):
         r = client.get(f"/api/articles/{article_id}")
         assert r.status_code == 200
         assert r.json()["full_content"] is None
+
+
+def test_fetch_article_full_content(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        _seed_feed_with_articles(client)
+        article_id = client.get("/api/articles").json()[0]["id"]
+
+        html = (
+            b"<html><body><article><h1>T</h1><p>Hello world. "
+            b"This paragraph is long enough for trafilatura to extract, "
+            b"we need sufficient prose to pass boilerplate filters here.</p>"
+            b"</article></body></html>"
+        )
+        with patch("rss_kindle.api.articles.fetch_url_bytes") as mock_fetch:
+            mock_fetch.return_value = html
+            r = client.post(f"/api/articles/{article_id}/fetch")
+            assert r.status_code == 200
+            assert "Hello world" in r.json()["full_content"]
+
+        r = client.get(f"/api/articles/{article_id}")
+        assert r.json()["has_full_content"] is True

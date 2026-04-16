@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request
 
 from rss_kindle.models import Article, ArticleDetail
+from rss_kindle.services.content_extractor import extract_markdown
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
+
+
+async def fetch_url_bytes(url: str) -> bytes:
+    async with httpx.AsyncClient(
+        timeout=20.0,
+        follow_redirects=True,
+        headers={"User-Agent": "rss-kindle-selector/0.1"},
+    ) as client:
+        r = await client.get(url)
+        r.raise_for_status()
+        return r.content
 
 
 @router.get("", response_model=list[Article])
@@ -54,3 +67,27 @@ async def get_article(article_id: int, request: Request) -> ArticleDetail:
     return ArticleDetail.model_validate(
         {**dict(row), "has_full_content": bool(row["has_full_content"])}
     )
+
+
+@router.post("/{article_id}/fetch", response_model=ArticleDetail)
+async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail:
+    db = request.app.state.db
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT url FROM articles WHERE id = ?", (article_id,))
+        row = await cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="article not found")
+
+    html = await fetch_url_bytes(row["url"])
+    markdown = extract_markdown(html, url=row["url"])
+    if not markdown:
+        raise HTTPException(status_code=422, detail="could not extract article content")
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE articles SET full_content = ?, fetched_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (markdown, article_id),
+        )
+        await conn.commit()
+
+    return await get_article(article_id, request)
