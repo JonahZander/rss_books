@@ -38,7 +38,8 @@ yarn-error.log*
 .claude/worktrees/*
 !.claude/worktrees/.gitkeep
 
-# Bachelor thesis source material (binaries and extracted archive)
-bachelor_material/*.zip
-bachelor_material/*.mp4
-bachelor_material/ba_zander/
+# App data
+services/api/data/
+
+# Brainstorm / agent scratch
+.superpowers/
