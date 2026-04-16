@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,10 +37,12 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         return {"status": "ok"}
 
     from rss_kindle.api.articles import router as articles_router
+    from rss_kindle.api.digests import router as digests_router
     from rss_kindle.api.feeds import router as feeds_router
 
     app.include_router(feeds_router)
     app.include_router(articles_router)
+    app.include_router(digests_router)
 
     return app
 

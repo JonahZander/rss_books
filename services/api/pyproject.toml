@@ -45,6 +45,10 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 no_implicit_optional = true
 
+[[tool.mypy.overrides]]
+module = ["feedparser", "trafilatura", "ebooklib", "ebooklib.*"]
+ignore_missing_imports = true
+
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"

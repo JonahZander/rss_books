@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from time import struct_time
 from typing import cast
 
@@ -30,7 +30,7 @@ class ParsedFeed:
 def _struct_to_dt(st: struct_time | None) -> datetime | None:
     if st is None:
         return None
-    return datetime(*st[:6], tzinfo=timezone.utc)
+    return datetime(*st[:6], tzinfo=UTC)
 
 
 def parse_feed(content: bytes) -> ParsedFeed:
