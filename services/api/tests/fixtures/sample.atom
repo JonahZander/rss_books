@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Feed</title>
+  <link href="https://example.com/"/>
+  <updated>2026-04-15T12:00:00Z</updated>
+  <entry>
+    <title>First Post</title>
+    <link href="https://example.com/first"/>
+    <id>urn:example:first</id>
+    <updated>2026-04-14T10:00:00Z</updated>
+    <summary>This is the first post summary.</summary>
+  </entry>
+  <entry>
+    <title>Second Post</title>
+    <link href="https://example.com/second"/>
+    <id>urn:example:second</id>
+    <updated>2026-04-15T11:00:00Z</updated>
+    <summary>This is the second post summary.</summary>
+  </entry>
+</feed>
