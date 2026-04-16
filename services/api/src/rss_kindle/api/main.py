@@ -36,6 +36,10 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    from rss_kindle.api.feeds import router as feeds_router
+
+    app.include_router(feeds_router)
+
     return app
 
 
