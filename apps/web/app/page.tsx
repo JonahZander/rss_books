@@ -1,110 +1,79 @@
-const featuredProjects = [
-  {
-    title: "Design systems with teeth",
-    summary:
-      "Portfolio case studies can explain not just what shipped, but how decisions held up under real product constraints.",
-    tags: ["Systems", "UX", "Engineering"],
-  },
-  {
-    title: "Research-shaped product thinking",
-    summary:
-      "Show the path from ambiguity to delivery: inputs, framing, tradeoffs, and what changed after feedback.",
-    tags: ["Strategy", "Research", "Execution"],
-  },
-  {
-    title: "Calm technical storytelling",
-    summary:
-      "Use writing, diagrams, and artifacts to make complex work feel legible to collaborators, clients, and hiring teams.",
-    tags: ["Writing", "Architecture", "Communication"],
-  },
-];
+"use client";
 
-const workingPrinciples = [
-  "Build interfaces that earn attention instead of begging for it.",
-  "Make technical choices visible, explicit, and reversible.",
-  "Treat documentation as part of the product surface.",
-];
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArticleList } from "../components/ArticleList";
+import { DigestQueue } from "../components/DigestQueue";
+import { FeedSidebar } from "../components/FeedSidebar";
+import { api, type Article, type Feed } from "../lib/api";
 
-export default function HomePage() {
+export default function Home() {
+  const [feeds, setFeeds] = useState<Feed[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const refreshFeeds = useCallback(async () => {
+    setFeeds(await api.listFeeds());
+  }, []);
+
+  const refreshArticles = useCallback(async () => {
+    setArticles(await api.listArticles(selectedFeedId ?? undefined));
+  }, [selectedFeedId]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshFeeds();
+  }, [refreshFeeds]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshArticles();
+  }, [refreshArticles]);
+
+  const addFeed = async (url: string, title: string) => {
+    await api.addFeed(url, title);
+    await refreshFeeds();
+  };
+
+  const deleteFeed = async (id: number) => {
+    await api.deleteFeed(id);
+    await refreshFeeds();
+    await refreshArticles();
+  };
+
+  const pollAll = async () => {
+    await api.refreshAll();
+    await refreshArticles();
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedArticles = useMemo(
+    () => articles.filter((a) => selectedIds.has(a.id)),
+    [articles, selectedIds],
+  );
+
   return (
-    <main className="page-shell">
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Portfolio platform</p>
-          <h1>
-            A personal website for thoughtful product work,
-            <span> built to grow without losing its shape.</span>
-          </h1>
-          <p className="lede">
-            This starter is intentionally structured for case studies, writing, and future API-backed content. It uses
-            a bold editorial layout up front and keeps room for Python services behind the scenes.
-          </p>
-          <div className="hero-actions">
-            <a className="primary-link" href="#work">
-              View featured work
-            </a>
-            <a className="secondary-link" href="#contact">
-              Plan the next iteration
-            </a>
-          </div>
-        </div>
-        <div className="hero-panel">
-          <p className="panel-label">Current direction</p>
-          <ul>
-            <li>Next.js frontend tuned for Cloudflare hosting</li>
-            <li>FastAPI backend ready for structured content and integrations</li>
-            <li>Agent-readable docs so the repo stays maintainable as it grows</li>
-          </ul>
-        </div>
+    <main className="layout">
+      <FeedSidebar
+        feeds={feeds}
+        selectedFeedId={selectedFeedId}
+        onSelect={setSelectedFeedId}
+        onAdd={addFeed}
+        onDelete={deleteFeed}
+        onRefresh={pollAll}
+      />
+      <section className="content">
+        <ArticleList articles={articles} selectedIds={selectedIds} onToggle={toggleSelect} />
       </section>
-
-      <section className="section-grid" id="work">
-        <div className="section-intro">
-          <p className="eyebrow">Featured structure</p>
-          <h2>Case studies, writing, and proof of taste.</h2>
-        </div>
-        <div className="project-grid">
-          {featuredProjects.map((project) => (
-            <article className="project-card" key={project.title}>
-              <h3>{project.title}</h3>
-              <p>{project.summary}</p>
-              <div className="tag-row">
-                {project.tags.map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="section-grid about-band">
-        <div className="section-intro">
-          <p className="eyebrow">Working style</p>
-          <h2>Present the thinking, not just the polish.</h2>
-        </div>
-        <div className="principles">
-          {workingPrinciples.map((principle) => (
-            <p key={principle}>{principle}</p>
-          ))}
-        </div>
-      </section>
-
-      <section className="section-grid contact-band" id="contact">
-        <div className="section-intro">
-          <p className="eyebrow">Next steps</p>
-          <h2>Replace the starter content with your real story.</h2>
-        </div>
-        <div className="contact-card">
-          <p>
-            Add real projects, writing, and contact links here. The backend already gives you a clean place to grow
-            into forms, CMS syncing, analytics summaries, or structured content APIs.
-          </p>
-          <a className="primary-link" href="mailto:hello@yourdomain.com">
-            hello@yourdomain.com
-          </a>
-        </div>
-      </section>
+      <DigestQueue selected={selectedArticles} onClear={() => setSelectedIds(new Set())} />
     </main>
   );
 }
