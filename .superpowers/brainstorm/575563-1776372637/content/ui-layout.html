@@ -1,0 +1,96 @@
+<h2>UI Layout</h2>
+<p class="subtitle">Which layout feels right for browsing and selecting articles?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Feed Sidebar + Article List</h3>
+      <p>Left sidebar lists your feeds (collapsible). Main area shows articles from the selected feed or all feeds. Checkboxes to select articles for the digest.</p>
+      <div class="mockup" style="margin-top: 12px;">
+        <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 16px;">
+<pre style="margin:0; line-height:1.6;">
++------------------+----------------------------------------+
+| FEEDS            | Articles               [Send Digest]  |
+|                  |                                        |
+| > All (24 new)   | [x] How We Scaled Our DB    3h ago    |
+| > Simon Willison |     simonwillison.net                  |
+|   Hacker News    |     "We migrated from Postgres to..."  |
+|   Dan Luu        |                                        |
+|   Julia Evans    | [ ] Why I Use Makefiles      5h ago   |
+|   Oxide Computer |     blog.danlu.net                     |
+|                  |     "Make is underrated because..."    |
+|   + Add Feed     |                                        |
+|                  | [x] Git Internals Deep Dive  1d ago   |
+| DIGEST (2)       |     jvns.ca                            |
+| How We Scaled..  |     "Let's look at how git stores..."  |
+| Git Internals..  |                                        |
++------------------+----------------------------------------+
+</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Single Column Feed Reader</h3>
+      <p>Full-width article list with feed filter tabs at the top. Selected articles shown in a floating bottom bar.</p>
+      <div class="mockup" style="margin-top: 12px;">
+        <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 16px;">
+<pre style="margin:0; line-height:1.6;">
++----------------------------------------------------+
+| [All] [Simon W.] [HN] [Dan Luu] [+Add]  [Refresh] |
++----------------------------------------------------+
+|                                                    |
+| [x] How We Scaled Our DB               3h ago     |
+|     simonwillison.net                              |
+|     "We migrated from Postgres to..."              |
+|                                                    |
+| [ ] Why I Use Makefiles                 5h ago     |
+|     blog.danlu.net                                 |
+|     "Make is underrated because..."                |
+|                                                    |
+| [x] Git Internals Deep Dive            1d ago     |
+|     jvns.ca                                        |
+|     "Let's look at how git stores..."              |
+|                                                    |
++----------------------------------------------------+
+| DIGEST: 2 articles selected      [Send to Kindle] |
++----------------------------------------------------+
+</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Three-Panel (Email Client Style)</h3>
+      <p>Feed list | Article list | Article preview. Click an article to see its full summary in the right panel before selecting.</p>
+      <div class="mockup" style="margin-top: 12px;">
+        <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 16px;">
+<pre style="margin:0; line-height:1.6;">
++-------------+---------------------+--------------------+
+| FEEDS       | ARTICLES            | PREVIEW            |
+|             |                     |                    |
+| All (24)    | [x] How We Scaled   | How We Scaled Our  |
+| Simon W.    |     3h ago          | Database            |
+| HN          |                     |                    |
+| Dan Luu     | [ ] Why Makefiles   | simonwillison.net  |
+| Julia Evans |     5h ago          | 3 hours ago        |
+|             |                     |                    |
+| + Add Feed  | [x] Git Internals   | We migrated from   |
+|             |     1d ago          | Postgres to a new  |
+|             |                     | sharded setup...   |
+| DIGEST (2)  |                     |                    |
+| [Send]      |                     | [+ Add to Digest]  |
++-------------+---------------------+--------------------+
+</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

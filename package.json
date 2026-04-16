@@ -1,0 +1,18 @@
+{
+  "name": "rss-kindle-selector",
+  "private": true,
+  "packageManager": "npm@11.11.0",
+  "engines": { "node": "20.19.6" },
+  "workspaces": ["apps/web"],
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev -- -p 3737",
+    "build:web": "npm --workspace apps/web run build",
+    "lint:web": "npm --workspace apps/web run lint",
+    "typecheck:web": "npm --workspace apps/web run typecheck",
+    "dev:api": "uv run --directory services/api uvicorn rss_kindle.api.main:app --reload --reload-dir src --port 8765",
+    "test:api": "uv run --directory services/api --extra dev pytest",
+    "lint:api": "uv run --directory services/api --extra dev ruff check .",
+    "typecheck:api": "uv run --directory services/api --extra dev mypy src",
+    "test": "npm run typecheck:web && npm run test:api"
+  }
+}

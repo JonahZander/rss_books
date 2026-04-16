@@ -1,0 +1,63 @@
+<h2>Architecture Approaches</h2>
+<p class="subtitle">How should the system be structured?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Monolith API + Next.js Frontend (Recommended)</h3>
+      <p>Single FastAPI backend handles everything: RSS polling, content extraction, EPUB generation, Kindle delivery. Next.js frontend for browsing and selection.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Simple deployment &mdash; one backend process</li>
+          <li>Shared state &mdash; no message queues needed</li>
+          <li>Familiar stack from content_evaluation</li>
+          <li>SQLite for feed/article storage</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>EPUB generation blocks the API if not async</li>
+          <li>All logic in one service</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Background Worker + API + Frontend</h3>
+      <p>FastAPI serves the UI API. A separate background worker (Celery/ARQ) handles RSS polling, content fetching, and EPUB generation asynchronously.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Non-blocking &mdash; heavy work runs in background</li>
+          <li>Scalable &mdash; can add more workers</li>
+          <li>Clean separation of concerns</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>More infrastructure (Redis/queue)</li>
+          <li>Overkill for a personal tool</li>
+          <li>More complex deployment</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Monolith + Background Tasks (via FastAPI)</h3>
+      <p>Same as A, but uses FastAPI's BackgroundTasks or asyncio tasks for EPUB generation and delivery. No external queue, but heavy work doesn't block the API.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Simple like A, non-blocking like B</li>
+          <li>No extra infrastructure</li>
+          <li>FastAPI BackgroundTasks is built-in</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Tasks lost on restart (no persistence)</li>
+          <li>Limited observability into background work</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,44 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Python
+.venv/
+.uv-cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+services/api/.env
+apps/web/.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Local agent scratch areas
+.claude/worktrees/*
+!.claude/worktrees/.gitkeep
+
+# Bachelor thesis source material (binaries and extracted archive)
+bachelor_material/*.zip
+bachelor_material/*.mp4
+bachelor_material/ba_zander/

@@ -1,0 +1,74 @@
+<h2>Layout A + Expandable Preview</h2>
+<p class="subtitle">Click an article to expand its content inline</p>
+
+<div class="mockup">
+  <div class="mockup-header">Collapsed State (default)</div>
+  <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 16px;">
+<pre style="margin:0; line-height:1.6;">
++------------------+-------------------------------------------+
+| FEEDS            | Articles                  [Send Digest]   |
+|                  |                                           |
+| > All (24 new)   | [x] v How We Scaled Our DB       3h ago  |
+| > Simon Willison |       simonwillison.net                   |
+|   Hacker News    |       "We migrated from Postgres to..."   |
+|   Dan Luu        |                                           |
+|   Julia Evans    | [ ] > Why I Use Makefiles        5h ago   |
+|   Oxide Computer |       blog.danlu.net                      |
+|                  |       "Make is underrated because..."     |
+|   + Add Feed     |                                           |
+|                  | [x] > Git Internals Deep Dive    1d ago   |
+| DIGEST (2)       |       jvns.ca                             |
+| How We Scaled..  |       "Let's look at how git stores..."   |
+| Git Internals..  |                                           |
++------------------+-------------------------------------------+
+    v = expanded     > = collapsed
+</pre>
+  </div>
+</div>
+
+<div style="margin-top: 24px;"></div>
+
+<div class="mockup">
+  <div class="mockup-header">Expanded State (after clicking first article)</div>
+  <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 16px;">
+<pre style="margin:0; line-height:1.6;">
++------------------+-------------------------------------------+
+| FEEDS            | Articles                  [Send Digest]   |
+|                  |                                           |
+| > All (24 new)   | [x] v How We Scaled Our DB       3h ago  |
+| > Simon Willison |       simonwillison.net                   |
+|   Hacker News    |  +------------------------------------------+
+|   Dan Luu        |  | We migrated from Postgres to a new     |
+|   Julia Evans    |  | sharded setup last quarter. Here's     |
+|   Oxide Computer |  | what we learned along the way...       |
+|                  |  |                                        |
+|   + Add Feed     |  | The key insight was that connection     |
+|                  |  | pooling mattered more than we          |
+| DIGEST (2)       |  | expected. PgBouncer saved us when      |
+| How We Scaled..  |  | traffic spiked 10x during launch...    |
+| Git Internals..  |  +------------------------------------------+
+|                  |                                           |
+|                  | [ ] > Why I Use Makefiles        5h ago   |
+|                  |       blog.danlu.net                      |
++------------------+-------------------------------------------+
+</pre>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>Interactions</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>Click article row</strong><br><span style="opacity: 0.7">Toggle content preview open/closed</span>
+    </div>
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>Checkbox</strong><br><span style="opacity: 0.7">Add/remove from digest (independent of expand)</span>
+    </div>
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>Expand triggers fetch</strong><br><span style="opacity: 0.7">If only RSS summary exists, expanding fetches full content via Trafilatura</span>
+    </div>
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>Send Digest</strong><br><span style="opacity: 0.7">Bundle checked articles into EPUB &rarr; deliver to Kindle</span>
+    </div>
+  </div>
+</div>

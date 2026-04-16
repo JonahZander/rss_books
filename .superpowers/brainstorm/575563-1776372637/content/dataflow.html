@@ -1,0 +1,57 @@
+<h2>Data Flow</h2>
+<p class="subtitle">How articles move from RSS feeds to your Kindle</p>
+
+<div class="mockup">
+  <div class="mockup-header">Pipeline Overview</div>
+  <div class="mockup-body" style="font-family: monospace; font-size: 14px; line-height: 1.8; padding: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="text-align: center; padding: 12px; background: rgba(99,102,241,0.15); border-radius: 8px;">
+        <strong>1. RSS Feeds</strong><br>
+        <span style="opacity: 0.7">User adds feed URLs &rarr; stored in SQLite</span>
+      </div>
+      <div style="text-align: center; opacity: 0.5;">&darr;</div>
+      <div style="text-align: center; padding: 12px; background: rgba(99,102,241,0.15); border-radius: 8px;">
+        <strong>2. Feed Polling</strong><br>
+        <span style="opacity: 0.7">Manual refresh or periodic &rarr; parse with <code>feedparser</code> &rarr; store new articles</span>
+      </div>
+      <div style="text-align: center; opacity: 0.5;">&darr;</div>
+      <div style="text-align: center; padding: 12px; background: rgba(99,102,241,0.15); border-radius: 8px;">
+        <strong>3. Browse & Select</strong><br>
+        <span style="opacity: 0.7">Next.js UI shows articles by feed &rarr; read RSS summary &rarr; check articles for digest</span>
+      </div>
+      <div style="text-align: center; opacity: 0.5;">&darr;</div>
+      <div style="text-align: center; padding: 12px; background: rgba(245,158,11,0.15); border-radius: 8px;">
+        <strong>4. Full Content Fetch</strong> (on demand)<br>
+        <span style="opacity: 0.7">Selected articles &rarr; Trafilatura extracts clean markdown from source URL</span>
+      </div>
+      <div style="text-align: center; opacity: 0.5;">&darr;</div>
+      <div style="text-align: center; padding: 12px; background: rgba(16,185,129,0.15); border-radius: 8px;">
+        <strong>5. EPUB Generation</strong> (background task)<br>
+        <span style="opacity: 0.7">Markdown &rarr; EPUB via <code>ebooklib</code> &rarr; daily digest with table of contents</span>
+      </div>
+      <div style="text-align: center; opacity: 0.5;">&darr;</div>
+      <div style="text-align: center; padding: 12px; background: rgba(16,185,129,0.15); border-radius: 8px;">
+        <strong>6. Kindle Delivery</strong> (background task)<br>
+        <span style="opacity: 0.7">Send-to-Kindle email <em>or</em> KOReader OPDS catalog</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>Key Libraries</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>feedparser</strong><br><span style="opacity: 0.7">Parse RSS/Atom feeds</span>
+    </div>
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>trafilatura</strong><br><span style="opacity: 0.7">Extract article content from URLs</span>
+    </div>
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>ebooklib</strong><br><span style="opacity: 0.7">Generate EPUB files</span>
+    </div>
+    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <strong>SQLite + aiosqlite</strong><br><span style="opacity: 0.7">Store feeds, articles, digests</span>
+    </div>
+  </div>
+</div>
