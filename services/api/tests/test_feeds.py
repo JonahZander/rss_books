@@ -94,6 +94,46 @@ def test_manual_refresh_failure_recorded_and_cleared(tmp_path):
         assert feed["consecutive_failures"] == 0
 
 
+OPML = """<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>t</title></head>
+  <body>
+    <outline text="One" title="One" type="rss" xmlUrl="https://one.example/rss" htmlUrl="https://one.example"/>
+    <outline text="folder">
+      <outline text="Two" type="rss" xmlUrl="https://two.example/rss"/>
+    </outline>
+    <outline text="no-url-outline"/>
+  </body>
+</opml>"""
+
+
+def test_opml_import_dedupes_and_export_roundtrips(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
+        )
+        assert r.status_code == 200
+        assert r.json() == {"added": 2, "skipped": 0}
+
+        r = client.post(
+            "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
+        )
+        assert r.json() == {"added": 0, "skipped": 2}
+
+        feeds = client.get("/api/feeds").json()
+        assert {f["title"] for f in feeds} == {"One", "Two"}
+
+        r = client.get("/api/feeds/export.opml")
+        assert r.status_code == 200
+        assert "attachment" in r.headers["content-disposition"]
+        assert 'xmlUrl="https://one.example/rss"' in r.text
+        assert 'xmlUrl="https://two.example/rss"' in r.text
+
+        r = client.post("/api/feeds/import", files={"file": ("x.opml", "<not-xml", "text/xml")})
+        assert r.status_code == 400
+
+
 def test_refresh_all_reports_errors(tmp_path):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:

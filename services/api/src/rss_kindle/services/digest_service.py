@@ -46,6 +46,13 @@ async def create_digest_record(
                 "INSERT INTO digest_articles (digest_id, article_id, position) VALUES (?, ?, ?)",
                 (digest_id, article_id, position),
             )
+        # compiling an edition always counts as having read its articles
+        marks = ", ".join("?" for _ in ids)
+        await conn.execute(
+            f"UPDATE articles SET read_at = CURRENT_TIMESTAMP "
+            f"WHERE id IN ({marks}) AND read_at IS NULL",
+            ids,
+        )
         if from_queue:
             await conn.execute("DELETE FROM digest_queue")
         await conn.commit()

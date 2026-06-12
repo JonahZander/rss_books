@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from xml.etree import ElementTree as ET
+from xml.sax.saxutils import quoteattr
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 
 from rss_kindle.db import Database
 from rss_kindle.models import Feed, FeedCreate, FeedUpdate
@@ -16,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 FEED_COLUMNS = (
     "id, url, title, site_url, last_polled, created_at, "
-    "poll_interval_minutes, last_error, last_error_at, consecutive_failures"
+    "poll_interval_minutes, last_error, last_error_at, consecutive_failures, "
+    "(SELECT COUNT(*) FROM articles a WHERE a.feed_id = feeds.id AND a.read_at IS NULL) "
+    "AS unread_count"
 )
 
 
@@ -80,6 +84,63 @@ async def create_feed(payload: FeedCreate, request: Request) -> Feed:
     if row is None:
         raise RuntimeError(f"feed {feed_id} not found after insert")
     return Feed.model_validate(dict(row))
+
+
+@router.post("/import")
+async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
+    content = await file.read()
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError as e:
+        raise HTTPException(status_code=400, detail=f"not valid OPML: {e}") from e
+
+    added = 0
+    skipped = 0
+    db = request.app.state.db
+    async with db.connect() as conn:
+        for outline in root.iter("outline"):
+            url = outline.get("xmlUrl")
+            if not url:
+                continue
+            title = outline.get("title") or outline.get("text") or url
+            try:
+                await conn.execute(
+                    "INSERT INTO feeds (url, title, site_url) VALUES (?, ?, ?)",
+                    (url, title, outline.get("htmlUrl")),
+                )
+                added += 1
+            except sqlite3.IntegrityError:
+                skipped += 1
+        await conn.commit()
+    logger.info("opml import: %d added, %d skipped", added, skipped)
+    return {"added": added, "skipped": skipped}
+
+
+@router.get("/export.opml")
+async def export_opml(request: Request) -> Response:
+    db = request.app.state.db
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT url, title, site_url FROM feeds ORDER BY title")
+        rows = await cur.fetchall()
+    outlines = "\n".join(
+        f"    <outline text={quoteattr(r['title'])} title={quoteattr(r['title'])} "
+        f'type="rss" xmlUrl={quoteattr(r["url"])}'
+        + (f" htmlUrl={quoteattr(r['site_url'])}" if r["site_url"] else "")
+        + "/>"
+        for r in rows
+    )
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<opml version="2.0">\n'
+        "  <head>\n    <title>rss-kindle-selector feeds</title>\n  </head>\n"
+        f"  <body>\n{outlines}\n  </body>\n"
+        "</opml>\n"
+    )
+    return Response(
+        content=body,
+        media_type="text/x-opml",
+        headers={"Content-Disposition": 'attachment; filename="feeds.opml"'},
+    )
 
 
 @router.patch("/{feed_id}", response_model=Feed)

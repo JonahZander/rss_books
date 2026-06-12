@@ -111,12 +111,17 @@ async def _m5_feed_health(conn: aiosqlite.Connection) -> None:
     )
 
 
+async def _m6_read_state(conn: aiosqlite.Connection) -> None:
+    await conn.execute("ALTER TABLE articles ADD COLUMN read_at DATETIME")
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
     ("digest failure state", _m2_digest_failure),
     ("html content reset", _m3_html_content),
     ("queue, deliveries, settings", _m4_queue_delivery_settings),
     ("feed health and conditional GET", _m5_feed_health),
+    ("read state", _m6_read_state),
 ]
 
 

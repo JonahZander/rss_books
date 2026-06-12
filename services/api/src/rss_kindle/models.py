@@ -37,6 +37,7 @@ class Article(BaseModel):
     url: str
     summary: str | None = None
     published_at: datetime | None = None
+    read_at: datetime | None = None
     has_full_content: bool = False
 
 
