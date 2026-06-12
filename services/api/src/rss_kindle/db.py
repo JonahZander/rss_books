@@ -69,10 +69,40 @@ async def _m3_html_content(conn: aiosqlite.Connection) -> None:
     await conn.execute("UPDATE articles SET full_content = NULL, fetched_at = NULL")
 
 
+async def _m4_queue_delivery_settings(conn: aiosqlite.Connection) -> None:
+    await conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS digest_queue (
+            article_id INTEGER PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
+            position INTEGER NOT NULL,
+            queued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS deliveries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            digest_id INTEGER NOT NULL REFERENCES digests(id) ON DELETE CASCADE,
+            channel TEXT NOT NULL,
+            target TEXT,
+            status TEXT NOT NULL,
+            error TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+        """
+    )
+    await conn.execute("ALTER TABLE digests ADD COLUMN delivered_at DATETIME")
+    await conn.execute("ALTER TABLE digests ADD COLUMN size_bytes INTEGER")
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
     ("digest failure state", _m2_digest_failure),
     ("html content reset", _m3_html_content),
+    ("queue, deliveries, settings", _m4_queue_delivery_settings),
 ]
 
 

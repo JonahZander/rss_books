@@ -45,9 +45,11 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     from rss_kindle.api.articles import router as articles_router
     from rss_kindle.api.digests import router as digests_router
     from rss_kindle.api.feeds import router as feeds_router
+    from rss_kindle.api.queue import router as queue_router
 
     app.include_router(feeds_router)
     app.include_router(articles_router)
+    app.include_router(queue_router)
     app.include_router(digests_router)
 
     return app

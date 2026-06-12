@@ -34,8 +34,12 @@ class ArticleDetail(Article):
 
 
 class DigestCreate(BaseModel):
-    article_ids: list[int]
+    article_ids: list[int] | None = None
     title: str | None = None
+
+
+class QueueUpdate(BaseModel):
+    article_ids: list[int]
 
 
 class Digest(BaseModel):
@@ -44,4 +48,6 @@ class Digest(BaseModel):
     status: str
     epub_path: str | None = None
     error: str | None = None
+    size_bytes: int | None = None
+    delivered_at: datetime | None = None
     created_at: datetime

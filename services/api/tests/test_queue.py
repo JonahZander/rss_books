@@ -1,0 +1,97 @@
+import time
+from pathlib import Path
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+
+from rss_kindle.api.main import create_app
+
+FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
+
+
+def _seed(client: TestClient) -> list[int]:
+    r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
+    feed_id = r.json()["id"]
+    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
+        m.return_value = FIXTURE.read_bytes()
+        client.post(f"/api/feeds/{feed_id}/refresh")
+    return [a["id"] for a in client.get("/api/articles").json()]
+
+
+def test_queue_add_list_remove(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        assert client.get("/api/queue").json() == []
+
+        r = client.post(f"/api/queue/{ids[1]}")
+        assert r.status_code == 200
+        r = client.post(f"/api/queue/{ids[0]}")
+        assert [a["id"] for a in r.json()] == [ids[1], ids[0]]
+
+        # idempotent re-add keeps position
+        r = client.post(f"/api/queue/{ids[1]}")
+        assert [a["id"] for a in r.json()] == [ids[1], ids[0]]
+
+        r = client.delete(f"/api/queue/{ids[1]}")
+        assert [a["id"] for a in r.json()] == [ids[0]]
+
+
+def test_queue_add_unknown_article_404(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        assert client.post("/api/queue/9999").status_code == 404
+
+
+def test_queue_replace_for_reorder(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        client.post(f"/api/queue/{ids[0]}")
+        client.post(f"/api/queue/{ids[1]}")
+        r = client.put("/api/queue", json={"article_ids": [ids[1], ids[0]]})
+        assert r.status_code == 200
+        assert [a["id"] for a in r.json()] == [ids[1], ids[0]]
+
+        r = client.put("/api/queue", json={"article_ids": []})
+        assert r.json() == []
+
+
+def test_queue_survives_restart_of_app(tmp_path):
+    db_path = tmp_path / "t.db"
+    app = create_app(db_path=db_path)
+    with TestClient(app) as client:
+        ids = _seed(client)
+        client.post(f"/api/queue/{ids[0]}")
+    app2 = create_app(db_path=db_path)
+    with TestClient(app2) as client:
+        assert [a["id"] for a in client.get("/api/queue").json()] == [ids[0]]
+
+
+def test_digest_from_queue_clears_queue(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        client.post(f"/api/queue/{ids[1]}")
+        client.post(f"/api/queue/{ids[0]}")
+
+        r = client.post("/api/digests", json={})
+        assert r.status_code == 201
+        digest_id = r.json()["id"]
+
+        assert client.get("/api/queue").json() == []
+
+        for _ in range(30):
+            d = client.get(f"/api/digests/{digest_id}").json()
+            if d["status"] in {"ready", "failed"}:
+                break
+            time.sleep(0.1)
+        assert d["status"] == "ready"
+        assert d["size_bytes"] > 0
+
+
+def test_digest_from_empty_queue_400(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        assert client.post("/api/digests", json={}).status_code == 400

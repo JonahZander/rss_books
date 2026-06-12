@@ -48,7 +48,7 @@ def test_digest_build_failure_sets_failed_status(tmp_path, monkeypatch):
     with TestClient(app) as client:
         ids = _seed(client)
         with patch(
-            "rss_kindle.api.digests.build_digest_epub",
+            "rss_kindle.services.digest_service.build_digest_epub",
             side_effect=RuntimeError("boom: disk full"),
         ):
             r = client.post("/api/digests", json={"article_ids": ids})
