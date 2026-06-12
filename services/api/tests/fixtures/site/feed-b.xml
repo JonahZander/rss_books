@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>The Arcade Ledger</title>
+    <link>http://localhost:8901/</link>
+    <description>Second fixture feed — distinct guids so it can coexist with feed.xml</description>
+    <item>
+      <title>Patch Notes as Literature</title>
+      <link>http://localhost:8901/article2.html</link>
+      <guid isPermaLink="false">urn:fixture-b:patch-notes</guid>
+      <pubDate>Thu, 11 Jun 2026 09:00:00 GMT</pubDate>
+      <description>Reading balance changes the way critics read poetry: closely, and twice.</description>
+    </item>
+    <item>
+      <title>The Save File at the End of the World</title>
+      <link>http://localhost:8901/article3.html</link>
+      <guid isPermaLink="false">urn:fixture-b:save-file</guid>
+      <pubDate>Wed, 10 Jun 2026 20:00:00 GMT</pubDate>
+      <description>On preservation, emulation, and the four kilobytes that outlived the console.</description>
+    </item>
+  </channel>
+</rss>
