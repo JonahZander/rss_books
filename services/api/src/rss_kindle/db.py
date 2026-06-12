@@ -98,11 +98,25 @@ async def _m4_queue_delivery_settings(conn: aiosqlite.Connection) -> None:
     await conn.execute("ALTER TABLE digests ADD COLUMN size_bytes INTEGER")
 
 
+async def _m5_feed_health(conn: aiosqlite.Connection) -> None:
+    await conn.execute("ALTER TABLE feeds ADD COLUMN etag TEXT")
+    await conn.execute("ALTER TABLE feeds ADD COLUMN last_modified TEXT")
+    await conn.execute(
+        "ALTER TABLE feeds ADD COLUMN poll_interval_minutes INTEGER NOT NULL DEFAULT 30"
+    )
+    await conn.execute("ALTER TABLE feeds ADD COLUMN last_error TEXT")
+    await conn.execute("ALTER TABLE feeds ADD COLUMN last_error_at DATETIME")
+    await conn.execute(
+        "ALTER TABLE feeds ADD COLUMN consecutive_failures INTEGER NOT NULL DEFAULT 0"
+    )
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
     ("digest failure state", _m2_digest_failure),
     ("html content reset", _m3_html_content),
     ("queue, deliveries, settings", _m4_queue_delivery_settings),
+    ("feed health and conditional GET", _m5_feed_health),
 ]
 
 

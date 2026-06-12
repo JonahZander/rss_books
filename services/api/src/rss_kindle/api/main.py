@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -10,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from rss_kindle.config import get_settings
 from rss_kindle.db import Database
+from rss_kindle.services.scheduler import Scheduler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,7 +28,21 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         db.path.parent.mkdir(parents=True, exist_ok=True)
         settings.epub_dir.mkdir(parents=True, exist_ok=True)
         await db.init()
+
+        scheduler_task: asyncio.Task[None] | None = None
+        scheduler_stop = asyncio.Event()
+        # guard against double-start (e.g. the module imported twice under --reload)
+        if settings.scheduler_enabled and getattr(app.state, "scheduler_task", None) is None:
+            scheduler = Scheduler(db, settings.epub_dir)
+            scheduler_task = asyncio.create_task(scheduler.run(scheduler_stop))
+            app.state.scheduler_task = scheduler_task
+
         yield
+
+        if scheduler_task is not None:
+            scheduler_stop.set()
+            await scheduler_task
+            app.state.scheduler_task = None
 
     app = FastAPI(title="RSS Kindle Selector", lifespan=lifespan)
     app.add_middleware(

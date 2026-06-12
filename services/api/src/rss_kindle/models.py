@@ -18,6 +18,16 @@ class Feed(BaseModel):
     site_url: str | None = None
     last_polled: datetime | None = None
     created_at: datetime
+    poll_interval_minutes: int = 30
+    last_error: str | None = None
+    last_error_at: datetime | None = None
+    consecutive_failures: int = 0
+    unread_count: int = 0
+
+
+class FeedUpdate(BaseModel):
+    title: str | None = None
+    poll_interval_minutes: int | None = Field(default=None, ge=1)
 
 
 class Article(BaseModel):

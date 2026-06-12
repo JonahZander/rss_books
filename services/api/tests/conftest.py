@@ -8,3 +8,10 @@ def _no_proxy_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for var in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"):
         monkeypatch.delenv(var, raising=False)
         monkeypatch.delenv(var.lower(), raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_background_scheduler(monkeypatch: pytest.MonkeyPatch) -> None:
+    """TestClient apps must not start the polling loop; scheduler tests
+    drive Scheduler.tick() directly with an injected clock and client."""
+    monkeypatch.setenv("SCHEDULER_ENABLED", "0")
