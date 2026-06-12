@@ -1,0 +1,18 @@
+services:
+  rss-kindle-selector:
+    build: .
+    ports:
+      - "8765:8765"
+    volumes:
+      # named volume: your database and editions survive image rebuilds
+      - rss_kindle_data:/data
+    restart: unless-stopped
+    # SMTP credentials can live here instead of the settings UI:
+    # environment:
+    #   SMTP_HOST: smtp.fastmail.com
+    #   SMTP_USERNAME: you@example.com
+    #   SMTP_PASSWORD: app-password
+    #   SMTP_FROM: you@example.com
+
+volumes:
+  rss_kindle_data:
