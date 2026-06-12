@@ -6,12 +6,13 @@ from typing import Any
 
 import httpx
 
+from rss_kindle.config import USER_AGENT
 from rss_kindle.db import Database
 from rss_kindle.services.feed_poller import poll_feed_content
 
-logger = logging.getLogger(__name__)
+__all__ = ["USER_AGENT", "PollResult", "poll_feed"]
 
-USER_AGENT = "rss-kindle-selector/1.0 (+https://github.com/JonahZander/rss_kindle_selector)"
+logger = logging.getLogger(__name__)
 
 
 @dataclass

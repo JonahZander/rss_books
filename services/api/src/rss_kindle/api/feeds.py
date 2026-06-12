@@ -10,6 +10,7 @@ import aiosqlite
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 
+from rss_kindle.config import USER_AGENT
 from rss_kindle.db import Database
 from rss_kindle.models import Feed, FeedCreate, FeedUpdate
 from rss_kindle.services.feed_poller import placeholder_title, poll_feed_content
@@ -30,7 +31,7 @@ async def fetch_feed_bytes(url: str) -> bytes:
     async with httpx.AsyncClient(
         timeout=15.0,
         follow_redirects=True,
-        headers={"User-Agent": "rss-kindle-selector/1.0"},
+        headers={"User-Agent": USER_AGENT},
     ) as client:
         r = await client.get(url)
         r.raise_for_status()

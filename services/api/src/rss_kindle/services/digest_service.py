@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx
 
+from rss_kindle.config import USER_AGENT
 from rss_kindle.db import Database
 from rss_kindle.services.cover import render_cover
 from rss_kindle.services.emailer import send_digest_and_record
@@ -160,7 +161,7 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
         async with httpx.AsyncClient(
             timeout=20.0,
             follow_redirects=True,
-            headers={"User-Agent": "rss-kindle-selector/1.0"},
+            headers={"User-Agent": USER_AGENT},
         ) as client:
             rewritten, images = await prepare_images([(a.html, a.url) for a in articles], client)
         for art, new_html in zip(articles, rewritten, strict=True):

@@ -1,9 +1,11 @@
 from pathlib import Path
 from unittest.mock import patch
 
+import httpx
 from fastapi.testclient import TestClient
 
 from rss_kindle.api.main import create_app
+from rss_kindle.config import USER_AGENT
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 
@@ -60,3 +62,34 @@ def test_fetch_article_full_content(tmp_path):
 
         r = client.get(f"/api/articles/{article_id}")
         assert r.json()["has_full_content"] is True
+
+
+def test_fetch_blocked_site_returns_502_not_500(tmp_path):
+    """Bot-walled sites (e.g. openai.com → 403) must surface as a clear 502,
+    not an unhandled exception."""
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        _seed_feed_with_articles(client)
+        article_id = client.get("/api/articles").json()[0]["id"]
+
+        req = httpx.Request("GET", "https://blocked.example/a")
+        err = httpx.HTTPStatusError(
+            "403", request=req, response=httpx.Response(403, request=req)
+        )
+        with patch("rss_kindle.api.articles.fetch_url_bytes", side_effect=err):
+            r = client.post(f"/api/articles/{article_id}/fetch")
+        assert r.status_code == 502
+        assert "403" in r.json()["detail"]
+
+        timeout = httpx.ConnectTimeout("timed out", request=req)
+        with patch("rss_kindle.api.articles.fetch_url_bytes", side_effect=timeout):
+            r = client.post(f"/api/articles/{article_id}/fetch")
+        assert r.status_code == 502
+
+
+def test_user_agent_is_browser_shaped_and_shared():
+    from rss_kindle.services import poller
+
+    assert USER_AGENT.startswith("Mozilla/5.0")
+    assert "rss-kindle-selector" in USER_AGENT
+    assert poller.USER_AGENT == USER_AGENT

@@ -3,6 +3,7 @@ from __future__ import annotations
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 
+from rss_kindle.config import USER_AGENT
 from rss_kindle.models import Article, ArticleDetail
 from rss_kindle.services.content_extractor import extract_html
 
@@ -18,7 +19,7 @@ async def fetch_url_bytes(url: str) -> bytes:
     async with httpx.AsyncClient(
         timeout=20.0,
         follow_redirects=True,
-        headers={"User-Agent": "rss-kindle-selector/1.0"},
+        headers={"User-Agent": USER_AGENT},
     ) as client:
         r = await client.get(url)
         r.raise_for_status()
@@ -97,7 +98,17 @@ async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail
     if row is None:
         raise HTTPException(status_code=404, detail="article not found")
 
-    raw = await fetch_url_bytes(row["url"])
+    try:
+        raw = await fetch_url_bytes(row["url"])
+    except httpx.HTTPStatusError as e:
+        # bot-walled sites (403/429/…) are an upstream refusal, not our crash
+        raise HTTPException(
+            status_code=502,
+            detail=f"the site returned HTTP {e.response.status_code} — "
+            "try the original link instead",
+        ) from e
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"fetch failed: {e}") from e
     content = extract_html(raw, url=row["url"])
     if not content:
         raise HTTPException(status_code=422, detail="could not extract article content")
