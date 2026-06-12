@@ -8,6 +8,7 @@ import { useToast } from "./Toasts";
 type Props = {
   queue: Article[];
   emailConfigured: boolean;
+  groupsExist: boolean;
   onRemove: (article: Article) => void;
   onClear: () => void;
   onCompiled: () => Promise<void>;
@@ -15,31 +16,76 @@ type Props = {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-export function DigestQueue({ queue, emailConfigured, onRemove, onClear, onCompiled }: Props) {
+const SPLIT_KEY = "compile-split";
+type Split = "combined" | "per_group";
+
+function statusLabel(d: Digest): string {
+  switch (d.status) {
+    case "ready":
+      return "Ready · EPUB committed";
+    case "failed":
+      return "Failed";
+    case "generating":
+      return "Generating EPUB…";
+    default:
+      return "Pending";
+  }
+}
+
+export function DigestQueue({
+  queue,
+  emailConfigured,
+  groupsExist,
+  onRemove,
+  onClear,
+  onCompiled,
+}: Props) {
   const toast = useToast();
-  const [digest, setDigest] = useState<Digest | null>(null);
+  const [digests, setDigests] = useState<Digest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [compiling, setCompiling] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [sendingId, setSendingId] = useState<number | null>(null);
+  const [split, setSplit] = useState<Split>(() => {
+    if (typeof window === "undefined") return "combined";
+    return window.localStorage.getItem(SPLIT_KEY) === "per_group" ? "per_group" : "combined";
+  });
+
+  const chooseSplit = (next: Split) => {
+    setSplit(next);
+    window.localStorage.setItem(SPLIT_KEY, next);
+  };
 
   const compile = async () => {
     if (queue.length === 0) return;
     setCompiling(true);
     setError(null);
     try {
-      const d = await api.createDigest();
-      setDigest(d);
-      let current = d;
-      while (current.status === "pending" || current.status === "generating") {
+      let current = await api.createDigest({ split: groupsExist ? split : "combined" });
+      setDigests(current);
+      while (current.some((d) => d.status === "pending" || d.status === "generating")) {
         await new Promise((r) => setTimeout(r, 1000));
-        current = await api.getDigest(d.id);
-        setDigest(current);
+        current = await Promise.all(
+          current.map((d) =>
+            d.status === "pending" || d.status === "generating"
+              ? api.getDigest(d.id)
+              : Promise.resolve(d),
+          ),
+        );
+        setDigests(current);
       }
-      if (current.status === "failed") {
-        setError(current.error ?? "digest build failed");
-        toast("Edition failed to build", "error");
+      const failed = current.filter((d) => d.status === "failed");
+      if (failed.length > 0) {
+        setError(failed[0].error ?? "digest build failed");
+        toast(
+          failed.length === current.length
+            ? "Edition failed to build"
+            : `${failed.length} of ${current.length} editions failed`,
+          "error",
+        );
+      } else if (current.length > 1) {
+        toast(`Pressed ${current.length} editions`);
       } else {
-        toast(`Edition ${current.title} is ready`);
+        toast(`Edition ${current[0].title} is ready`);
       }
       await onCompiled();
     } catch (e) {
@@ -49,9 +95,8 @@ export function DigestQueue({ queue, emailConfigured, onRemove, onClear, onCompi
     }
   };
 
-  const send = async () => {
-    if (!digest) return;
-    setSending(true);
+  const send = async (digest: Digest) => {
+    setSendingId(digest.id);
     try {
       const delivery = await api.sendDigest(digest.id);
       if (delivery.status === "sent") {
@@ -62,21 +107,12 @@ export function DigestQueue({ queue, emailConfigured, onRemove, onClear, onCompi
     } catch (e) {
       toast(e instanceof Error ? e.message : "send failed", "error");
     } finally {
-      setSending(false);
+      setSendingId(null);
     }
   };
 
   const count = queue.length;
-  const statusLabel =
-    digest?.status === "ready"
-      ? "Ready · EPUB committed"
-      : digest?.status === "failed"
-        ? "Failed"
-        : digest?.status === "generating"
-          ? "Generating EPUB…"
-          : digest?.status === "pending"
-            ? "Pending"
-            : null;
+  const ready = digests.filter((d) => d.status === "ready");
 
   return (
     <section className="digest-queue" aria-label="Digest queue">
@@ -115,6 +151,28 @@ export function DigestQueue({ queue, emailConfigured, onRemove, onClear, onCompi
         </ol>
       )}
 
+      {groupsExist && (
+        <div className="segmented" role="radiogroup" aria-label="Edition mode">
+          {(
+            [
+              ["combined", "Combined"],
+              ["per_group", "One per group"],
+            ] as [Split, string][]
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={split === value}
+              className={`segmented-option ${split === value ? "active" : ""}`}
+              onClick={() => chooseSplit(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="queue-actions">
         <button
           type="button"
@@ -134,48 +192,47 @@ export function DigestQueue({ queue, emailConfigured, onRemove, onClear, onCompi
         )}
       </div>
 
-      {statusLabel && (
+      {digests.map((d) => (
         <div
+          key={d.id}
           className={`queue-status ${
-            digest?.status === "generating" || digest?.status === "pending"
+            d.status === "generating" || d.status === "pending"
               ? "generating"
-              : digest?.status === "ready"
+              : d.status === "ready"
                 ? "ready"
                 : "failed"
           }`}
         >
           <div className="queue-status-row">
-            <span>{statusLabel}</span>
+            <span>{statusLabel(d)}</span>
           </div>
-          {digest && (
-            <span className="queue-status-ref">
-              Ref&nbsp;#{String(digest.id).padStart(4, "0")} · {digest.title}
-            </span>
-          )}
+          <span className="queue-status-ref">
+            Ref&nbsp;#{String(d.id).padStart(4, "0")} · {d.title}
+          </span>
         </div>
-      )}
+      ))}
 
       {error && <p className="article-body-error">⚠ {error}</p>}
 
-      {digest && digest.status === "ready" && (
-        <>
-          <a href={api.downloadDigestUrl(digest.id)} className="queue-download" download>
-            <span>Download · {digest.title}.epub</span>
+      {ready.map((d) => (
+        <div key={d.id} className="queue-ready-actions">
+          <a href={api.downloadDigestUrl(d.id)} className="queue-download" download>
+            <span>Download · {d.title}.epub</span>
             <span className="queue-download-arrow">↓</span>
           </a>
           {emailConfigured && (
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => void send()}
-              disabled={sending}
+              onClick={() => void send(d)}
+              disabled={sendingId === d.id}
             >
-              <span>{sending ? "Sending…" : "Send to e-reader"}</span>
+              <span>{sendingId === d.id ? "Sending…" : "Send to e-reader"}</span>
               <span className="btn-arrow">✉</span>
             </button>
           )}
-        </>
-      )}
+        </div>
+      ))}
     </section>
   );
 }

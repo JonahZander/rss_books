@@ -1,4 +1,5 @@
 import time
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,6 +19,29 @@ def _seed(client: TestClient) -> list[int]:
     return [a["id"] for a in client.get("/api/articles").json()]
 
 
+def _add_feed_with_articles(
+    client: TestClient, url: str, title: str, guid_prefix: bytes, group_id: int | None = None
+) -> list[int]:
+    feed = client.post("/api/feeds", json={"url": url, "title": title}).json()
+    if group_id is not None:
+        client.patch(f"/api/feeds/{feed['id']}", json={"group_id": group_id})
+    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
+        m.return_value = FIXTURE.read_bytes().replace(b"urn:example:", guid_prefix)
+        client.post(f"/api/feeds/{feed['id']}/refresh")
+    arts = client.get("/api/articles", params={"feed_id": feed["id"]}).json()
+    return sorted(a["id"] for a in arts)
+
+
+def _wait_settled(client: TestClient, digest_id: int) -> dict:
+    digest = {}
+    for _ in range(50):
+        digest = client.get(f"/api/digests/{digest_id}").json()
+        if digest["status"] in {"ready", "failed"}:
+            return digest
+        time.sleep(0.1)
+    return digest
+
+
 def test_create_digest_generates_epub(tmp_path, monkeypatch):
     monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
     app = create_app(db_path=tmp_path / "t.db")
@@ -25,16 +49,14 @@ def test_create_digest_generates_epub(tmp_path, monkeypatch):
         ids = _seed(client)
         r = client.post("/api/digests", json={"article_ids": ids, "title": "2026-04-16"})
         assert r.status_code == 201
-        digest = r.json()
+        created = r.json()
+        assert isinstance(created, list) and len(created) == 1
+        digest = created[0]
         assert digest["status"] in {"pending", "generating", "ready"}
+        assert digest["group_name"] is None
 
         digest_id = digest["id"]
-        for _ in range(30):
-            r = client.get(f"/api/digests/{digest_id}")
-            if r.json()["status"] == "ready":
-                break
-            time.sleep(0.1)
-        assert client.get(f"/api/digests/{digest_id}").json()["status"] == "ready"
+        assert _wait_settled(client, digest_id)["status"] == "ready"
 
         r = client.get(f"/api/digests/{digest_id}/download")
         assert r.status_code == 200
@@ -53,19 +75,81 @@ def test_digest_build_failure_sets_failed_status(tmp_path, monkeypatch):
         ):
             r = client.post("/api/digests", json={"article_ids": ids})
             assert r.status_code == 201
-            digest_id = r.json()["id"]
+            digest_id = r.json()[0]["id"]
 
-        digest = {}
-        for _ in range(30):
-            digest = client.get(f"/api/digests/{digest_id}").json()
-            if digest["status"] in {"ready", "failed"}:
-                break
-            time.sleep(0.1)
+        digest = _wait_settled(client, digest_id)
         assert digest["status"] == "failed"
         assert "boom: disk full" in digest["error"]
 
         r = client.get(f"/api/digests/{digest_id}/download")
         assert r.status_code == 409
+
+
+def test_per_group_compile_partitions_queue(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ai = client.post("/api/groups", json={"name": "AI"}).json()
+        gaming = client.post("/api/groups", json={"name": "Gaming"}).json()
+        a_ids = _add_feed_with_articles(
+            client, "https://a.example/rss", "A", b"urn:a:", ai["id"]
+        )
+        b_ids = _add_feed_with_articles(
+            client, "https://b.example/rss", "B", b"urn:b:", gaming["id"]
+        )
+        c_ids = _add_feed_with_articles(client, "https://c.example/rss", "C", b"urn:c:")
+
+        # queue order: A1, B1, A2, C1 → buckets AI[2], Gaming[1], Ungrouped[1] last
+        for article_id in (a_ids[0], b_ids[0], a_ids[1], c_ids[0]):
+            assert client.post(f"/api/queue/{article_id}").status_code == 200
+
+        r = client.post("/api/digests", json={"split": "per_group"})
+        assert r.status_code == 201
+        created = r.json()
+        today = date.today().isoformat()
+        assert [d["title"] for d in created] == [
+            f"{today} — AI",
+            f"{today} — Gaming",
+            f"{today} — Ungrouped",
+        ]
+        assert [d["group_name"] for d in created] == ["AI", "Gaming", "Ungrouped"]
+        assert [d["article_count"] for d in created] == [2, 1, 1]
+
+        # the queue cleared once, all queued articles marked read
+        assert client.get("/api/queue").json() == []
+        unread_ids = {a["id"] for a in client.get("/api/articles", params={"unread": True}).json()}
+        assert unread_ids.isdisjoint({a_ids[0], a_ids[1], b_ids[0], c_ids[0]})
+
+        for d in created:
+            assert _wait_settled(client, d["id"])["status"] == "ready"
+
+
+def test_per_group_single_bucket_still_suffixed(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ai = client.post("/api/groups", json={"name": "AI"}).json()
+        a_ids = _add_feed_with_articles(
+            client, "https://a.example/rss", "A", b"urn:a:", ai["id"]
+        )
+        r = client.post("/api/digests", json={"article_ids": a_ids, "split": "per_group"})
+        created = r.json()
+        assert len(created) == 1
+        assert created[0]["title"].endswith(" — AI")
+        assert created[0]["group_name"] == "AI"
+
+
+def test_epub_filename_sanitized(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        r = client.post("/api/digests", json={"article_ids": ids, "title": "a/b: c"})
+        digest = _wait_settled(client, r.json()[0]["id"])
+        assert digest["status"] == "ready"
+        name = Path(digest["epub_path"]).name
+        assert "/" not in name and ":" not in name
+        assert Path(digest["epub_path"]).is_file()
 
 
 def test_list_digests(tmp_path, monkeypatch):

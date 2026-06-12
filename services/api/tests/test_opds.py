@@ -19,7 +19,7 @@ def _seed_ready_digest(client: TestClient) -> int:
         m.return_value = FIXTURE.read_bytes()
         client.post(f"/api/feeds/{feed_id}/refresh")
     ids = [a["id"] for a in client.get("/api/articles").json()]
-    digest_id = client.post("/api/digests", json={"article_ids": ids}).json()["id"]
+    digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
     for _ in range(50):
         if client.get(f"/api/digests/{digest_id}").json()["status"] == "ready":
             return digest_id
@@ -50,7 +50,7 @@ def test_acquisition_feed_lists_ready_digests(tmp_path, monkeypatch):
         ):
             failed_id = client.post(
                 "/api/digests", json={"article_ids": [1], "title": "broken"}
-            ).json()["id"]
+            ).json()[0]["id"]
             for _ in range(50):
                 if client.get(f"/api/digests/{failed_id}").json()["status"] == "failed":
                     break

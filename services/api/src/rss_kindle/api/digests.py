@@ -7,14 +7,14 @@ from fastapi.responses import FileResponse
 
 from rss_kindle.db import Database
 from rss_kindle.models import Delivery, Digest, DigestCreate
-from rss_kindle.services.digest_service import create_digest_record, generate_digest
+from rss_kindle.services.digest_service import create_digest_records, generate_digest
 from rss_kindle.services.emailer import EmailError, send_digest_and_record
 from rss_kindle.services.settings_store import get_app_settings
 
 router = APIRouter(prefix="/api/digests", tags=["digests"])
 
 DIGEST_COLUMNS = (
-    "id, title, epub_path, status, error, size_bytes, delivered_at, created_at, "
+    "id, title, group_name, epub_path, status, error, size_bytes, delivered_at, created_at, "
     "(SELECT COUNT(*) FROM digest_articles da WHERE da.digest_id = digests.id) AS article_count"
 )
 DELIVERY_COLUMNS = "id, digest_id, channel, target, status, error, created_at"
@@ -75,31 +75,37 @@ async def send_digest(digest_id: int, request: Request) -> Delivery:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
 
-@router.post("", response_model=Digest, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=list[Digest], status_code=status.HTTP_201_CREATED)
 async def create_digest(
     payload: DigestCreate,
     request: Request,
     background: BackgroundTasks,
-) -> Digest:
+) -> list[Digest]:
+    """Create edition(s) from the selection or queue — one digest in combined
+    mode, one per feed group in per_group mode (creation order preserved)."""
     db: Database = request.app.state.db
     epub_dir: Path = request.app.state.settings.epub_dir
 
     try:
-        digest_id = await create_digest_record(db, payload.article_ids, payload.title)
+        digest_ids = await create_digest_records(
+            db, payload.article_ids, payload.title, payload.split
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
+    marks = ", ".join("?" for _ in digest_ids)
     async with db.connect() as conn:
         cur = await conn.execute(
-            f"SELECT {DIGEST_COLUMNS} FROM digests WHERE id = ?",
-            (digest_id,),
+            f"SELECT {DIGEST_COLUMNS} FROM digests WHERE id IN ({marks})",
+            digest_ids,
         )
-        row = await cur.fetchone()
-    if row is None:
-        raise RuntimeError(f"digest {digest_id} not found after insert")
+        rows = {r["id"]: r for r in await cur.fetchall()}
+    if len(rows) != len(digest_ids):
+        raise RuntimeError("digest rows not found after insert")
 
-    background.add_task(generate_digest, db, digest_id, epub_dir)
-    return Digest.model_validate(dict(row))
+    for digest_id in digest_ids:
+        background.add_task(generate_digest, db, digest_id, epub_dir)
+    return [Digest.model_validate(dict(rows[digest_id])) for digest_id in digest_ids]
 
 
 @router.delete("/{digest_id}", status_code=status.HTTP_204_NO_CONTENT)

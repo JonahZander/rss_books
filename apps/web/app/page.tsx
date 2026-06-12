@@ -7,13 +7,21 @@ import { DigestQueue } from "../components/DigestQueue";
 import { FeedSidebar } from "../components/FeedSidebar";
 import { Masthead } from "../components/Masthead";
 import { useToast } from "../components/Toasts";
-import { api, emailConfigured, type AppSettings, type Article, type Feed } from "../lib/api";
+import {
+  api,
+  emailConfigured,
+  type AppSettings,
+  type Article,
+  type Feed,
+  type Group,
+} from "../lib/api";
 
 type MobilePanel = "feeds" | "articles" | "queue";
 
 export default function Home() {
   const toast = useToast();
   const [feeds, setFeeds] = useState<Feed[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [queue, setQueue] = useState<Article[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -25,7 +33,9 @@ export default function Home() {
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("articles");
 
   const refreshFeeds = useCallback(async () => {
-    setFeeds(await api.listFeeds());
+    const [feedList, groupList] = await Promise.all([api.listFeeds(), api.listGroups()]);
+    setFeeds(feedList);
+    setGroups(groupList);
   }, []);
 
   const refreshArticles = useCallback(async () => {
@@ -183,6 +193,7 @@ export default function Home() {
         <DigestQueue
           queue={queue}
           emailConfigured={settings ? emailConfigured(settings) : false}
+          groupsExist={groups.length > 0}
           onRemove={(a) => void toggleQueue(a)}
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);

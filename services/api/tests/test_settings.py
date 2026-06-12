@@ -55,3 +55,13 @@ def test_env_overrides_win(tmp_path, monkeypatch):
         s["smtp_host"] = "smtp.db.example"
         s = client.put("/api/settings", json=s).json()
         assert s["smtp_host"] == "smtp.env.example"
+
+
+def test_deadline_split_roundtrip(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        s = client.get("/api/settings").json()
+        assert s["deadline_split"] == "combined"
+        s["deadline_split"] = "per_group"
+        assert client.put("/api/settings", json=s).status_code == 200
+        assert client.get("/api/settings").json()["deadline_split"] == "per_group"

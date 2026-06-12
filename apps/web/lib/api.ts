@@ -123,8 +123,21 @@ export const api = {
   listFeeds: () => fetch(`${BASE}/api/feeds`).then((r) => j<Feed[]>(r)),
   addFeed: (url: string, title: string) =>
     fetch(`${BASE}/api/feeds`, jsonInit("POST", { url, title })).then((r) => j<Feed>(r)),
-  patchFeed: (id: number, patch: { title?: string; poll_interval_minutes?: number }) =>
-    fetch(`${BASE}/api/feeds/${id}`, jsonInit("PATCH", patch)).then((r) => j<Feed>(r)),
+  patchFeed: (
+    id: number,
+    patch: { title?: string; poll_interval_minutes?: number; group_id?: number | null },
+  ) => fetch(`${BASE}/api/feeds/${id}`, jsonInit("PATCH", patch)).then((r) => j<Feed>(r)),
+
+  // groups
+  listGroups: () => fetch(`${BASE}/api/groups`).then((r) => j<Group[]>(r)),
+  createGroup: (name: string) =>
+    fetch(`${BASE}/api/groups`, jsonInit("POST", { name })).then((r) => j<Group>(r)),
+  patchGroup: (id: number, patch: { name?: string; position?: number }) =>
+    fetch(`${BASE}/api/groups/${id}`, jsonInit("PATCH", patch)).then((r) => j<Group>(r)),
+  deleteGroup: (id: number) =>
+    fetch(`${BASE}/api/groups/${id}`, { method: "DELETE" }).then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+    }),
   deleteFeed: (id: number) =>
     fetch(`${BASE}/api/feeds/${id}`, { method: "DELETE" }).then((r) => {
       if (!r.ok) throw new Error(`${r.status}`);
@@ -182,11 +195,18 @@ export const api = {
 
   // digests
   listDigests: () => fetch(`${BASE}/api/digests`).then((r) => j<Digest[]>(r)),
-  createDigest: (articleIds?: number[], title?: string) =>
+  /** Creates one edition (combined) or one per feed group (per_group). */
+  createDigest: (
+    opts: { articleIds?: number[]; title?: string; split?: "combined" | "per_group" } = {},
+  ) =>
     fetch(
       `${BASE}/api/digests`,
-      jsonInit("POST", { article_ids: articleIds ?? null, title: title ?? null }),
-    ).then((r) => j<Digest>(r)),
+      jsonInit("POST", {
+        article_ids: opts.articleIds ?? null,
+        title: opts.title ?? null,
+        split: opts.split ?? "combined",
+      }),
+    ).then((r) => j<Digest[]>(r)),
   getDigest: (id: number) => fetch(`${BASE}/api/digests/${id}`).then((r) => j<Digest>(r)),
   deleteDigest: (id: number) =>
     fetch(`${BASE}/api/digests/${id}`, { method: "DELETE" }).then((r) => {

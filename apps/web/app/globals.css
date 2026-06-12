@@ -1160,6 +1160,52 @@ a {
   font-size: 14px;
 }
 
+.queue-ready-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ─── Segmented control (edition mode) ────────────────────── */
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--rule);
+}
+
+.segmented-option {
+  padding: 8px 10px;
+  background: var(--paper);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 0;
+  cursor: pointer;
+  transition:
+    background 140ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    color 140ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.segmented-option + .segmented-option {
+  border-left: 1px solid var(--rule);
+}
+
+.segmented-option:hover {
+  color: var(--ink);
+}
+
+.segmented-option.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.segmented-option.active:hover {
+  color: var(--amber-soft);
+}
+
 /* ─── Animations ──────────────────────────────────────────── */
 
 @keyframes fadeIn {

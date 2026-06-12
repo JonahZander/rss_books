@@ -78,7 +78,7 @@ def test_digest_from_queue_clears_queue(tmp_path, monkeypatch):
 
         r = client.post("/api/digests", json={})
         assert r.status_code == 201
-        digest_id = r.json()["id"]
+        digest_id = r.json()[0]["id"]
 
         assert client.get("/api/queue").json() == []
 

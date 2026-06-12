@@ -12,7 +12,7 @@ import httpx
 
 from rss_kindle.db import Database
 from rss_kindle.models import AppSettings
-from rss_kindle.services.digest_service import create_digest_record, generate_digest
+from rss_kindle.services.digest_service import create_digest_records, generate_digest
 from rss_kindle.services.poller import USER_AGENT, poll_feed
 from rss_kindle.services.settings_store import get_app_settings, get_value, set_value
 
@@ -129,14 +129,15 @@ class Scheduler:
             return
         await set_value(self.db, "_last_deadline_run", occurrence.isoformat())
         try:
-            digest_id = await create_digest_record(
-                self.db, None, now.date().isoformat()
+            digest_ids = await create_digest_records(
+                self.db, None, now.date().isoformat(), settings.deadline_split
             )
         except ValueError:
             logger.info("press deadline: queue empty, skipping edition")
             return
-        logger.info("press deadline: compiling edition %d", digest_id)
-        await generate_digest(self.db, digest_id, self.epub_dir)
+        logger.info("press deadline: compiling %d edition(s)", len(digest_ids))
+        for digest_id in digest_ids:
+            await generate_digest(self.db, digest_id, self.epub_dir)
 
     async def _retention(self, settings: AppSettings) -> None:
         if not settings.retention_enabled:

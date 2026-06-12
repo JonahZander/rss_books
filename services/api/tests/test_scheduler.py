@@ -198,6 +198,44 @@ async def test_press_deadline_fires_once_then_skips(tmp_path: Path) -> None:
     assert row is not None and row["n"] == 1
 
 
+async def test_press_deadline_split_per_group(tmp_path: Path) -> None:
+    db = await _seed_db(tmp_path)
+    async with db.connect() as conn:
+        await conn.execute("INSERT INTO groups (name, position) VALUES ('AI', 1)")
+        await conn.execute("INSERT INTO groups (name, position) VALUES ('Gaming', 2)")
+        await conn.commit()
+    ai_feed = await _add_feed(db, "https://ai.example/rss", group_id=1)
+    gaming_feed = await _add_feed(db, "https://gaming.example/rss", group_id=2)
+    async with db.connect() as conn:
+        for position, (feed_id, guid) in enumerate(((ai_feed, "g1"), (gaming_feed, "g2"))):
+            cur = await conn.execute(
+                "INSERT INTO articles (feed_id, guid, title, url, summary) "
+                "VALUES (?, ?, 'T', 'https://x', '<p>s</p>')",
+                (feed_id, guid),
+            )
+            await conn.execute(
+                "INSERT INTO digest_queue (article_id, position) VALUES (?, ?)",
+                (cur.lastrowid, position),
+            )
+        await conn.commit()
+
+    settings = AppSettings(
+        deadline_enabled=True, deadline_time="06:30", deadline_split="per_group"
+    )
+    sched = Scheduler(db, tmp_path / "epubs", now_fn=lambda: NOW)
+    await sched._press_deadline(settings)
+
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT title, status, group_name FROM digests ORDER BY id")
+        digests = [dict(r) for r in await cur.fetchall()]
+        cur = await conn.execute("SELECT COUNT(*) AS n FROM digest_queue")
+        row = await cur.fetchone()
+    assert [d["group_name"] for d in digests] == ["AI", "Gaming"]
+    assert all(d["status"] == "ready" for d in digests)
+    assert all(" — " in d["title"] for d in digests)
+    assert row is not None and row["n"] == 0
+
+
 async def test_retention_preserves_queued_and_digested(tmp_path: Path) -> None:
     db = await _seed_db(tmp_path)
     feed_id = await _add_feed(db, "https://feed.example/rss")

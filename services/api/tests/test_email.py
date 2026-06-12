@@ -17,7 +17,7 @@ def _seed_ready_digest(client: TestClient) -> int:
         m.return_value = FIXTURE.read_bytes()
         client.post(f"/api/feeds/{feed_id}/refresh")
     ids = [a["id"] for a in client.get("/api/articles").json()]
-    digest_id = client.post("/api/digests", json={"article_ids": ids}).json()["id"]
+    digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
     for _ in range(50):
         if client.get(f"/api/digests/{digest_id}").json()["status"] in {"ready", "failed"}:
             break
@@ -120,7 +120,7 @@ def test_email_on_ready_auto_sends(tmp_path, monkeypatch):
         client.put("/api/settings", json=s)
 
         with patch("rss_kindle.services.emailer.aiosmtplib.send", new=AsyncMock()) as sent:
-            digest_id = client.post("/api/digests", json={"article_ids": ids}).json()["id"]
+            digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
             for _ in range(50):
                 d = client.get(f"/api/digests/{digest_id}").json()
                 if d["status"] in {"ready", "failed"} and d["deliveries"]:
