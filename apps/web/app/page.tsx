@@ -26,10 +26,12 @@ export default function Home() {
   const [queue, setQueue] = useState<Article[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | "none" | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(true);
   const [search, setSearch] = useState("");
   const [lastPoll, setLastPoll] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Feed | null>(null);
+  const [deleteGroupTarget, setDeleteGroupTarget] = useState<Group | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("articles");
 
   const refreshFeeds = useCallback(async () => {
@@ -42,11 +44,12 @@ export default function Home() {
     setArticles(
       await api.listArticles({
         feedId: selectedFeedId ?? undefined,
+        groupId: selectedGroupId ?? undefined,
         unread: unreadOnly,
         q: search || undefined,
       }),
     );
-  }, [selectedFeedId, unreadOnly, search]);
+  }, [selectedFeedId, selectedGroupId, unreadOnly, search]);
 
   const refreshQueue = useCallback(async () => {
     setQueue(await api.getQueue());
@@ -87,6 +90,32 @@ export default function Home() {
       toast(e instanceof Error ? e.message : "delete failed", "error");
     }
   };
+
+  const deleteGroup = async () => {
+    if (!deleteGroupTarget) return;
+    const group = deleteGroupTarget;
+    setDeleteGroupTarget(null);
+    try {
+      await api.deleteGroup(group.id);
+      toast(`Group “${group.name}” dissolved — feeds kept`);
+      if (selectedGroupId === group.id) setSelectedGroupId(null);
+      await Promise.all([refreshFeeds(), refreshArticles()]);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "delete failed", "error");
+    }
+  };
+
+  const selectFeed = useCallback((id: number | null) => {
+    setSelectedFeedId(id);
+    setSelectedGroupId(null);
+    setMobilePanel("articles");
+  }, []);
+
+  const selectGroup = useCallback((id: number | "none" | null) => {
+    setSelectedGroupId(id);
+    setSelectedFeedId(null);
+    setMobilePanel("articles");
+  }, []);
 
   const pollAll = async () => {
     try {
@@ -133,6 +162,18 @@ export default function Home() {
     () => feeds.find((f) => f.id === selectedFeedId) ?? null,
     [feeds, selectedFeedId],
   );
+  const currentGroup = useMemo(() => {
+    if (selectedGroupId === "none") return { name: "Ungrouped" };
+    return groups.find((g) => g.id === selectedGroupId) ?? null;
+  }, [groups, selectedGroupId]);
+
+  // a deleted/renamed-away group can't stay selected
+  useEffect(() => {
+    if (typeof selectedGroupId === "number" && !groups.some((g) => g.id === selectedGroupId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedGroupId(null);
+    }
+  }, [groups, selectedGroupId]);
 
   return (
     <div className="app">
@@ -165,13 +206,14 @@ export default function Home() {
       <main className={`layout panel-${mobilePanel}`}>
         <FeedSidebar
           feeds={feeds}
+          groups={groups}
           selectedFeedId={selectedFeedId}
-          onSelect={(id) => {
-            setSelectedFeedId(id);
-            setMobilePanel("articles");
-          }}
+          selectedGroupId={selectedGroupId}
+          onSelect={selectFeed}
+          onSelectGroup={selectGroup}
           onAdd={addFeed}
           onDelete={setDeleteTarget}
+          onDeleteGroup={setDeleteGroupTarget}
           onRefresh={pollAll}
           onChanged={refreshFeeds}
         />
@@ -187,6 +229,7 @@ export default function Home() {
             onToggleQueue={toggleQueue}
             onRead={onRead}
             currentFeed={currentFeed}
+            currentGroup={currentGroup}
             lastPoll={lastPoll}
           />
         </section>
@@ -208,6 +251,14 @@ export default function Home() {
         confirmLabel="Remove feed"
         onConfirm={() => void deleteFeed()}
         onCancel={() => setDeleteTarget(null)}
+      />
+      <ConfirmDialog
+        open={deleteGroupTarget !== null}
+        title={`Dissolve “${deleteGroupTarget?.name ?? ""}”?`}
+        body="Feeds in this group keep their subscriptions and articles — they just become ungrouped."
+        confirmLabel="Dissolve group"
+        onConfirm={() => void deleteGroup()}
+        onCancel={() => setDeleteGroupTarget(null)}
       />
     </div>
   );

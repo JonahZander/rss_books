@@ -14,6 +14,7 @@ type Props = {
   onToggleQueue: (article: Article) => void;
   onRead: (article: Article) => void;
   currentFeed: Feed | null;
+  currentGroup: { name: string } | null;
   lastPoll: string | null;
 };
 
@@ -44,9 +45,10 @@ export function ArticleList({
   onToggleQueue,
   onRead,
   currentFeed,
+  currentGroup,
   lastPoll,
 }: Props) {
-  const title = currentFeed ? currentFeed.title : "All dispatches";
+  const title = currentFeed?.title ?? currentGroup?.name ?? "All dispatches";
   const total = articles.length;
 
   return (

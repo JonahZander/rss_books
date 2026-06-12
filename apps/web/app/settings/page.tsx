@@ -356,6 +356,18 @@ export default function Settings() {
                     onChange={(e) => set("deadline_time", e.target.value)}
                   />
                 </label>
+                <label>
+                  <span className="feed-form-label">Edition mode</span>
+                  <select
+                    value={settings.deadline_split}
+                    onChange={(e) =>
+                      set("deadline_split", e.target.value as AppSettings["deadline_split"])
+                    }
+                  >
+                    <option value="combined">One combined edition</option>
+                    <option value="per_group">One edition per feed group</option>
+                  </select>
+                </label>
               </div>
             )}
           </section>
