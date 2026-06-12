@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 from xml.etree import ElementTree as ET
@@ -11,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, sta
 
 from rss_kindle.db import Database
 from rss_kindle.models import Feed, FeedCreate, FeedUpdate
-from rss_kindle.services.feed_poller import poll_feed_content
+from rss_kindle.services.feed_poller import placeholder_title, poll_feed_content
 
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
 
@@ -182,6 +183,70 @@ async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
         counts["regrouped"],
     )
     return counts
+
+
+@router.post("/import-json")
+async def import_feeds_json(file: UploadFile, request: Request) -> dict[str, int]:
+    """Import a JSON feed list: {"group name": ["feed url", …]}.
+
+    The key "ungrouped" (case-insensitive) means no group. URLs carry no
+    titles, so feeds start with hostname placeholders that the poller
+    replaces with each feed's own <title> on first refresh."""
+    content = await file.read()
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"not valid JSON: {e}") from e
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=400,
+            detail='expected an object like {"group name": ["feed url", …]}',
+        )
+
+    entries: list[tuple[str, str, str | None, str | None]] = []
+    for group_key, urls in data.items():
+        name = group_key.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="group names must not be empty")
+        if not isinstance(urls, list) or not all(isinstance(u, str) for u in urls):
+            raise HTTPException(
+                status_code=400, detail=f'"{name}" must be a list of feed URL strings'
+            )
+        group_name = None if name.casefold() == "ungrouped" else name
+        for url in urls:
+            if not url.startswith(("http://", "https://")):
+                raise HTTPException(status_code=400, detail=f"not a feed URL: {url!r}")
+            entries.append((url, placeholder_title(url), None, group_name))
+
+    counts = await _import_feed_rows(request.app.state.db, entries)
+    logger.info(
+        "json import: %d added, %d skipped, %d regrouped",
+        counts["added"],
+        counts["skipped"],
+        counts["regrouped"],
+    )
+    return counts
+
+
+@router.get("/export.json")
+async def export_feeds_json(request: Request) -> Response:
+    """Export the JSON feed list (the import format, round-trippable)."""
+    db = request.app.state.db
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "SELECT f.url, g.name AS group_name "
+            "FROM feeds f LEFT JOIN groups g ON g.id = f.group_id "
+            "ORDER BY g.position IS NULL, g.position, f.title"
+        )
+        rows = await cur.fetchall()
+    data: dict[str, list[str]] = {}
+    for r in rows:
+        data.setdefault(r["group_name"] or "ungrouped", []).append(r["url"])
+    return Response(
+        content=json.dumps(data, indent=2) + "\n",
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="feeds.json"'},
+    )
 
 
 @router.get("/export.opml")

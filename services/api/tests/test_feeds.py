@@ -283,6 +283,107 @@ def test_opml_export_nests_groups_and_roundtrips(tmp_path):
         assert feeds2["https://c.example/rss"]["group_id"] is None
 
 
+FEEDS_JSON = """{
+  "ai": ["https://a.example/rss", "https://b.example/rss"],
+  "gaming": ["https://g.example/rss"],
+  "ungrouped": ["https://c.example/rss"]
+}"""
+
+
+def _import_json(client: TestClient, body: str):
+    return client.post(
+        "/api/feeds/import-json",
+        files={"file": ("feeds.json", body, "application/json")},
+    )
+
+
+def test_json_import_groups_and_placeholder_titles(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        r = _import_json(client, FEEDS_JSON)
+        assert r.status_code == 200
+        assert r.json() == {"added": 4, "skipped": 0, "regrouped": 0}
+
+        groups = client.get("/api/groups").json()
+        assert [g["name"] for g in groups] == ["ai", "gaming"]  # key order; no "ungrouped" group
+
+        feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
+        by_name = {g["name"]: g["id"] for g in groups}
+        assert feeds["https://a.example/rss"]["group_id"] == by_name["ai"]
+        assert feeds["https://b.example/rss"]["group_id"] == by_name["ai"]
+        assert feeds["https://g.example/rss"]["group_id"] == by_name["gaming"]
+        assert feeds["https://c.example/rss"]["group_id"] is None
+        # no titles in this format → hostname placeholders
+        assert feeds["https://a.example/rss"]["title"] == "a.example"
+
+
+def test_json_import_validation(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        assert _import_json(client, "[1, 2]").status_code == 400
+        assert _import_json(client, '{"ai": "https://a.example"}').status_code == 400
+        assert _import_json(client, '{"ai": [42]}').status_code == 400
+        assert _import_json(client, '{"ai": ["ftp://a.example"]}').status_code == 400
+        assert _import_json(client, '{"": ["https://a.example"]}').status_code == 400
+        assert _import_json(client, "{nope").status_code == 400
+        assert client.get("/api/feeds").json() == []
+
+
+def test_json_reimport_adopts_only_ungrouped(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        _import_json(client, FEEDS_JSON)
+        feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
+        client.patch(f"/api/feeds/{feeds['https://a.example/rss']['id']}", json={"group_id": None})
+
+        r = _import_json(client, FEEDS_JSON)
+        assert r.json() == {"added": 0, "skipped": 4, "regrouped": 1}
+        feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
+        ai_id = next(g["id"] for g in client.get("/api/groups").json() if g["name"] == "ai")
+        assert feeds["https://a.example/rss"]["group_id"] == ai_id
+
+
+def test_json_export_roundtrips(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        _import_json(client, FEEDS_JSON)
+        r = client.get("/api/feeds/export.json")
+        assert r.status_code == 200
+        assert "attachment" in r.headers["content-disposition"]
+        data = r.json()
+        assert sorted(data["ai"]) == ["https://a.example/rss", "https://b.example/rss"]
+        assert data["gaming"] == ["https://g.example/rss"]
+        assert data["ungrouped"] == ["https://c.example/rss"]
+
+    app2 = create_app(db_path=tmp_path / "t2.db")
+    with TestClient(app2) as client2:
+        assert _import_json(client2, r.text).json()["added"] == 4
+        feeds2 = {f["url"]: f for f in client2.get("/api/feeds").json()}
+        assert feeds2["https://c.example/rss"]["group_id"] is None
+        assert [g["name"] for g in client2.get("/api/groups").json()] == ["ai", "gaming"]
+
+
+def test_poll_adopts_placeholder_title_until_renamed(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        _import_json(client, '{"ungrouped": ["https://example.com/rss"]}')
+        feed = client.get("/api/feeds").json()[0]
+        assert feed["title"] == "example.com"
+
+        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
+            m.return_value = FIXTURE.read_bytes()
+            client.post(f"/api/feeds/{feed['id']}/refresh")
+        # the placeholder adopted the feed's self-reported title
+        assert client.get("/api/feeds").json()[0]["title"] == "Example Feed"
+
+        client.patch(f"/api/feeds/{feed['id']}", json={"title": "Mine"})
+        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
+            m.return_value = FIXTURE.read_bytes()
+            client.post(f"/api/feeds/{feed['id']}/refresh")
+        # a manual rename is never overwritten
+        assert client.get("/api/feeds").json()[0]["title"] == "Mine"
+
+
 def test_refresh_all_reports_errors(tmp_path):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:

@@ -100,11 +100,16 @@ export function FeedSidebar({
     await onChanged();
   };
 
-  const importOpml = async (file: File) => {
+  const importFile = async (file: File) => {
+    // one Import button for both formats: .json (or a leading "{") → JSON list,
+    // anything else → OPML
+    const isJson =
+      file.name.toLowerCase().endsWith(".json") ||
+      (await file.slice(0, 64).text()).trimStart().startsWith("{");
     try {
-      const r = await api.importOpml(file);
+      const r = isJson ? await api.importFeedsJson(file) : await api.importOpml(file);
       const regrouped = r.regrouped > 0 ? `, ${r.regrouped} regrouped` : "";
-      toast(`OPML import: ${r.added} added, ${r.skipped} skipped${regrouped}`);
+      toast(`${isJson ? "JSON" : "OPML"} import: ${r.added} added, ${r.skipped} skipped${regrouped}`);
       await onChanged();
     } catch (e) {
       toast(e instanceof Error ? e.message : "import failed", "error");
@@ -270,20 +275,24 @@ export function FeedSidebar({
         <input
           ref={fileRef}
           type="file"
-          accept=".opml,.xml,text/xml"
+          accept=".opml,.xml,.json,text/xml,application/json"
           className="visually-hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) void importOpml(file);
+            if (file) void importFile(file);
             e.target.value = "";
           }}
         />
         <button type="button" className="btn btn-ghost" onClick={() => fileRef.current?.click()}>
-          <span>Import OPML</span>
+          <span>Import OPML / JSON</span>
           <span className="btn-arrow">↑</span>
         </button>
         <a className="btn btn-ghost" href={api.exportOpmlUrl()} download>
           <span>Export OPML</span>
+          <span className="btn-arrow">↓</span>
+        </a>
+        <a className="btn btn-ghost" href={api.exportJsonUrl()} download>
+          <span>Export JSON</span>
           <span className="btn-arrow">↓</span>
         </a>
       </div>

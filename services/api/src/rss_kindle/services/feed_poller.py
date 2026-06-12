@@ -5,10 +5,19 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from time import struct_time
 from typing import cast
+from urllib.parse import urlparse
 
 import feedparser
 
 from rss_kindle.db import Database
+
+
+def placeholder_title(url: str) -> str:
+    """Default title for imports that carry no titles (JSON feed lists):
+    the hostname. The first successful poll replaces it with the feed's own
+    <title> — unless the user renamed the feed first."""
+    host = (urlparse(url).hostname or "").removeprefix("www.")
+    return host or url
 
 
 @dataclass
@@ -62,6 +71,15 @@ async def poll_feed_content(db: Database, feed_id: int, content: bytes) -> int:
     parsed = parse_feed(content)
     inserted = 0
     async with db.connect() as conn:
+        if parsed.title and parsed.title != "Untitled":
+            # adopt the feed's self-reported title while the stored title is
+            # still the import placeholder (a manual rename breaks the match)
+            cur = await conn.execute("SELECT url, title FROM feeds WHERE id = ?", (feed_id,))
+            row = await cur.fetchone()
+            if row is not None and row["title"] == placeholder_title(row["url"]):
+                await conn.execute(
+                    "UPDATE feeds SET title = ? WHERE id = ?", (parsed.title, feed_id)
+                )
         for entry in parsed.entries:
             try:
                 await conn.execute(

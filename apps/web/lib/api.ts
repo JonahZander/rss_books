@@ -157,7 +157,16 @@ export const api = {
       j<{ added: number; skipped: number; regrouped: number }>(r),
     );
   },
+  /** JSON feed list: {"group name": ["feed url", …]}; "ungrouped" = no group. */
+  importFeedsJson: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${BASE}/api/feeds/import-json`, { method: "POST", body: fd }).then((r) =>
+      j<{ added: number; skipped: number; regrouped: number }>(r),
+    );
+  },
   exportOpmlUrl: () => `${BASE}/api/feeds/export.opml`,
+  exportJsonUrl: () => `${BASE}/api/feeds/export.json`,
 
   // articles
   listArticles: ({ feedId, groupId, unread, q, limit, offset }: ArticleQuery = {}) => {
