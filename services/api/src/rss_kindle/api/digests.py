@@ -6,12 +6,18 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from fastapi.responses import FileResponse
 
 from rss_kindle.db import Database
-from rss_kindle.models import Digest, DigestCreate
+from rss_kindle.models import Delivery, Digest, DigestCreate
 from rss_kindle.services.digest_service import create_digest_record, generate_digest
+from rss_kindle.services.emailer import EmailError, send_digest_and_record
+from rss_kindle.services.settings_store import get_app_settings
 
 router = APIRouter(prefix="/api/digests", tags=["digests"])
 
-DIGEST_COLUMNS = "id, title, epub_path, status, error, size_bytes, delivered_at, created_at"
+DIGEST_COLUMNS = (
+    "id, title, epub_path, status, error, size_bytes, delivered_at, created_at, "
+    "(SELECT COUNT(*) FROM digest_articles da WHERE da.digest_id = digests.id) AS article_count"
+)
+DELIVERY_COLUMNS = "id, digest_id, channel, target, status, error, created_at"
 
 
 @router.get("", response_model=list[Digest])
@@ -22,7 +28,18 @@ async def list_digests(request: Request) -> list[Digest]:
             f"SELECT {DIGEST_COLUMNS} FROM digests ORDER BY created_at DESC, id DESC"
         )
         rows = await cur.fetchall()
-    return [Digest.model_validate(dict(r)) for r in rows]
+        cur = await conn.execute(
+            f"SELECT {DELIVERY_COLUMNS} FROM deliveries ORDER BY created_at DESC, id DESC"
+        )
+        delivery_rows = await cur.fetchall()
+
+    by_digest: dict[int, list[Delivery]] = {}
+    for d in delivery_rows:
+        by_digest.setdefault(d["digest_id"], []).append(Delivery.model_validate(dict(d)))
+    return [
+        Digest.model_validate({**dict(r), "deliveries": by_digest.get(r["id"], [])})
+        for r in rows
+    ]
 
 
 @router.get("/{digest_id}", response_model=Digest)
@@ -34,9 +51,28 @@ async def get_digest(digest_id: int, request: Request) -> Digest:
             (digest_id,),
         )
         row = await cur.fetchone()
+        cur = await conn.execute(
+            f"SELECT {DELIVERY_COLUMNS} FROM deliveries WHERE digest_id = ? "
+            "ORDER BY created_at DESC, id DESC",
+            (digest_id,),
+        )
+        delivery_rows = await cur.fetchall()
     if row is None:
         raise HTTPException(status_code=404, detail="digest not found")
-    return Digest.model_validate(dict(row))
+    deliveries = [Delivery.model_validate(dict(d)) for d in delivery_rows]
+    return Digest.model_validate({**dict(row), "deliveries": deliveries})
+
+
+@router.post("/{digest_id}/send", response_model=Delivery)
+async def send_digest(digest_id: int, request: Request) -> Delivery:
+    db = request.app.state.db
+    app_settings = await get_app_settings(db)
+    try:
+        return await send_digest_and_record(db, app_settings, digest_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except EmailError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 @router.post("", response_model=Digest, status_code=status.HTTP_201_CREATED)

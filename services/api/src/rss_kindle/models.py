@@ -91,3 +91,5 @@ class Digest(BaseModel):
     size_bytes: int | None = None
     delivered_at: datetime | None = None
     created_at: datetime
+    article_count: int = 0
+    deliveries: list[Delivery] = []

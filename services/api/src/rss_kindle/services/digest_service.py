@@ -8,9 +8,11 @@ import httpx
 
 from rss_kindle.db import Database
 from rss_kindle.services.cover import render_cover
+from rss_kindle.services.emailer import send_digest_and_record
 from rss_kindle.services.epub_builder import DigestArticle, build_digest_epub
 from rss_kindle.services.image_pipeline import prepare_images
 from rss_kindle.services.sanitizer import sanitize
+from rss_kindle.services.settings_store import get_app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +137,13 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
             len(articles),
             size_bytes,
         )
+
+        app_settings = await get_app_settings(db)
+        if app_settings.email_on_ready and app_settings.send_to:
+            try:
+                await send_digest_and_record(db, app_settings, digest_id)
+            except Exception:
+                logger.exception("auto-email for digest %d failed", digest_id)
     except Exception as exc:
         logger.exception("digest %d build failed", digest_id)
         async with db.connect() as conn:
