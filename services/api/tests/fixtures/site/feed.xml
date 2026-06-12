@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>The Local Gazette</title>
+    <link>http://localhost:8901/</link>
+    <description>Fixture feed for end-to-end testing</description>
+    <item>
+      <title>The Doughnut Economy of Port Anselm</title>
+      <link>http://localhost:8901/article1.html</link>
+      <guid>http://localhost:8901/article1.html</guid>
+      <pubDate>Thu, 11 Jun 2026 06:00:00 GMT</pubDate>
+      <description>How one harbour town rebuilt its trade around pastry, patience, and a very specific tide table.</description>
+    </item>
+    <item>
+      <title>Notes on a Forgotten Compiler</title>
+      <link>http://localhost:8901/article2.html</link>
+      <guid>http://localhost:8901/article2.html</guid>
+      <pubDate>Wed, 10 Jun 2026 18:30:00 GMT</pubDate>
+      <description>An archaeology of build systems past, with code that still compiles if you ask it nicely.</description>
+    </item>
+    <item>
+      <title>Weather for Readers: The Isobar Edit</title>
+      <link>http://localhost:8901/article3.html</link>
+      <guid>http://localhost:8901/article3.html</guid>
+      <pubDate>Wed, 10 Jun 2026 07:15:00 GMT</pubDate>
+      <description>Why the best forecast is the one you read tomorrow, on paper-ish.</description>
+    </item>
+  </channel>
+</rss>
