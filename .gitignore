@@ -60,3 +60,4 @@ services/api/data/
 /.idea
 /.vscode
 /.claude
+**/.mcp.json
