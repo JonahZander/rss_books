@@ -101,6 +101,29 @@ def test_assign_feed_to_group_and_clear(tmp_path):
         assert client.get("/api/feeds").json()[0]["group_id"] is None
 
 
+def test_articles_group_filter(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        group = client.post("/api/groups", json={"name": "AI"}).json()
+        a = client.post("/api/feeds", json={"url": "https://a.example/rss", "title": "A"}).json()
+        b = client.post("/api/feeds", json={"url": "https://b.example/rss", "title": "B"}).json()
+        client.patch(f"/api/feeds/{a['id']}", json={"group_id": group["id"]})
+
+        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
+            m.return_value = FIXTURE.read_bytes()
+            client.post(f"/api/feeds/{a['id']}/refresh")
+            m.return_value = FIXTURE.read_bytes().replace(b"urn:example:", b"urn:other:")
+            client.post(f"/api/feeds/{b['id']}/refresh")
+        assert len(client.get("/api/articles").json()) == 4
+
+        grouped = client.get("/api/articles", params={"group_id": group["id"]}).json()
+        assert {x["feed_id"] for x in grouped} == {a["id"]}
+
+        # group_id=0 selects articles of ungrouped feeds
+        ungrouped = client.get("/api/articles", params={"group_id": 0}).json()
+        assert {x["feed_id"] for x in ungrouped} == {b["id"]}
+
+
 def test_manual_refresh_failure_recorded_and_cleared(tmp_path):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:

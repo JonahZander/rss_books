@@ -86,6 +86,8 @@ export type AppSettings = {
 
 export type ArticleQuery = {
   feedId?: number;
+  /** a group id, or "none" for articles of ungrouped feeds */
+  groupId?: number | "none";
   unread?: boolean;
   q?: string;
   limit?: number;
@@ -145,9 +147,10 @@ export const api = {
   exportOpmlUrl: () => `${BASE}/api/feeds/export.opml`,
 
   // articles
-  listArticles: ({ feedId, unread, q, limit, offset }: ArticleQuery = {}) => {
+  listArticles: ({ feedId, groupId, unread, q, limit, offset }: ArticleQuery = {}) => {
     const params = new URLSearchParams();
     if (feedId != null) params.set("feed_id", String(feedId));
+    if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
     if (unread) params.set("unread", "true");
     if (q) params.set("q", q);
     if (limit != null) params.set("limit", String(limit));

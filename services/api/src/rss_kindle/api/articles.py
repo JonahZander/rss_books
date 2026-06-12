@@ -34,6 +34,7 @@ def _to_article(row: object) -> Article:
 async def list_articles(
     request: Request,
     feed_id: int | None = None,
+    group_id: int | None = None,
     unread: bool = False,
     q: str | None = None,
     limit: int = 200,
@@ -45,6 +46,13 @@ async def list_articles(
     if feed_id is not None:
         clauses.append("feed_id = ?")
         params.append(feed_id)
+    if group_id is not None:
+        # rowids start at 1, so 0 is reserved to mean "ungrouped feeds"
+        if group_id == 0:
+            clauses.append("feed_id IN (SELECT id FROM feeds WHERE group_id IS NULL)")
+        else:
+            clauses.append("feed_id IN (SELECT id FROM feeds WHERE group_id = ?)")
+            params.append(group_id)
     if unread:
         clauses.append("read_at IS NULL")
     if q:
