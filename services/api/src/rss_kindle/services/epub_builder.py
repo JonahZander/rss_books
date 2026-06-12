@@ -26,16 +26,40 @@ class DigestArticle:
 # the reader's typeface wins and files stay small), wrapped monospace, and
 # hard page breaks between articles.
 STYLESHEET = """\
-body { font-family: Georgia, "Times New Roman", serif; line-height: 1.55; margin: 0 2%; color: #000; }
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.55;
+  margin: 0 2%;
+  color: #000;
+}
 h1, h2, h3, h4, h5, h6 { line-height: 1.25; page-break-after: avoid; }
 .chapter { page-break-before: always; }
 h1.article-title { font-size: 1.45em; margin: 0.4em 0 0.25em; }
-.byline { font-size: 0.78em; letter-spacing: 0.04em; text-transform: uppercase; color: #333; margin: 0 0 0.8em; }
+.byline {
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #333;
+  margin: 0 0 0.8em;
+}
 .fallback-note { font-size: 0.85em; color: #333; }
 hr.rule { border: 0; border-top: 1px solid #000; margin: 1em 0; }
 p { margin: 0.5em 0; }
-blockquote { margin: 1em 1.2em; padding-left: 0.7em; border-left: 2px solid #000; font-style: italic; }
-pre { font-family: "Courier New", monospace; font-size: 0.75em; white-space: pre-wrap; word-wrap: break-word; border: 1px solid #888; padding: 0.6em; margin: 0.8em 0; }
+blockquote {
+  margin: 1em 1.2em;
+  padding-left: 0.7em;
+  border-left: 2px solid #000;
+  font-style: italic;
+}
+pre {
+  font-family: "Courier New", monospace;
+  font-size: 0.75em;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid #888;
+  padding: 0.6em;
+  margin: 0.8em 0;
+}
 code { font-family: "Courier New", monospace; font-size: 0.85em; }
 pre code { font-size: 1em; }
 img { max-width: 100%; }
@@ -45,7 +69,12 @@ table { border-collapse: collapse; font-size: 0.85em; margin: 0.8em 0; }
 th, td { border: 1px solid #666; padding: 0.3em 0.5em; text-align: left; }
 ul, ol { margin: 0.6em 0 0.6em 1.4em; padding: 0; }
 a { color: inherit; }
-.article-footer { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.04em; color: #333; }
+.article-footer {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #333;
+}
 .titlepage { text-align: center; margin-top: 18%; }
 .titlepage h1 { font-size: 2.4em; margin: 0.3em 0; }
 .eyebrow { font-size: 0.7em; letter-spacing: 0.18em; text-transform: uppercase; }

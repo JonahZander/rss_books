@@ -16,7 +16,10 @@ WIDTH, HEIGHT = 1600, 2560
 MARGIN = 140
 
 
-def _wrap(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
+AnyFont = ImageFont.FreeTypeFont | ImageFont.ImageFont
+
+
+def _wrap(draw: ImageDraw.ImageDraw, text: str, font: AnyFont, max_width: int) -> list[str]:
     words = text.split()
     lines: list[str] = []
     current = ""

@@ -30,7 +30,7 @@ def _recompress(data: bytes, *, max_width: int, jpeg_quality: int) -> tuple[byte
     JPEG for opaque images, PNG only when transparency would be lost.
     Raises on undecodable input.
     """
-    img = Image.open(BytesIO(data))
+    img: Image.Image = Image.open(BytesIO(data))
     img.load()
     has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
     if img.width > max_width:
