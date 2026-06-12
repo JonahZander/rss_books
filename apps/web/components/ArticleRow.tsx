@@ -50,6 +50,27 @@ function pad(n: number, width: number): string {
   return String(n).padStart(width, "0");
 }
 
+type Lifecycle = "new" | "seen" | "queued" | "in_edition";
+
+const LIFECYCLE_LABEL: Record<Lifecycle, string> = {
+  new: "New",
+  seen: "Seen",
+  queued: "Queued",
+  in_edition: "In edition",
+};
+
+/**
+ * Resolve the effective lifecycle for display. `article.state` is authoritative
+ * on load; `queued` is the optimistic overlay for the moment the box is ticked.
+ * Precedence: in_edition > queued (local OR state) > seen > new.
+ */
+function lifecycleOf(article: Article, queued: boolean): Lifecycle {
+  if (article.state === "in_edition") return "in_edition";
+  if (queued || article.state === "queued") return "queued";
+  if (article.state === "seen" || article.read_at) return "seen";
+  return "new";
+}
+
 export function ArticleRow({
   article,
   index,
@@ -99,13 +120,11 @@ export function ArticleRow({
   const width = String(total).length;
   const idx = pad(index + 1, Math.max(2, width));
   const totalStr = pad(total, Math.max(2, width));
-  const read = Boolean(article.read_at);
+  const lifecycle = lifecycleOf(article, queued);
 
   return (
     <article
-      className={`article-row ${queued ? "selected" : ""} ${expanded ? "expanded" : ""} ${
-        read ? "read" : ""
-      }`}
+      className={`article-row ${queued ? "selected" : ""} ${expanded ? "expanded" : ""} state-${lifecycle}`}
       style={{ "--row-index": Math.min(index, 12) } as React.CSSProperties}
     >
       <header className="article-header">
@@ -139,7 +158,10 @@ export function ArticleRow({
           {hostnameOf(article.url)} ↗
         </a>
         {article.published_at && <span>{fmtTimestamp(article.published_at)}</span>}
-        {read && <span className="read-stamp">Read</span>}
+        <span className={`lifecycle-stamp lc-${lifecycle}`}>
+          <span className="status-square" aria-hidden />
+          {LIFECYCLE_LABEL[lifecycle]}
+        </span>
       </div>
 
       {!expanded &&

@@ -66,10 +66,11 @@ export function Masthead({ readouts }: Props) {
           RSS<span className="slash">/</span>Kindle Selector
         </h1>
         <div className="masthead-sub">
-          <span>Model&nbsp;RKS&#8209;01</span>
-          <span className="dot" aria-hidden />
-          <span>Self&#8209;hosted news desk</span>
-          <span className="dot" aria-hidden />
+          <span className="masthead-tagline">
+            <span>Model&nbsp;RKS&#8209;01</span>
+            <span className="dot" aria-hidden />
+            <span>Self&#8209;hosted news desk</span>
+          </span>
           <nav className="masthead-nav" aria-label="Primary">
             {NAV.map((item) => (
               <Link

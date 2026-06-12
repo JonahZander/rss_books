@@ -32,6 +32,8 @@ export type Article = {
   published_at: string | null;
   read_at: string | null;
   has_full_content: boolean;
+  /** Server-computed lifecycle: new → seen → queued → in_edition (terminal). */
+  state: "new" | "seen" | "queued" | "in_edition";
 };
 
 export type ArticleDetail = Article & { full_content: string | null };

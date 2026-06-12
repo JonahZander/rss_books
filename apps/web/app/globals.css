@@ -210,7 +210,7 @@ a {
 .masthead-sub {
   margin-top: 8px;
   display: flex;
-  gap: 14px;
+  gap: 18px;
   align-items: center;
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -219,10 +219,18 @@ a {
   color: var(--ink-3);
 }
 
+/* Static tagline: a passive label — quieter, not interactive. */
+.masthead-tagline {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--mute);
+}
+
 .masthead-sub .dot {
-  width: 5px;
-  height: 5px;
-  background: var(--ink);
+  width: 4px;
+  height: 4px;
+  background: var(--mute);
   display: inline-block;
 }
 
@@ -721,18 +729,83 @@ a {
   }
 }
 
-.article-row.read:not(.expanded) {
-  opacity: 0.55;
+/* Seen (triage glance) dims the row, but never the queued/compiled states. */
+.article-row.state-seen:not(.expanded):not(.selected) {
+  opacity: 0.6;
 }
 
-.article-row.read .article-title {
+.article-row.state-seen:not(.selected) .article-title {
   color: var(--ink-3);
 }
 
-.read-stamp {
-  padding: 1px 5px;
+/* ─── Lifecycle stamp (New → Seen → Queued → In edition) ──── */
+
+.lifecycle-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 6px 1px 5px;
   border: 1px solid var(--hairline);
   color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.lifecycle-stamp .status-square {
+  width: 7px;
+  height: 7px;
+}
+
+/* New — untouched. Hollow square, ink outline reads as "fresh". */
+.lifecycle-stamp.lc-new {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.lifecycle-stamp.lc-new .status-square {
+  border-color: var(--ink);
+  background: transparent;
+}
+
+/* Seen — quiet/recessive; the user has only glanced at it. */
+.lifecycle-stamp.lc-seen {
+  border-color: var(--hairline);
+  color: var(--ink-3);
+}
+.lifecycle-stamp.lc-seen .status-square {
+  border-color: var(--ink-3);
+  background: var(--ink-3);
+}
+
+/* Queued — the live/armed state: amber, the single accent. */
+.lifecycle-stamp.lc-queued {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.lifecycle-stamp.lc-queued .status-square {
+  border-color: var(--amber);
+  background: var(--amber);
+  animation: queuedPip 480ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* In edition — terminal: solid ink, reads as "committed to press". */
+.lifecycle-stamp.lc-in_edition {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.lifecycle-stamp.lc-in_edition .status-square {
+  border-color: var(--paper);
+  background: var(--paper);
+}
+
+@keyframes queuedPip {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .article-row::before {
@@ -1393,20 +1466,47 @@ a {
 
 /* ─── Masthead nav ────────────────────────────────────────── */
 
+/* Interactive nav: set apart from the tagline by a hard rule, and each link
+   carries a clear default + hover affordance so it reads as clickable. */
 .masthead-nav {
   display: inline-flex;
-  gap: 14px;
+  gap: 16px;
+  align-items: center;
+  padding-left: 18px;
+  border-left: 1px solid var(--rule);
 }
 
 .nav-link {
   position: relative;
-  padding-bottom: 2px;
-  color: var(--ink-3);
+  padding-bottom: 3px;
+  color: var(--ink-2);
+  cursor: pointer;
   transition: color 140ms ease;
 }
 
+/* Resting underline: hairline so links read as actionable, not plain text. */
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--hairline);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    background 140ms ease;
+}
+
 .nav-link:hover {
-  color: var(--ink);
+  color: var(--amber);
+}
+
+.nav-link:hover::after {
+  background: var(--amber);
+  transform: scaleX(1);
 }
 
 .nav-link.active {
@@ -1415,13 +1515,9 @@ a {
 }
 
 .nav-link.active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -3px;
-  height: 2px;
   background: var(--amber);
+  transform: scaleX(1);
+  bottom: -3px;
   animation: underlineIn 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
@@ -2082,7 +2178,17 @@ a {
 
   .masthead-sub {
     flex-wrap: wrap;
-    row-gap: 6px;
+    row-gap: 10px;
+  }
+
+  /* When the row wraps, the nav drops to its own line: swap the left rule
+     for a top rule so the tagline/nav grouping still reads cleanly. */
+  .masthead-nav {
+    padding-left: 0;
+    padding-top: 8px;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+    flex-basis: 100%;
   }
 
   .mobile-tabs {
