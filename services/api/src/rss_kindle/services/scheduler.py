@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -35,7 +35,7 @@ def parse_db_datetime(value: str | None) -> datetime | None:
     return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
 
 
-def feed_due(feed: Mapping[str, Any], now: datetime) -> bool:
+def feed_due(feed: Any, now: datetime) -> bool:
     last = parse_db_datetime(feed["last_polled"])
     if last is None:
         return True
@@ -97,7 +97,7 @@ class Scheduler:
                 "SELECT id, url, etag, last_modified, last_polled, "
                 "poll_interval_minutes, consecutive_failures FROM feeds"
             )
-            rows = await cur.fetchall()
+            rows = list(await cur.fetchall())
         due = [dict(r) for r in rows if feed_due(r, now)]
         if not due:
             return
