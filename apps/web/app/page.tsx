@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArticleList } from "../components/ArticleList";
 import { DigestQueue } from "../components/DigestQueue";
 import { FeedSidebar } from "../components/FeedSidebar";
+import { Masthead } from "../components/Masthead";
 import { api, type Article, type Feed } from "../lib/api";
 
 export default function Home() {
@@ -11,6 +12,7 @@ export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [lastPoll, setLastPoll] = useState<string | null>(null);
 
   const refreshFeeds = useCallback(async () => {
     setFeeds(await api.listFeeds());
@@ -43,6 +45,7 @@ export default function Home() {
 
   const pollAll = async () => {
     await api.refreshAll();
+    setLastPoll(new Date().toISOString());
     await refreshArticles();
   };
 
@@ -60,20 +63,38 @@ export default function Home() {
     [articles, selectedIds],
   );
 
+  const currentFeed = useMemo(
+    () => feeds.find((f) => f.id === selectedFeedId) ?? null,
+    [feeds, selectedFeedId],
+  );
+
   return (
-    <main className="layout">
-      <FeedSidebar
-        feeds={feeds}
-        selectedFeedId={selectedFeedId}
-        onSelect={setSelectedFeedId}
-        onAdd={addFeed}
-        onDelete={deleteFeed}
-        onRefresh={pollAll}
+    <div className="app">
+      <Masthead
+        feedCount={feeds.length}
+        articleCount={articles.length}
+        queueCount={selectedIds.size}
       />
-      <section className="content">
-        <ArticleList articles={articles} selectedIds={selectedIds} onToggle={toggleSelect} />
-      </section>
-      <DigestQueue selected={selectedArticles} onClear={() => setSelectedIds(new Set())} />
-    </main>
+      <main className="layout">
+        <FeedSidebar
+          feeds={feeds}
+          selectedFeedId={selectedFeedId}
+          onSelect={setSelectedFeedId}
+          onAdd={addFeed}
+          onDelete={deleteFeed}
+          onRefresh={pollAll}
+        />
+        <section className="content">
+          <ArticleList
+            articles={articles}
+            selectedIds={selectedIds}
+            onToggle={toggleSelect}
+            currentFeed={currentFeed}
+            lastPoll={lastPoll}
+          />
+        </section>
+        <DigestQueue selected={selectedArticles} onClear={() => setSelectedIds(new Set())} />
+      </main>
+    </div>
   );
 }

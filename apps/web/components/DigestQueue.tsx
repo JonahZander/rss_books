@@ -9,6 +9,8 @@ type Props = {
   onClear: () => void;
 };
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 export function DigestQueue({ selected, onClear }: Props) {
   const [digest, setDigest] = useState<Digest | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,27 +36,86 @@ export function DigestQueue({ selected, onClear }: Props) {
     }
   };
 
+  const count = selected.length;
+  const statusLabel =
+    digest?.status === "ready"
+      ? "Ready · EPUB committed"
+      : digest?.status === "generating"
+        ? "Generating EPUB…"
+        : digest?.status === "pending"
+          ? "Pending"
+          : null;
+
   return (
     <section className="digest-queue">
-      <h3>Digest ({selected.length})</h3>
-      <ul>
-        {selected.map((a) => (
-          <li key={a.id}>{a.title}</li>
-        ))}
-      </ul>
-      <button onClick={() => void send()} disabled={selected.length === 0 || sending}>
-        {sending ? "Building…" : "Build digest"}
-      </button>
-      {error && <p className="error">{error}</p>}
-      {digest && digest.status === "ready" && (
-        <a href={api.downloadDigestUrl(digest.id)} className="download-link">
-          Download {digest.title}.epub
-        </a>
+      <div className="section-head">
+        <span className="eyebrow eyebrow-ink">03 — Dispatch / Digest</span>
+      </div>
+
+      <div className="queue-readout">
+        <span className="queue-count">{pad2(count)}</span>
+        <div className="queue-count-sub">
+          <span className="queue-count-label">Selected</span>
+          <span className="queue-count-hint">{count === 1 ? "article" : "articles"} queued</span>
+        </div>
+      </div>
+
+      {count === 0 ? (
+        <p className="queue-empty">Queue empty · Select articles to compile</p>
+      ) : (
+        <ol className="queue-list">
+          {selected.map((a, i) => (
+            <li key={a.id}>
+              <span className="q-idx">{pad2(i + 1)}</span>
+              <span>{a.title}</span>
+            </li>
+          ))}
+        </ol>
       )}
-      {selected.length > 0 && (
-        <button className="secondary" onClick={onClear}>
-          Clear selection
+
+      <div className="queue-actions">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => void send()}
+          disabled={count === 0 || sending}
+        >
+          <span>{sending ? "Compiling…" : "Compile · EPUB"}</span>
+          <span className="btn-arrow">→</span>
         </button>
+
+        {count > 0 && !sending && (
+          <button type="button" className="btn btn-ghost" onClick={onClear}>
+            <span>Clear queue</span>
+            <span className="btn-arrow">×</span>
+          </button>
+        )}
+      </div>
+
+      {statusLabel && (
+        <div
+          className={`queue-status ${
+            digest?.status === "generating" ? "generating" : digest?.status === "ready" ? "ready" : ""
+          }`}
+        >
+          <div className="queue-status-row">
+            <span>{statusLabel}</span>
+          </div>
+          {digest && (
+            <span style={{ color: "var(--ink-3)", fontSize: 9.5, letterSpacing: "0.1em" }}>
+              Ref&nbsp;#{String(digest.id).padStart(4, "0")} · {digest.title}
+            </span>
+          )}
+        </div>
+      )}
+
+      {error && <p className="article-body-error">⚠ {error}</p>}
+
+      {digest && digest.status === "ready" && (
+        <a href={api.downloadDigestUrl(digest.id)} className="queue-download" download>
+          <span>Download · {digest.title}.epub</span>
+          <span className="queue-download-arrow">↓</span>
+        </a>
       )}
     </section>
   );

@@ -43,3 +43,20 @@ services/api/data/
 
 # Brainstorm / agent scratch
 .superpowers/
+
+# Playwright MCP scratch
+.playwright-mcp/
+
+# Container/host mount artifacts (dev-container /dev/null masks)
+/.bashrc
+/.bash_profile
+/.profile
+/.zshrc
+/.zprofile
+/.gitconfig
+/.gitmodules
+/.ripgreprc
+/.mcp.json
+/.idea
+/.vscode
+/.claude
