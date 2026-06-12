@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.metadata
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 
 from rss_kindle.config import get_settings
 from rss_kindle.db import Database
@@ -49,7 +51,21 @@ def create_app(db_path: Path | None = None) -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        return {"status": "ok"}
+        try:
+            async with db.connect() as conn:
+                await conn.execute("SELECT 1")
+            db_status = "ok"
+        except Exception as exc:
+            db_status = f"error: {exc}"
+        try:
+            version = importlib.metadata.version("rss-kindle-api")
+        except importlib.metadata.PackageNotFoundError:
+            version = "unknown"
+        return {
+            "status": "ok" if db_status == "ok" else "degraded",
+            "version": version,
+            "db": db_status,
+        }
 
     from rss_kindle.api.articles import router as articles_router
     from rss_kindle.api.digests import router as digests_router
@@ -64,6 +80,32 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     app.include_router(digests_router)
     app.include_router(settings_router)
     app.include_router(opds_router)
+
+    static_dir = settings.static_dir
+    if static_dir is not None and static_dir.is_dir():
+        static_root = static_dir.resolve()
+
+        # Next prefetches routes with HEAD, so register both methods
+        @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+        async def spa(path: str) -> FileResponse:
+            index = static_root / "index.html"
+            if not path:
+                return FileResponse(index)
+            candidate = (static_root / path).resolve()
+            if not candidate.is_relative_to(static_root):
+                return FileResponse(index)
+            if candidate.is_file():
+                return FileResponse(candidate)
+            with_html = static_root / f"{path}.html"
+            if with_html.is_file():
+                return FileResponse(with_html)
+            nested_index = candidate / "index.html"
+            if nested_index.is_file():
+                return FileResponse(nested_index)
+            return FileResponse(index)
+
+        logger = logging.getLogger(__name__)
+        logger.info("serving static web app from %s", static_root)
 
     return app
 

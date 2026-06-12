@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     db_path: Path = Field(default=Path("./data/rss_kindle.db"))
     epub_dir: Path = Field(default=Path("./data/epubs"))
     scheduler_enabled: bool = True
+    # Directory holding the static-exported web app; when set, the API
+    # serves the UI same-origin with an SPA fallback (single container).
+    static_dir: Path | None = None
 
     # Optional overrides for users who keep SMTP credentials outside the DB.
     smtp_host: str | None = None

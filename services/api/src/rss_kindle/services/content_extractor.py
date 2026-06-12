@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from lxml import html as lxml_html
-
 import trafilatura
+from lxml import html as lxml_html
 
 from rss_kindle.services.sanitizer import sanitize
 
