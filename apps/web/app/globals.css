@@ -763,12 +763,139 @@ a {
 }
 
 .article-body-content {
-  white-space: pre-wrap;
   font-family: var(--font-body);
   font-size: 13.5px;
   line-height: 1.7;
   color: var(--ink);
   max-width: 68ch;
+}
+
+.article-body-content.plain {
+  white-space: pre-wrap;
+}
+
+/* ─── Extracted-article prose (server-sanitized HTML) ─────── */
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1.2em 0 0.4em;
+}
+
+.prose h1 {
+  font-size: 18px;
+}
+.prose h2 {
+  font-size: 16px;
+}
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-size: 14px;
+}
+
+.prose p {
+  margin: 0 0 0.9em;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--hairline);
+}
+
+.prose pre {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 1em 0;
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: rgba(14, 15, 17, 0.06);
+  padding: 1px 4px;
+}
+
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+
+.prose blockquote {
+  margin: 1em 0;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--ink);
+  color: var(--ink-2);
+  font-style: italic;
+}
+
+.prose table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin: 1em 0;
+  display: block;
+  overflow-x: auto;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--hairline);
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.prose th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--paper);
+}
+
+.prose a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose ul,
+.prose ol {
+  margin: 0.6em 0;
+  padding-left: 1.4em;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  margin: 1.2em 0;
+}
+
+.prose figure {
+  margin: 1em 0;
+}
+
+.prose figcaption {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  margin-top: 4px;
 }
 
 .article-body-loading {

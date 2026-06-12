@@ -124,11 +124,18 @@ export function ArticleRow({ article, index, total, selected, onToggleSelect }: 
           </div>
           {loading && <p className="article-body-loading">Fetching full content</p>}
           {error && <p className="article-body-error">⚠ {error}</p>}
-          {detail && (
-            <div className="article-body-content">
-              {detail.full_content || detail.summary || "(no content available)"}
-            </div>
-          )}
+          {detail &&
+            (detail.full_content ? (
+              // full_content is sanitized server-side (nh3 allowlist)
+              <div
+                className="article-body-content prose"
+                dangerouslySetInnerHTML={{ __html: detail.full_content }}
+              />
+            ) : (
+              <div className="article-body-content plain">
+                {plainSummary(detail.summary) || "(no content available)"}
+              </div>
+            ))}
         </div>
       )}
     </article>
