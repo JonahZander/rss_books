@@ -28,6 +28,8 @@ def test_queue_add_list_remove(tmp_path):
         assert r.status_code == 200
         r = client.post(f"/api/queue/{ids[0]}")
         assert [a["id"] for a in r.json()] == [ids[1], ids[0]]
+        # the queue endpoint reports the derived lifecycle state too
+        assert all(a["state"] == "queued" for a in r.json())
 
         # idempotent re-add keeps position
         r = client.post(f"/api/queue/{ids[1]}")

@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import feedparser
 
 from rss_kindle.db import Database
+from rss_kindle.services.sanitizer import sanitize
 
 
 def placeholder_title(url: str) -> str:
@@ -27,6 +28,20 @@ class ParsedEntry:
     url: str
     summary: str
     published_at: datetime | None
+    # Full article HTML when the feed embeds it (<content:encoded> / Atom
+    # <content>). Lets us skip the on-demand page fetch entirely.
+    content: str | None = None
+
+
+def _longest_content(entry: object) -> str | None:
+    """feedparser exposes entry.content as a list of {'value', 'type', ...}
+    dicts; pick the one with the longest value (some feeds carry both a teaser
+    and the full body). Returns None when no content is present."""
+    items = entry.get("content")  # type: ignore[attr-defined]
+    if not items:
+        return None
+    best = max((c.get("value", "") for c in items), key=len, default="")
+    return best or None
 
 
 @dataclass
@@ -62,6 +77,7 @@ def parse_feed(content: bytes) -> ParsedFeed:
                     cast(struct_time | None, e.get("published_parsed"))
                     or cast(struct_time | None, e.get("updated_parsed"))
                 ),
+                content=_longest_content(e),
             )
         )
     return ParsedFeed(title=title, site_url=site_url, entries=entries)
@@ -81,16 +97,34 @@ async def poll_feed_content(db: Database, feed_id: int, content: bytes) -> int:
                     "UPDATE feeds SET title = ? WHERE id = ?", (parsed.title, feed_id)
                 )
         for entry in parsed.entries:
+            # Many feeds embed the whole article (<content:encoded> / Atom
+            # <content>); when it's meaningfully fuller than the summary we
+            # sanitize and store it now so the article is readable without an
+            # on-demand page fetch (which modern WAFs often 403). The length
+            # guard rejects teaser-only content:encoded. We only sanitize —
+            # never run trafilatura — since feed content is already article
+            # HTML, and the nh3 allowlist is the contract for all stored HTML.
+            full_content: str | None = None
+            if (
+                entry.content
+                and len(entry.content) > len(entry.summary)
+                and len(entry.content) > 200
+            ):
+                full_content = sanitize(entry.content)
             try:
                 await conn.execute(
-                    "INSERT INTO articles (feed_id, guid, title, url, summary, published_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO articles "
+                    "(feed_id, guid, title, url, summary, full_content, published_at, fetched_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, "
+                    + ("CURRENT_TIMESTAMP" if full_content else "NULL")
+                    + ")",
                     (
                         feed_id,
                         entry.guid,
                         entry.title,
                         entry.url,
                         entry.summary,
+                        full_content,
                         entry.published_at.isoformat() if entry.published_at else None,
                     ),
                 )

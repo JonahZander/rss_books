@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Full Content Feed</title>
+    <link>https://full.example/</link>
+    <description>A feed that embeds whole articles.</description>
+    <item>
+      <title>Embedded Article</title>
+      <link>https://full.example/embedded</link>
+      <guid>https://full.example/embedded</guid>
+      <pubDate>Mon, 15 Apr 2026 10:00:00 GMT</pubDate>
+      <description>Short teaser summary.</description>
+      <content:encoded><![CDATA[<p>This is the full article body delivered right inside the feed via content:encoded. It is substantially longer than the teaser summary, so the poller should store it as full_content without ever fetching the page.</p><p>It also carries <a href="https://full.example/more" onclick="evil()">a link</a> and a <script>alert(1)</script> that the sanitizer must scrub before storage.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>Teaser Only Article</title>
+      <link>https://full.example/teaser</link>
+      <guid>https://full.example/teaser</guid>
+      <pubDate>Mon, 15 Apr 2026 09:00:00 GMT</pubDate>
+      <description>This summary is actually the longer of the two fields for this entry, describing the piece in full sentences.</description>
+      <content:encoded><![CDATA[<p>Read more.</p>]]></content:encoded>
+    </item>
+  </channel>
+</rss>

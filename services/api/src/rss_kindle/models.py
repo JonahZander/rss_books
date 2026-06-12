@@ -74,6 +74,9 @@ class Article(BaseModel):
     published_at: datetime | None = None
     read_at: datetime | None = None
     has_full_content: bool = False
+    # Lifecycle, derived in SQL (see ARTICLE_COLUMNS): new → seen (read) →
+    # queued → in_edition. Purely additive; read_at semantics are unchanged.
+    state: Literal["new", "seen", "queued", "in_edition"] = "new"
 
 
 class ArticleDetail(Article):

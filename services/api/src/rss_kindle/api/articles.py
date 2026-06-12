@@ -1,27 +1,48 @@
 from __future__ import annotations
 
-import httpx
+from curl_cffi.requests import AsyncSession
+from curl_cffi.requests.exceptions import HTTPError, RequestException
 from fastapi import APIRouter, HTTPException, Request
 
-from rss_kindle.config import USER_AGENT
 from rss_kindle.models import Article, ArticleDetail
 from rss_kindle.services.content_extractor import extract_html
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
 
+
+def article_state_sql(prefix: str = "articles.") -> str:
+    """The derived `state` column, computed in ONE place so every Article
+    response (list/detail here, the queue in queue.py) agrees.
+
+    `state` layers queue/edition membership and the read flag over the raw row
+    so the triage desk can show an article's lifecycle. Precedence, highest
+    first: in an edition > queued > seen (read) > new. `prefix` qualifies the
+    article's id/read_at for callers that alias the table (e.g. "a.").
+    """
+    return (
+        "CASE "
+        f"WHEN EXISTS (SELECT 1 FROM digest_articles da WHERE da.article_id = {prefix}id) "
+        "THEN 'in_edition' "
+        f"WHEN EXISTS (SELECT 1 FROM digest_queue dq WHERE dq.article_id = {prefix}id) "
+        "THEN 'queued' "
+        f"WHEN {prefix}read_at IS NOT NULL THEN 'seen' "
+        "ELSE 'new' "
+        "END AS state"
+    )
+
+
 ARTICLE_COLUMNS = (
     "id, feed_id, title, url, summary, published_at, read_at, "
-    "(full_content IS NOT NULL) AS has_full_content"
+    "(full_content IS NOT NULL) AS has_full_content, " + article_state_sql()
 )
 
 
 async def fetch_url_bytes(url: str) -> bytes:
-    async with httpx.AsyncClient(
-        timeout=20.0,
-        follow_redirects=True,
-        headers={"User-Agent": USER_AGENT},
-    ) as client:
-        r = await client.get(url)
+    # Modern WAFs fingerprint the TLS handshake (JA3/JA4) and reject any
+    # non-browser client regardless of User-Agent, so we impersonate Chrome
+    # at the transport layer rather than just spoofing the UA header.
+    async with AsyncSession() as session:
+        r = await session.get(url, impersonate="chrome", timeout=20, allow_redirects=True)
         r.raise_for_status()
         return r.content
 
@@ -100,14 +121,15 @@ async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail
 
     try:
         raw = await fetch_url_bytes(row["url"])
-    except httpx.HTTPStatusError as e:
-        # bot-walled sites (403/429/…) are an upstream refusal, not our crash
+    except HTTPError as e:
+        # bot-walled sites (403/429/…) are an upstream refusal, not our crash.
+        # raise_for_status() attaches the response; guard in case it's absent.
+        status = e.response.status_code if e.response is not None else "error"
         raise HTTPException(
             status_code=502,
-            detail=f"the site returned HTTP {e.response.status_code} — "
-            "try the original link instead",
+            detail=f"the site returned HTTP {status} — try the original link instead",
         ) from e
-    except httpx.HTTPError as e:
+    except RequestException as e:
         raise HTTPException(status_code=502, detail=f"fetch failed: {e}") from e
     content = extract_html(raw, url=row["url"])
     if not content:

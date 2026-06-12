@@ -5,13 +5,14 @@ import sqlite3
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Request
 
+from rss_kindle.api.articles import article_state_sql
 from rss_kindle.models import Article, QueueUpdate
 
 router = APIRouter(prefix="/api/queue", tags=["queue"])
 
 QUEUE_SELECT = (
     "SELECT a.id, a.feed_id, a.title, a.url, a.summary, a.published_at, a.read_at, "
-    "(a.full_content IS NOT NULL) AS has_full_content "
+    "(a.full_content IS NOT NULL) AS has_full_content, " + article_state_sql("a.") + " "
     "FROM digest_queue q JOIN articles a ON a.id = q.article_id "
     "ORDER BY q.position ASC"
 )
