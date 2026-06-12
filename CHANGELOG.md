@@ -4,6 +4,49 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org/).
 
+## [1.1.0] — 2026-06-12
+
+Feed groups & split editions — the
+[feed-groups spec](docs/superpowers/specs/2026-06-12-feed-groups-design.md).
+
+### Added
+
+- **Feed groups** (folder model, migration 7): a `groups` table and
+  `feeds.group_id`; collapsible sidebar sections with rolled-up unread
+  badges, group filtering, inline rename/dissolve (feeds survive), a
+  move-to-group picker on every feed row, and a "New group" form
+- **Split compiles**: choose *Combined* or *One per group* at compile time
+  (remembered locally) — per-group mode presses one edition per group,
+  titled `<date> — <Group>`, with the Ungrouped bucket last; the press
+  deadline gets the same choice (`deadline_split` in Settings)
+- **Group-sectioned TOC**: combined editions section their table of contents
+  by group (groups in queue order, Ungrouped last, feed names in bylines);
+  per-group editions keep per-feed sections; no groups ⇒ the 1.0 shape
+- **OPML folders**: import maps top-level folders to groups (deep nesting
+  flattens; existing feeds adopt a folder only while ungrouped — re-import
+  is the upgrade path); export nests feeds under their group
+- **JSON feed lists**: import/export `{"group name": ["feed url", …]}` with
+  `"ungrouped"` reserved (`POST /api/feeds/import-json`,
+  `GET /api/feeds/export.json`); titles default to the hostname and adopt
+  the feed's own `<title>` on first poll unless renamed
+- `GET /api/articles?group_id=` filter (`0` = ungrouped feeds)
+
+### Fixed
+
+- Fetching the full text of articles on bot-walled sites (e.g. openai.com)
+  returned an unhandled **500**; it is now a **502** carrying the upstream
+  status, and the article keeps its summary + original link. All outbound
+  fetches (feeds, articles, images) share one browser-shaped User-Agent —
+  with `rss-kindle-selector` kept in the string — so UA-only bot filters
+  no longer refuse us
+- EPUB filenames are sanitized; titles containing `/` or `:` (possible via
+  custom titles, easier via group suffixes) can no longer break the build
+
+### Changed
+
+- `POST /api/digests` returns a **list** of digests (length 1 in combined
+  mode); the bundled web client is updated in step
+
 ## [1.0.0] — 2026-06-12
 
 The 1.0 release: the full

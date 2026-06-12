@@ -27,9 +27,13 @@ gap. The full "why not KindleEar / KTool / Calibre?" answer lives in
   The queue lives server-side — triage on your phone, compile at your desk.
   Nothing is ever sent that you didn't pick.
 - **Editions, not streams.** Output is a finite, dated EPUB issue with a
-  cover, a table of contents sectioned by source, bylines, reading times,
-  embedded images (downscaled for e-ink), real tables and code blocks, and a
+  cover, a sectioned table of contents, bylines, reading times, embedded
+  images (downscaled for e-ink), real tables and code blocks, and a
   stylesheet tuned for 6–7″ greyscale screens.
+- **Group your feeds.** Organize feeds into groups ("AI", "Gaming", …) and
+  choose at press time: one combined edition with a chapter section per
+  group, or **one edition per group**. Import/export grouping as OPML
+  folders or a plain JSON feed list (`{"group": ["feed url", …]}`).
 - **Any reader.** Kindle gets editions by send-to-Kindle email (with an
   in-app setup wizard). KOReader — including jailbroken Kindles —
   Xteink/CrossPoint, Kobo, Boox and Calibre pull them from the built-in OPDS
@@ -90,6 +94,14 @@ variables for operators:
 | `STATIC_DIR` | unset (`/app/static` in Docker) | Static web app to serve same-origin |
 | `SCHEDULER_ENABLED` | `1` | Set `0` to disable background polling entirely |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | unset | Override stored SMTP settings (keep credentials out of the DB) |
+
+## Limits worth knowing
+
+Article text is fetched server-side. Sites behind aggressive bot walls
+(Cloudflare-style TLS fingerprinting — openai.com, for example) refuse
+non-browser clients no matter what; those articles show the upstream status
+in the UI and fall back to the feed's own summary in editions, with the
+original link one tap away.
 
 ## Security posture
 
