@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -9,6 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from rss_kindle.config import get_settings
 from rss_kindle.db import Database
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 def create_app(db_path: Path | None = None) -> FastAPI:

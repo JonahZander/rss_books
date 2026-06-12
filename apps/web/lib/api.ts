@@ -24,8 +24,9 @@ export type ArticleDetail = Article & { full_content: string | null };
 export type Digest = {
   id: number;
   title: string;
-  status: "pending" | "generating" | "ready";
+  status: "pending" | "generating" | "ready" | "failed";
   epub_path: string | null;
+  error: string | null;
   created_at: string;
 };
 

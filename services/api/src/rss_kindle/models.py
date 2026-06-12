@@ -43,4 +43,5 @@ class Digest(BaseModel):
     title: str
     status: str
     epub_path: str | None = None
+    error: str | None = None
     created_at: datetime

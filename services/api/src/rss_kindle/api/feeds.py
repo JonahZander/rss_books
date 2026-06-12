@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 
 import httpx
@@ -9,6 +10,8 @@ from rss_kindle.models import Feed, FeedCreate
 from rss_kindle.services.feed_poller import poll_feed_content
 
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
+
+logger = logging.getLogger(__name__)
 
 
 async def fetch_feed_bytes(url: str) -> bytes:
@@ -49,7 +52,8 @@ async def create_feed(payload: FeedCreate, request: Request) -> Feed:
             row = await cur.fetchone()
     except sqlite3.IntegrityError as e:
         raise HTTPException(status_code=409, detail="feed with this url already exists") from e
-    assert row is not None
+    if row is None:
+        raise RuntimeError(f"feed {feed_id} not found after insert")
     return Feed.model_validate(dict(row))
 
 
@@ -82,10 +86,13 @@ async def refresh_all_feeds(request: Request) -> dict[str, int]:
         cur = await conn.execute("SELECT id, url FROM feeds")
         rows = await cur.fetchall()
     total = 0
+    errors = 0
     for row in rows:
         try:
             content = await fetch_feed_bytes(row["url"])
             total += await poll_feed_content(db, row["id"], content)
-        except Exception:
-            continue
-    return {"inserted": total}
+        except Exception as exc:
+            errors += 1
+            logger.warning("refresh failed for feed %d (%s): %s", row["id"], row["url"], exc)
+    logger.info("refreshed %d feeds: %d new articles, %d errors", len(rows), total, errors)
+    return {"inserted": total, "errors": errors}

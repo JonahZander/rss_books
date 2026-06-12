@@ -42,6 +42,32 @@ def test_create_digest_generates_epub(tmp_path, monkeypatch):
         assert len(r.content) > 1000
 
 
+def test_digest_build_failure_sets_failed_status(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        with patch(
+            "rss_kindle.api.digests.build_digest_epub",
+            side_effect=RuntimeError("boom: disk full"),
+        ):
+            r = client.post("/api/digests", json={"article_ids": ids})
+            assert r.status_code == 201
+            digest_id = r.json()["id"]
+
+        digest = {}
+        for _ in range(30):
+            digest = client.get(f"/api/digests/{digest_id}").json()
+            if digest["status"] in {"ready", "failed"}:
+                break
+            time.sleep(0.1)
+        assert digest["status"] == "failed"
+        assert "boom: disk full" in digest["error"]
+
+        r = client.get(f"/api/digests/{digest_id}/download")
+        assert r.status_code == 409
+
+
 def test_list_digests(tmp_path, monkeypatch):
     monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
     app = create_app(db_path=tmp_path / "t.db")

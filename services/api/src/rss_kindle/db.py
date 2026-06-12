@@ -59,8 +59,13 @@ async def _m1_baseline(conn: aiosqlite.Connection) -> None:
 
 # Every schema change ships as a new migration appended here. Migrations run in
 # order inside Database.init(); the applied version is tracked in PRAGMA user_version.
+async def _m2_digest_failure(conn: aiosqlite.Connection) -> None:
+    await conn.execute("ALTER TABLE digests ADD COLUMN error TEXT")
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
+    ("digest failure state", _m2_digest_failure),
 ]
 
 

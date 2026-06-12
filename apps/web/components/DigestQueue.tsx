@@ -24,10 +24,13 @@ export function DigestQueue({ selected, onClear }: Props) {
       const d = await api.createDigest(selected.map((a) => a.id));
       setDigest(d);
       let current = d;
-      while (current.status !== "ready") {
+      while (current.status === "pending" || current.status === "generating") {
         await new Promise((r) => setTimeout(r, 1000));
         current = await api.getDigest(d.id);
         setDigest(current);
+      }
+      if (current.status === "failed") {
+        setError(current.error ?? "digest build failed");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "failed");

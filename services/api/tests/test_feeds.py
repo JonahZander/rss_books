@@ -48,3 +48,20 @@ def test_refresh_feed_fetches_and_stores(tmp_path):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
             assert r.status_code == 200
             assert r.json()["inserted"] == 2
+
+
+def test_refresh_all_reports_errors(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        client.post("/api/feeds", json={"url": "https://ok.example.com/rss", "title": "OK"})
+        client.post("/api/feeds", json={"url": "https://bad.example.com/rss", "title": "Bad"})
+
+        async def fake_fetch(url: str) -> bytes:
+            if "bad" in url:
+                raise RuntimeError("connection refused")
+            return FIXTURE.read_bytes()
+
+        with patch("rss_kindle.api.feeds.fetch_feed_bytes", side_effect=fake_fetch):
+            r = client.post("/api/feeds/refresh")
+        assert r.status_code == 200
+        assert r.json() == {"inserted": 2, "errors": 1}
