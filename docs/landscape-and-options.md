@@ -4,6 +4,7 @@
 
 **Researched:** 2026-06-11. Stars/activity were checked against the GitHub API that day; prices and policies come from the linked pages and will rot — trust the links over this text.
 **Companion:** the [v2 design spec](superpowers/specs/2026-06-11-rss-kindle-selector-v2-design.md) turns the conclusions here into a concrete plan.
+**Evidence base:** the full per-service research catalog (every tool, feature set, price, and weakness found) lives in [`docs/research/2026-06-11-rss-to-ereader-services.md`](research/2026-06-11-rss-to-ereader-services.md).
 
 ## The short version
 
