@@ -108,3 +108,32 @@ def test_epub_without_cover_still_builds(tmp_path: Path) -> None:
 def test_reading_minutes() -> None:
     assert _reading_minutes("<p>" + "word " * 460 + "</p>") == 2
     assert _reading_minutes("<p>short</p>") == 1
+
+
+def test_toc_sections_by_group_when_articles_carry_groups(tmp_path: Path) -> None:
+    articles = [
+        DigestArticle(title="One", source="Feed W", url="https://w.example/1", html="<p>w</p>",
+                      group="AI"),
+        DigestArticle(title="Two", source="Feed X", url="https://x.example/2", html="<p>x</p>",
+                      group="AI"),
+        DigestArticle(title="Loose", source="Feed Y", url="https://y.example/3", html="<p>y</p>"),
+        DigestArticle(title="Four", source="Feed Z", url="https://z.example/4", html="<p>z</p>",
+                      group="Gaming"),
+    ]
+    out = build_digest_epub(title="t", articles=articles, output_path=tmp_path / "g.epub")
+    with zipfile.ZipFile(out) as z:
+        nav = z.read("EPUB/nav.xhtml").decode("utf-8")
+        # groups in first-appearance order; the Ungrouped section always last,
+        # even though the loose article sits third in queue order
+        assert nav.index("AI") < nav.index("Gaming") < nav.index("Ungrouped")
+        assert "Feed W" not in nav  # feeds are no longer section heads…
+        chap1 = z.read("EPUB/chap_001.xhtml").decode("utf-8")
+        assert "Feed W" in chap1  # …but stay in the byline
+
+
+def test_toc_sections_by_feed_when_no_groups(tmp_path: Path) -> None:
+    out = _build(tmp_path)
+    with zipfile.ZipFile(out) as z:
+        nav = z.read("EPUB/nav.xhtml").decode("utf-8")
+        assert nav.index("Feed One") < nav.index("Feed Two")  # the 1.0 shape
+        assert "Ungrouped" not in nav

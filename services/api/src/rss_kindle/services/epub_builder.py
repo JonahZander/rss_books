@@ -20,6 +20,9 @@ class DigestArticle:
     published_at: str | None = None
     author: str | None = None
     is_summary_fallback: bool = False
+    # Feed-group name for combined editions: when any article carries one, the
+    # TOC sections by group instead of by feed. None everywhere = 1.0 shape.
+    group: str | None = None
 
 
 # Tuned for 6-7" greyscale e-ink: generic serif stack (no embedded fonts —
@@ -168,13 +171,20 @@ def build_digest_epub(
     title_page.add_item(css)
     book.add_item(title_page)
 
+    grouped = any(a.group for a in articles)
+
+    def _section_of(article: DigestArticle) -> str:
+        if grouped:
+            return article.group or "Ungrouped"
+        return article.source
+
     chapters: list[tuple[str, epub.EpubHtml]] = []
     for i, art in enumerate(articles, start=1):
         chap = epub.EpubHtml(title=art.title, file_name=f"chap_{i:03d}.xhtml", lang="en")
         chap.set_content(_chapter_body(art, i, total))
         chap.add_item(css)
         book.add_item(chap)
-        chapters.append((art.source, chap))
+        chapters.append((_section_of(art), chap))
 
     for n, image in enumerate((images or {}).values(), start=1):
         book.add_item(
@@ -200,9 +210,13 @@ def build_digest_epub(
     colophon.add_item(css)
     book.add_item(colophon)
 
-    # Sectioned TOC grouped by feed, sections in first-appearance (queue) order.
+    # Sectioned TOC in first-appearance (queue) order: by feed normally, by
+    # group when articles carry one — with the Ungrouped section always last.
+    section_names = list(dict.fromkeys(s for s, _ in chapters))
+    if grouped and "Ungrouped" in section_names:
+        section_names = [s for s in section_names if s != "Ungrouped"] + ["Ungrouped"]
     book.toc = [
-        (epub.Section(source), [c for s, c in chapters if s == source]) for source in sources
+        (epub.Section(name), [c for s, c in chapters if s == name]) for name in section_names
     ]
     book.add_item(epub.EpubNcx())
     nav = epub.EpubNav()
