@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch
+from xml.etree import ElementTree as ET
 
 from fastapi.testclient import TestClient
 
@@ -169,12 +170,12 @@ def test_opml_import_dedupes_and_export_roundtrips(tmp_path):
             "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
         )
         assert r.status_code == 200
-        assert r.json() == {"added": 2, "skipped": 0}
+        assert r.json() == {"added": 2, "skipped": 0, "regrouped": 0}
 
         r = client.post(
             "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
         )
-        assert r.json() == {"added": 0, "skipped": 2}
+        assert r.json() == {"added": 0, "skipped": 2, "regrouped": 0}
 
         feeds = client.get("/api/feeds").json()
         assert {f["title"] for f in feeds} == {"One", "Two"}
@@ -187,6 +188,99 @@ def test_opml_import_dedupes_and_export_roundtrips(tmp_path):
 
         r = client.post("/api/feeds/import", files={"file": ("x.opml", "<not-xml", "text/xml")})
         assert r.status_code == 400
+
+
+OPML_WITH_FOLDERS = """<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>subs</title></head>
+  <body>
+    <outline text="AI" title="AI">
+      <outline text="Feed A" type="rss" xmlUrl="https://a.example/rss"/>
+      <outline text="Sub">
+        <outline text="Feed B" type="rss" xmlUrl="https://b.example/rss"/>
+      </outline>
+    </outline>
+    <outline text="Feed C" type="rss" xmlUrl="https://c.example/rss"/>
+  </body>
+</opml>"""
+
+
+def _import_opml(client: TestClient, body: str) -> dict:
+    r = client.post(
+        "/api/feeds/import", files={"file": ("subs.opml", body, "text/xml")}
+    )
+    assert r.status_code == 200
+    return r.json()
+
+
+def test_opml_import_folders_become_groups(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        assert _import_opml(client, OPML_WITH_FOLDERS) == {
+            "added": 3,
+            "skipped": 0,
+            "regrouped": 0,
+        }
+        groups = client.get("/api/groups").json()
+        assert [g["name"] for g in groups] == ["AI"]
+        feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
+        ai_id = groups[0]["id"]
+        assert feeds["https://a.example/rss"]["group_id"] == ai_id
+        # nesting deeper than one level flattens into the top folder
+        assert feeds["https://b.example/rss"]["group_id"] == ai_id
+        assert feeds["https://c.example/rss"]["group_id"] is None
+
+
+def test_opml_reimport_adopts_only_ungrouped(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        _import_opml(client, OPML_WITH_FOLDERS)
+        other = client.post("/api/groups", json={"name": "Other"}).json()
+        feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
+        client.patch(
+            f"/api/feeds/{feeds['https://b.example/rss']['id']}",
+            json={"group_id": other["id"]},
+        )
+        client.patch(f"/api/feeds/{feeds['https://a.example/rss']['id']}", json={"group_id": None})
+
+        # A (now ungrouped) adopts the file's folder; B's manual choice survives
+        assert _import_opml(client, OPML_WITH_FOLDERS) == {
+            "added": 0,
+            "skipped": 3,
+            "regrouped": 1,
+        }
+        feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
+        ai_id = next(g["id"] for g in client.get("/api/groups").json() if g["name"] == "AI")
+        assert feeds["https://a.example/rss"]["group_id"] == ai_id
+        assert feeds["https://b.example/rss"]["group_id"] == other["id"]
+
+
+def test_opml_export_nests_groups_and_roundtrips(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ai = client.post("/api/groups", json={"name": "AI"}).json()
+        a = client.post("/api/feeds", json={"url": "https://a.example/rss", "title": "Feed A"})
+        client.patch(f"/api/feeds/{a.json()['id']}", json={"group_id": ai["id"]})
+        client.post("/api/feeds", json={"url": "https://c.example/rss", "title": "Feed C"})
+
+        body = client.get("/api/feeds/export.opml").text
+        root = ET.fromstring(body)
+        opml_body = root.find("body")
+        assert opml_body is not None
+        folders = [o for o in opml_body if not o.get("xmlUrl")]
+        assert [f.get("text") for f in folders] == ["AI"]
+        assert [c.get("xmlUrl") for c in folders[0]] == ["https://a.example/rss"]
+        top_level = [o.get("xmlUrl") for o in opml_body if o.get("xmlUrl")]
+        assert top_level == ["https://c.example/rss"]
+
+    app2 = create_app(db_path=tmp_path / "t2.db")
+    with TestClient(app2) as client2:
+        assert _import_opml(client2, body)["added"] == 2
+        groups2 = client2.get("/api/groups").json()
+        assert [g["name"] for g in groups2] == ["AI"]
+        feeds2 = {f["url"]: f for f in client2.get("/api/feeds").json()}
+        assert feeds2["https://a.example/rss"]["group_id"] == groups2[0]["id"]
+        assert feeds2["https://c.example/rss"]["group_id"] is None
 
 
 def test_refresh_all_reports_errors(tmp_path):

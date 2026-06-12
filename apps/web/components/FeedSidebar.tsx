@@ -103,7 +103,8 @@ export function FeedSidebar({
   const importOpml = async (file: File) => {
     try {
       const r = await api.importOpml(file);
-      toast(`OPML import: ${r.added} added, ${r.skipped} skipped`);
+      const regrouped = r.regrouped > 0 ? `, ${r.regrouped} regrouped` : "";
+      toast(`OPML import: ${r.added} added, ${r.skipped} skipped${regrouped}`);
       await onChanged();
     } catch (e) {
       toast(e instanceof Error ? e.message : "import failed", "error");

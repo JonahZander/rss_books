@@ -5,6 +5,7 @@ import sqlite3
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import quoteattr
 
+import aiosqlite
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 
@@ -86,6 +87,62 @@ async def create_feed(payload: FeedCreate, request: Request) -> Feed:
     return Feed.model_validate(dict(row))
 
 
+async def _group_id_for(
+    conn: aiosqlite.Connection, name: str, cache: dict[str, int]
+) -> int:
+    """Resolve a group by name (the column's NOCASE collation makes the match
+    case-insensitive), creating it at the end of the order when missing."""
+    key = name.casefold()
+    if key in cache:
+        return cache[key]
+    cur = await conn.execute("SELECT id FROM groups WHERE name = ?", (name,))
+    row = await cur.fetchone()
+    if row is None:
+        cur = await conn.execute(
+            "INSERT INTO groups (name, position) VALUES "
+            "(?, (SELECT COALESCE(MAX(position), 0) + 1 FROM groups))",
+            (name,),
+        )
+        if cur.lastrowid is None:
+            raise RuntimeError("group insert returned no row id")
+        group_id = cur.lastrowid
+    else:
+        group_id = int(row["id"])
+    cache[key] = group_id
+    return group_id
+
+
+async def _import_feed_rows(
+    db: Database, entries: list[tuple[str, str, str | None, str | None]]
+) -> dict[str, int]:
+    """Insert (url, title, site_url, group_name) rows. Existing feeds are
+    skipped — but adopt the file's group when they are currently ungrouped,
+    so re-importing a subscription file is the upgrade path to grouping."""
+    added = 0
+    skipped = 0
+    regrouped = 0
+    async with db.connect() as conn:
+        cache: dict[str, int] = {}
+        for url, title, site_url, group_name in entries:
+            gid = await _group_id_for(conn, group_name, cache) if group_name else None
+            try:
+                await conn.execute(
+                    "INSERT INTO feeds (url, title, site_url, group_id) VALUES (?, ?, ?, ?)",
+                    (url, title, site_url, gid),
+                )
+                added += 1
+            except sqlite3.IntegrityError:
+                skipped += 1
+                if gid is not None:
+                    cur = await conn.execute(
+                        "UPDATE feeds SET group_id = ? WHERE url = ? AND group_id IS NULL",
+                        (gid, url),
+                    )
+                    regrouped += cur.rowcount
+        await conn.commit()
+    return {"added": added, "skipped": skipped, "regrouped": regrouped}
+
+
 @router.post("/import")
 async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
     content = await file.read()
@@ -94,41 +151,76 @@ async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
     except ET.ParseError as e:
         raise HTTPException(status_code=400, detail=f"not valid OPML: {e}") from e
 
-    added = 0
-    skipped = 0
-    db = request.app.state.db
-    async with db.connect() as conn:
-        for outline in root.iter("outline"):
-            url = outline.get("xmlUrl")
-            if not url:
-                continue
-            title = outline.get("title") or outline.get("text") or url
-            try:
-                await conn.execute(
-                    "INSERT INTO feeds (url, title, site_url) VALUES (?, ?, ?)",
-                    (url, title, outline.get("htmlUrl")),
-                )
-                added += 1
-            except sqlite3.IntegrityError:
-                skipped += 1
-        await conn.commit()
-    logger.info("opml import: %d added, %d skipped", added, skipped)
-    return {"added": added, "skipped": skipped}
+    # OPML folders (outlines without xmlUrl) map to groups; nesting deeper
+    # than one level flattens into the topmost folder.
+    parent_of = {child: parent for parent in root.iter() for child in parent}
+
+    def top_folder_name(node: ET.Element) -> str | None:
+        name: str | None = None
+        current = parent_of.get(node)
+        while current is not None:
+            if current.tag == "outline" and not current.get("xmlUrl"):
+                label = (current.get("title") or current.get("text") or "").strip()
+                if label:
+                    name = label
+            current = parent_of.get(current)
+        return name
+
+    entries: list[tuple[str, str, str | None, str | None]] = []
+    for outline in root.iter("outline"):
+        url = outline.get("xmlUrl")
+        if not url:
+            continue
+        title = outline.get("title") or outline.get("text") or url
+        entries.append((url, title, outline.get("htmlUrl"), top_folder_name(outline)))
+
+    counts = await _import_feed_rows(request.app.state.db, entries)
+    logger.info(
+        "opml import: %d added, %d skipped, %d regrouped",
+        counts["added"],
+        counts["skipped"],
+        counts["regrouped"],
+    )
+    return counts
 
 
 @router.get("/export.opml")
 async def export_opml(request: Request) -> Response:
     db = request.app.state.db
     async with db.connect() as conn:
-        cur = await conn.execute("SELECT url, title, site_url FROM feeds ORDER BY title")
+        # grouped feeds first (group position order), then ungrouped at top level
+        cur = await conn.execute(
+            "SELECT f.url, f.title, f.site_url, g.name AS group_name "
+            "FROM feeds f LEFT JOIN groups g ON g.id = f.group_id "
+            "ORDER BY g.position IS NULL, g.position, f.title"
+        )
         rows = await cur.fetchall()
-    outlines = "\n".join(
-        f"    <outline text={quoteattr(r['title'])} title={quoteattr(r['title'])} "
-        f'type="rss" xmlUrl={quoteattr(r["url"])}'
-        + (f" htmlUrl={quoteattr(r['site_url'])}" if r["site_url"] else "")
-        + "/>"
-        for r in rows
-    )
+
+    def feed_outline(r: aiosqlite.Row) -> str:
+        return (
+            f"<outline text={quoteattr(r['title'])} title={quoteattr(r['title'])} "
+            f'type="rss" xmlUrl={quoteattr(r["url"])}'
+            + (f" htmlUrl={quoteattr(r['site_url'])}" if r["site_url"] else "")
+            + "/>"
+        )
+
+    chunks: list[str] = []
+    open_group: str | None = None
+    for r in rows:
+        if r["group_name"] != open_group:
+            if open_group is not None:
+                chunks.append("    </outline>")
+            open_group = r["group_name"]
+            if open_group is not None:
+                chunks.append(
+                    f"    <outline text={quoteattr(open_group)} "
+                    f"title={quoteattr(open_group)}>"
+                )
+        chunks.append(("      " if open_group else "    ") + feed_outline(r))
+    if open_group is not None:
+        chunks.append("    </outline>")
+    outlines = "\n".join(chunks)
+
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<opml version="2.0">\n'

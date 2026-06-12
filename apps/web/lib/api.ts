@@ -154,7 +154,7 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file);
     return fetch(`${BASE}/api/feeds/import`, { method: "POST", body: fd }).then((r) =>
-      j<{ added: number; skipped: number }>(r),
+      j<{ added: number; skipped: number; regrouped: number }>(r),
     );
   },
   exportOpmlUrl: () => `${BASE}/api/feeds/export.opml`,
