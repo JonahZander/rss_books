@@ -4,7 +4,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 
 from rss_kindle.models import Article, ArticleDetail
-from rss_kindle.services.content_extractor import extract_markdown
+from rss_kindle.services.content_extractor import extract_html
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
 
@@ -78,15 +78,15 @@ async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail
     if row is None:
         raise HTTPException(status_code=404, detail="article not found")
 
-    html = await fetch_url_bytes(row["url"])
-    markdown = extract_markdown(html, url=row["url"])
-    if not markdown:
+    raw = await fetch_url_bytes(row["url"])
+    content = extract_html(raw, url=row["url"])
+    if not content:
         raise HTTPException(status_code=422, detail="could not extract article content")
 
     async with db.connect() as conn:
         await conn.execute(
             "UPDATE articles SET full_content = ?, fetched_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (markdown, article_id),
+            (content, article_id),
         )
         await conn.commit()
 

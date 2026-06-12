@@ -63,9 +63,16 @@ async def _m2_digest_failure(conn: aiosqlite.Connection) -> None:
     await conn.execute("ALTER TABLE digests ADD COLUMN error TEXT")
 
 
+async def _m3_html_content(conn: aiosqlite.Connection) -> None:
+    # Content storage switched from markdown to sanitized HTML; cached
+    # extractions are invalidated and re-fetched on demand.
+    await conn.execute("UPDATE articles SET full_content = NULL, fetched_at = NULL")
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
     ("digest failure state", _m2_digest_failure),
+    ("html content reset", _m3_html_content),
 ]
 
 
