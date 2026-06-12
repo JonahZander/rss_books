@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import logging
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import aiosqlite
 
-SCHEMA = """
+logger = logging.getLogger(__name__)
+
+SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS feeds (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT UNIQUE NOT NULL,
@@ -47,6 +50,19 @@ CREATE TABLE IF NOT EXISTS digest_articles (
 );
 """
 
+Migration = Callable[[aiosqlite.Connection], Awaitable[None]]
+
+
+async def _m1_baseline(conn: aiosqlite.Connection) -> None:
+    await conn.executescript(SCHEMA_V1)
+
+
+# Every schema change ships as a new migration appended here. Migrations run in
+# order inside Database.init(); the applied version is tracked in PRAGMA user_version.
+MIGRATIONS: list[tuple[str, Migration]] = [
+    ("baseline", _m1_baseline),
+]
+
 
 class Database:
     def __init__(self, path: Path) -> None:
@@ -54,8 +70,28 @@ class Database:
 
     async def init(self) -> None:
         async with self.connect() as conn:
-            await conn.executescript(SCHEMA)
-            await conn.commit()
+            cur = await conn.execute("PRAGMA user_version")
+            row = await cur.fetchone()
+            version = int(row[0]) if row else 0
+
+            if version == 0:
+                # Distinguish a fresh database from a 0.1-era database that
+                # predates the migration mechanism (tables exist, version 0).
+                cur = await conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='feeds'"
+                )
+                if await cur.fetchone() is not None:
+                    version = 1
+                    await conn.execute("PRAGMA user_version = 1")
+                    await conn.commit()
+
+            for number, (name, migrate) in enumerate(MIGRATIONS, start=1):
+                if number <= version:
+                    continue
+                await migrate(conn)
+                await conn.execute(f"PRAGMA user_version = {number}")
+                await conn.commit()
+                logger.info("applied migration %d (%s)", number, name)
 
     @asynccontextmanager
     async def connect(self) -> AsyncIterator[aiosqlite.Connection]:
