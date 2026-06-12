@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+
+jobs:
+  web:
+    name: Web (typecheck · lint · build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.6
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck:web
+      - run: npm run lint:web
+      - run: npm run build:web
+
+  api:
+    name: API (ruff · mypy · pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --directory services/api --extra dev
+      - run: uv run --directory services/api --extra dev ruff check .
+      - run: uv run --directory services/api --extra dev mypy src
+      - run: uv run --directory services/api --extra dev pytest
