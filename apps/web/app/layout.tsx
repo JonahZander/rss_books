@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Archivo, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 
+import { ToastProvider } from "../components/Toasts";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -25,14 +26,22 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RSS Kindle Selector",
-  description: "Browse RSS feeds, bundle articles into a Kindle-ready digest.",
+  title: "RSS / Kindle Selector",
+  description:
+    "The self-hosted news desk for your e-reader. Pick your news, press an edition, read it anywhere.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${archivo.variable} ${plex.variable} ${jetbrains.variable}`}>
-      <body>{children}</body>
+      <body>
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from rss_kindle.config import get_settings
 from rss_kindle.db import Database
@@ -45,12 +44,6 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             app.state.scheduler_task = None
 
     app = FastAPI(title="RSS Kindle Selector", lifespan=lifespan)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:3737"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
     app.state.db = db
     app.state.settings = settings
 

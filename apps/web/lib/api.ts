@@ -1,4 +1,6 @@
-const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8765";
+// Same-origin by default: production serves the static app from the API
+// process; `next dev` proxies /api, /opds and /health via rewrites.
+const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
 export type Feed = {
   id: number;
@@ -7,6 +9,11 @@ export type Feed = {
   site_url: string | null;
   last_polled: string | null;
   created_at: string;
+  poll_interval_minutes: number;
+  last_error: string | null;
+  last_error_at: string | null;
+  consecutive_failures: number;
+  unread_count: number;
 };
 
 export type Article = {
@@ -16,10 +23,21 @@ export type Article = {
   url: string;
   summary: string | null;
   published_at: string | null;
+  read_at: string | null;
   has_full_content: boolean;
 };
 
 export type ArticleDetail = Article & { full_content: string | null };
+
+export type Delivery = {
+  id: number;
+  digest_id: number;
+  channel: string;
+  target: string | null;
+  status: "sent" | "failed";
+  error: string | null;
+  created_at: string;
+};
 
 export type Digest = {
   id: number;
@@ -27,32 +45,105 @@ export type Digest = {
   status: "pending" | "generating" | "ready" | "failed";
   epub_path: string | null;
   error: string | null;
+  size_bytes: number | null;
+  delivered_at: string | null;
   created_at: string;
+  article_count: number;
+  deliveries: Delivery[];
+};
+
+export type AppSettings = {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_security: "starttls" | "ssl" | "none";
+  smtp_username: string;
+  smtp_password: string;
+  smtp_from: string;
+  send_to: string[];
+  email_on_ready: boolean;
+  opds_auth_enabled: boolean;
+  opds_username: string;
+  opds_password: string;
+  poll_enabled: boolean;
+  default_poll_minutes: number;
+  retention_enabled: boolean;
+  retention_days: number;
+  mark_read_on_expand: boolean;
+  deadline_enabled: boolean;
+  deadline_type: "daily" | "weekly";
+  deadline_weekday: number;
+  deadline_time: string;
+};
+
+export type ArticleQuery = {
+  feedId?: number;
+  unread?: boolean;
+  q?: string;
+  limit?: number;
+  offset?: number;
 };
 
 async function j<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    let detail = `${res.status}`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) {
+        detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      }
+    } catch {
+      // keep the bare status code
+    }
+    throw new Error(detail);
+  }
   return (await res.json()) as T;
 }
 
+function jsonInit(method: string, body?: unknown): RequestInit {
+  return {
+    method,
+    headers: { "content-type": "application/json" },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  };
+}
+
 export const api = {
+  // feeds
   listFeeds: () => fetch(`${BASE}/api/feeds`).then((r) => j<Feed[]>(r)),
   addFeed: (url: string, title: string) =>
-    fetch(`${BASE}/api/feeds`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url, title }),
-    }).then((r) => j<Feed>(r)),
+    fetch(`${BASE}/api/feeds`, jsonInit("POST", { url, title })).then((r) => j<Feed>(r)),
+  patchFeed: (id: number, patch: { title?: string; poll_interval_minutes?: number }) =>
+    fetch(`${BASE}/api/feeds/${id}`, jsonInit("PATCH", patch)).then((r) => j<Feed>(r)),
   deleteFeed: (id: number) =>
     fetch(`${BASE}/api/feeds/${id}`, { method: "DELETE" }).then((r) => {
       if (!r.ok) throw new Error(`${r.status}`);
     }),
   refreshAll: () =>
     fetch(`${BASE}/api/feeds/refresh`, { method: "POST" }).then((r) =>
+      j<{ inserted: number; errors: number }>(r),
+    ),
+  refreshFeed: (id: number) =>
+    fetch(`${BASE}/api/feeds/${id}/refresh`, { method: "POST" }).then((r) =>
       j<{ inserted: number }>(r),
     ),
-  listArticles: (feedId?: number) => {
-    const qs = feedId != null ? `?feed_id=${feedId}` : "";
+  importOpml: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${BASE}/api/feeds/import`, { method: "POST", body: fd }).then((r) =>
+      j<{ added: number; skipped: number }>(r),
+    );
+  },
+  exportOpmlUrl: () => `${BASE}/api/feeds/export.opml`,
+
+  // articles
+  listArticles: ({ feedId, unread, q, limit, offset }: ArticleQuery = {}) => {
+    const params = new URLSearchParams();
+    if (feedId != null) params.set("feed_id", String(feedId));
+    if (unread) params.set("unread", "true");
+    if (q) params.set("q", q);
+    if (limit != null) params.set("limit", String(limit));
+    if (offset != null) params.set("offset", String(offset));
+    const qs = params.size > 0 ? `?${params}` : "";
     return fetch(`${BASE}/api/articles${qs}`).then((r) => j<Article[]>(r));
   },
   getArticle: (id: number) =>
@@ -61,12 +152,48 @@ export const api = {
     fetch(`${BASE}/api/articles/${id}/fetch`, { method: "POST" }).then((r) =>
       j<ArticleDetail>(r),
     ),
-  createDigest: (articleIds: number[], title?: string) =>
-    fetch(`${BASE}/api/digests`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ article_ids: articleIds, title }),
-    }).then((r) => j<Digest>(r)),
+  markRead: (id: number) =>
+    fetch(`${BASE}/api/articles/${id}/read`, { method: "POST" }).then((r) => j<Article>(r)),
+  markUnread: (id: number) =>
+    fetch(`${BASE}/api/articles/${id}/unread`, { method: "POST" }).then((r) => j<Article>(r)),
+
+  // queue
+  getQueue: () => fetch(`${BASE}/api/queue`).then((r) => j<Article[]>(r)),
+  addToQueue: (articleId: number) =>
+    fetch(`${BASE}/api/queue/${articleId}`, { method: "POST" }).then((r) => j<Article[]>(r)),
+  removeFromQueue: (articleId: number) =>
+    fetch(`${BASE}/api/queue/${articleId}`, { method: "DELETE" }).then((r) => j<Article[]>(r)),
+  replaceQueue: (articleIds: number[]) =>
+    fetch(`${BASE}/api/queue`, jsonInit("PUT", { article_ids: articleIds })).then((r) =>
+      j<Article[]>(r),
+    ),
+
+  // digests
+  listDigests: () => fetch(`${BASE}/api/digests`).then((r) => j<Digest[]>(r)),
+  createDigest: (articleIds?: number[], title?: string) =>
+    fetch(
+      `${BASE}/api/digests`,
+      jsonInit("POST", { article_ids: articleIds ?? null, title: title ?? null }),
+    ).then((r) => j<Digest>(r)),
   getDigest: (id: number) => fetch(`${BASE}/api/digests/${id}`).then((r) => j<Digest>(r)),
+  deleteDigest: (id: number) =>
+    fetch(`${BASE}/api/digests/${id}`, { method: "DELETE" }).then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+    }),
+  sendDigest: (id: number) =>
+    fetch(`${BASE}/api/digests/${id}/send`, { method: "POST" }).then((r) => j<Delivery>(r)),
   downloadDigestUrl: (id: number) => `${BASE}/api/digests/${id}/download`,
+
+  // settings
+  getSettings: () => fetch(`${BASE}/api/settings`).then((r) => j<AppSettings>(r)),
+  putSettings: (settings: AppSettings) =>
+    fetch(`${BASE}/api/settings`, jsonInit("PUT", settings)).then((r) => j<AppSettings>(r)),
+  testEmail: (to?: string[]) =>
+    fetch(`${BASE}/api/settings/test-email`, jsonInit("POST", { to: to ?? null })).then((r) =>
+      j<{ sent_to: string[] }>(r),
+    ),
 };
+
+export function emailConfigured(s: AppSettings): boolean {
+  return Boolean(s.smtp_host && s.smtp_from && s.send_to.length > 0);
+}

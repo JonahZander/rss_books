@@ -8,8 +8,10 @@ type Props = {
   article: Article;
   index: number;
   total: number;
-  selected: boolean;
-  onToggleSelect: () => void;
+  queued: boolean;
+  markReadOnExpand: boolean;
+  onToggleQueue: () => void;
+  onRead: (article: Article) => void;
 };
 
 function hostnameOf(url: string): string {
@@ -48,7 +50,15 @@ function pad(n: number, width: number): string {
   return String(n).padStart(width, "0");
 }
 
-export function ArticleRow({ article, index, total, selected, onToggleSelect }: Props) {
+export function ArticleRow({
+  article,
+  index,
+  total,
+  queued,
+  markReadOnExpand,
+  onToggleQueue,
+  onRead,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,7 +67,15 @@ export function ArticleRow({ article, index, total, selected, onToggleSelect }: 
   const toggle = async () => {
     const willExpand = !expanded;
     setExpanded(willExpand);
-    if (willExpand && !detail) {
+    if (!willExpand) return;
+
+    if (markReadOnExpand && !article.read_at) {
+      api
+        .markRead(article.id)
+        .then(onRead)
+        .catch(() => {});
+    }
+    if (!detail) {
       setLoading(true);
       setError(null);
       try {
@@ -67,6 +85,11 @@ export function ArticleRow({ article, index, total, selected, onToggleSelect }: 
         setDetail(d);
       } catch (e) {
         setError(e instanceof Error ? e.message : "failed to load");
+        try {
+          setDetail(await api.getArticle(article.id));
+        } catch {
+          // keep the error state
+        }
       } finally {
         setLoading(false);
       }
@@ -76,23 +99,33 @@ export function ArticleRow({ article, index, total, selected, onToggleSelect }: 
   const width = String(total).length;
   const idx = pad(index + 1, Math.max(2, width));
   const totalStr = pad(total, Math.max(2, width));
+  const read = Boolean(article.read_at);
 
   return (
-    <article className={`article-row ${selected ? "selected" : ""} ${expanded ? "expanded" : ""}`}>
+    <article
+      className={`article-row ${queued ? "selected" : ""} ${expanded ? "expanded" : ""} ${
+        read ? "read" : ""
+      }`}
+      style={{ "--row-index": Math.min(index, 12) } as React.CSSProperties}
+    >
       <header className="article-header">
         <span className="article-index">
           {idx}/{totalStr}
         </span>
-        <input
-          type="checkbox"
-          className="checkbox"
-          checked={selected}
-          onChange={onToggleSelect}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Select ${article.title}`}
-        />
-        <button type="button" className="article-title" onClick={toggle}>
-          <span className="chev">›</span>
+        <label className="checkbox-hit">
+          <input
+            type="checkbox"
+            className="checkbox"
+            checked={queued}
+            onChange={onToggleQueue}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Queue ${article.title}`}
+          />
+        </label>
+        <button type="button" className="article-title" onClick={toggle} aria-expanded={expanded}>
+          <span className="chev" aria-hidden>
+            ›
+          </span>
           <span>{article.title}</span>
         </button>
         <span className="article-status">
@@ -106,6 +139,7 @@ export function ArticleRow({ article, index, total, selected, onToggleSelect }: 
           {hostnameOf(article.url)} ↗
         </a>
         {article.published_at && <span>{fmtTimestamp(article.published_at)}</span>}
+        {read && <span className="read-stamp">Read</span>}
       </div>
 
       {!expanded &&

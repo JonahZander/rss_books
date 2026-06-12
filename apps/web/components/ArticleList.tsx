@@ -5,8 +5,14 @@ import { ArticleRow } from "./ArticleRow";
 
 type Props = {
   articles: Article[];
-  selectedIds: Set<number>;
-  onToggle: (id: number) => void;
+  queuedIds: Set<number>;
+  unreadOnly: boolean;
+  onUnreadOnly: (v: boolean) => void;
+  search: string;
+  onSearch: (v: string) => void;
+  markReadOnExpand: boolean;
+  onToggleQueue: (article: Article) => void;
+  onRead: (article: Article) => void;
   currentFeed: Feed | null;
   lastPoll: string | null;
 };
@@ -27,7 +33,19 @@ function ymd(): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function ArticleList({ articles, selectedIds, onToggle, currentFeed, lastPoll }: Props) {
+export function ArticleList({
+  articles,
+  queuedIds,
+  unreadOnly,
+  onUnreadOnly,
+  search,
+  onSearch,
+  markReadOnExpand,
+  onToggleQueue,
+  onRead,
+  currentFeed,
+  lastPoll,
+}: Props) {
   const title = currentFeed ? currentFeed.title : "All dispatches";
   const total = articles.length;
 
@@ -43,12 +61,29 @@ export function ArticleList({ articles, selectedIds, onToggle, currentFeed, last
             Count <strong>{String(total).padStart(3, "0")}</strong>
           </span>
           <span>
-            Selected <strong>{String(selectedIds.size).padStart(2, "0")}</strong>
-          </span>
-          <span>
             Last poll <strong>{hhmmss(lastPoll)}</strong>
           </span>
         </div>
+      </div>
+
+      <div className="list-controls">
+        <label className="filter-toggle">
+          <input
+            type="checkbox"
+            className="checkbox"
+            checked={unreadOnly}
+            onChange={(e) => onUnreadOnly(e.target.checked)}
+          />
+          <span>Unread only</span>
+        </label>
+        <input
+          type="search"
+          className="search-input"
+          placeholder="Search title / summary…"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          aria-label="Search articles"
+        />
       </div>
 
       {articles.length === 0 ? (
@@ -64,8 +99,10 @@ export function ArticleList({ articles, selectedIds, onToggle, currentFeed, last
               article={a}
               index={i}
               total={total}
-              selected={selectedIds.has(a.id)}
-              onToggleSelect={() => onToggle(a.id)}
+              queued={queuedIds.has(a.id)}
+              markReadOnExpand={markReadOnExpand}
+              onToggleQueue={() => onToggleQueue(a)}
+              onRead={onRead}
             />
           ))}
         </div>
