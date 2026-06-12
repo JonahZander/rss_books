@@ -69,6 +69,38 @@ def test_patch_feed(tmp_path):
         assert r.status_code == 422
 
 
+def test_assign_feed_to_group_and_clear(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        group = client.post("/api/groups", json={"name": "AI"}).json()
+        r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
+        feed_id = r.json()["id"]
+        assert r.json()["group_id"] is None
+
+        r = client.patch(f"/api/feeds/{feed_id}", json={"group_id": group["id"]})
+        assert r.status_code == 200
+        assert r.json()["group_id"] == group["id"]
+        assert client.get("/api/feeds").json()[0]["group_id"] == group["id"]
+
+        # explicit null moves the feed back to Ungrouped
+        r = client.patch(f"/api/feeds/{feed_id}", json={"group_id": None})
+        assert r.status_code == 200
+        assert r.json()["group_id"] is None
+
+        # nonexistent group
+        r = client.patch(f"/api/feeds/{feed_id}", json={"group_id": 9999})
+        assert r.status_code == 404
+        assert "group" in r.json()["detail"]
+
+        # NOT NULL columns reject explicit null
+        assert client.patch(f"/api/feeds/{feed_id}", json={"title": None}).status_code == 422
+
+        # deleting the group ungroups its feeds
+        client.patch(f"/api/feeds/{feed_id}", json={"group_id": group["id"]})
+        assert client.delete(f"/api/groups/{group['id']}").status_code == 204
+        assert client.get("/api/feeds").json()[0]["group_id"] is None
+
+
 def test_manual_refresh_failure_recorded_and_cleared(tmp_path):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:

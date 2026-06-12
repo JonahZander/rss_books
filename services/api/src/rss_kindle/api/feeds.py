@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/feeds", tags=["feeds"])
 logger = logging.getLogger(__name__)
 
 FEED_COLUMNS = (
-    "id, url, title, site_url, last_polled, created_at, "
+    "id, url, title, site_url, last_polled, created_at, group_id, "
     "poll_interval_minutes, last_error, last_error_at, consecutive_failures, "
     "(SELECT COUNT(*) FROM articles a WHERE a.feed_id = feeds.id AND a.read_at IS NULL) "
     "AS unread_count"
@@ -146,19 +146,28 @@ async def export_opml(request: Request) -> Response:
 @router.patch("/{feed_id}", response_model=Feed)
 async def update_feed(feed_id: int, payload: FeedUpdate, request: Request) -> Feed:
     db = request.app.state.db
-    fields = payload.model_dump(exclude_none=True)
-    async with db.connect() as conn:
-        if fields:
-            sets = ", ".join(f"{name} = ?" for name in fields)
+    # exclude_unset so an explicit {"group_id": null} moves the feed to Ungrouped
+    fields = payload.model_dump(exclude_unset=True)
+    for required in ("title", "poll_interval_minutes"):
+        if required in fields and fields[required] is None:
+            raise HTTPException(status_code=422, detail=f"{required} cannot be null")
+    try:
+        async with db.connect() as conn:
+            if fields:
+                sets = ", ".join(f"{name} = ?" for name in fields)
+                cur = await conn.execute(
+                    f"UPDATE feeds SET {sets} WHERE id = ?",  # noqa: S608 — keys from the model
+                    (*fields.values(), feed_id),
+                )
+                if cur.rowcount == 0:
+                    raise HTTPException(status_code=404, detail="feed not found")
+                await conn.commit()
             cur = await conn.execute(
-                f"UPDATE feeds SET {sets} WHERE id = ?",  # noqa: S608 — keys from the model
-                (*fields.values(), feed_id),
+                f"SELECT {FEED_COLUMNS} FROM feeds WHERE id = ?", (feed_id,)
             )
-            if cur.rowcount == 0:
-                raise HTTPException(status_code=404, detail="feed not found")
-            await conn.commit()
-        cur = await conn.execute(f"SELECT {FEED_COLUMNS} FROM feeds WHERE id = ?", (feed_id,))
-        row = await cur.fetchone()
+            row = await cur.fetchone()
+    except sqlite3.IntegrityError as e:
+        raise HTTPException(status_code=404, detail="group not found") from e
     if row is None:
         raise HTTPException(status_code=404, detail="feed not found")
     return Feed.model_validate(dict(row))
