@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class FeedCreate(BaseModel):
@@ -40,6 +41,45 @@ class DigestCreate(BaseModel):
 
 class QueueUpdate(BaseModel):
     article_ids: list[int]
+
+
+class AppSettings(BaseModel):
+    # Delivery: send-to-Kindle email (also works for PocketBook's gateway)
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    send_to: list[str] = []
+    email_on_ready: bool = False
+    # Delivery: OPDS catalog
+    opds_auth_enabled: bool = False
+    opds_username: str = ""
+    opds_password: str = ""
+    # Polling
+    poll_enabled: bool = True
+    default_poll_minutes: int = Field(default=30, ge=1)
+    # Retention
+    retention_enabled: bool = True
+    retention_days: int = Field(default=90, ge=1)
+    # Reading
+    mark_read_on_expand: bool = True
+    # Press deadline
+    deadline_enabled: bool = False
+    deadline_type: Literal["daily", "weekly"] = "daily"
+    deadline_weekday: int = Field(default=4, ge=0, le=6)  # 0 = Monday
+    deadline_time: str = Field(default="06:30", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+class Delivery(BaseModel):
+    id: int
+    digest_id: int
+    channel: str
+    target: str | None = None
+    status: str
+    error: str | None = None
+    created_at: datetime
 
 
 class Digest(BaseModel):

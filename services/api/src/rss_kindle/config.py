@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     db_path: Path = Field(default=Path("./data/rss_kindle.db"))
     epub_dir: Path = Field(default=Path("./data/epubs"))
 
+    # Optional overrides for users who keep SMTP credentials outside the DB.
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+
 
 def get_settings() -> Settings:
     return Settings()
