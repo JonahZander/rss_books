@@ -14,6 +14,13 @@ export type Feed = {
   last_error_at: string | null;
   consecutive_failures: number;
   unread_count: number;
+  group_id: number | null;
+};
+
+export type Group = {
+  id: number;
+  name: string;
+  position: number;
 };
 
 export type Article = {
@@ -43,6 +50,7 @@ export type Digest = {
   id: number;
   title: string;
   status: "pending" | "generating" | "ready" | "failed";
+  group_name: string | null;
   epub_path: string | null;
   error: string | null;
   size_bytes: number | null;
@@ -73,6 +81,7 @@ export type AppSettings = {
   deadline_type: "daily" | "weekly";
   deadline_weekday: number;
   deadline_time: string;
+  deadline_split: "combined" | "per_group";
 };
 
 export type ArticleQuery = {

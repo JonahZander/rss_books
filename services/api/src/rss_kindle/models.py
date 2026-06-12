@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class FeedCreate(BaseModel):
@@ -23,11 +23,46 @@ class Feed(BaseModel):
     last_error_at: datetime | None = None
     consecutive_failures: int = 0
     unread_count: int = 0
+    group_id: int | None = None
 
 
 class FeedUpdate(BaseModel):
     title: str | None = None
     poll_interval_minutes: int | None = Field(default=None, ge=1)
+    group_id: int | None = None
+
+
+class Group(BaseModel):
+    id: int
+    name: str
+    position: int
+
+
+class GroupCreate(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("name must not be empty")
+        return v
+
+
+class GroupUpdate(BaseModel):
+    name: str | None = None
+    position: int | None = Field(default=None, ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            raise ValueError("name must not be empty")
+        return v
 
 
 class Article(BaseModel):
@@ -48,6 +83,7 @@ class ArticleDetail(Article):
 class DigestCreate(BaseModel):
     article_ids: list[int] | None = None
     title: str | None = None
+    split: Literal["combined", "per_group"] = "combined"
 
 
 class QueueUpdate(BaseModel):
@@ -81,6 +117,7 @@ class AppSettings(BaseModel):
     deadline_type: Literal["daily", "weekly"] = "daily"
     deadline_weekday: int = Field(default=4, ge=0, le=6)  # 0 = Monday
     deadline_time: str = Field(default="06:30", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    deadline_split: Literal["combined", "per_group"] = "combined"
 
 
 class Delivery(BaseModel):
@@ -97,6 +134,7 @@ class Digest(BaseModel):
     id: int
     title: str
     status: str
+    group_name: str | None = None
     epub_path: str | None = None
     error: str | None = None
     size_bytes: int | None = None

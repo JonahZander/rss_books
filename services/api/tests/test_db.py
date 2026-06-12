@@ -50,3 +50,35 @@ async def test_init_is_idempotent(tmp_path: Path) -> None:
     await db.init()
     await db.init()
     assert await _user_version(db) == len(MIGRATIONS)
+
+
+async def test_migration_7_feed_groups(tmp_path: Path) -> None:
+    db = Database(tmp_path / "test.db")
+    await db.init()
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='groups'"
+        )
+        assert await cur.fetchone() is not None
+        cur = await conn.execute("PRAGMA table_info(feeds)")
+        feed_cols = {r["name"] for r in await cur.fetchall()}
+        assert "group_id" in feed_cols
+        cur = await conn.execute("PRAGMA table_info(digests)")
+        digest_cols = {r["name"] for r in await cur.fetchall()}
+        assert "group_name" in digest_cols
+
+
+async def test_deleting_group_ungroups_feeds(tmp_path: Path) -> None:
+    db = Database(tmp_path / "test.db")
+    await db.init()
+    async with db.connect() as conn:
+        await conn.execute("INSERT INTO groups (name, position) VALUES ('AI', 1)")
+        await conn.execute(
+            "INSERT INTO feeds (url, title, group_id) VALUES ('https://a.example/rss', 'A', 1)"
+        )
+        await conn.commit()
+        await conn.execute("DELETE FROM groups WHERE id = 1")
+        await conn.commit()
+        cur = await conn.execute("SELECT group_id FROM feeds WHERE url = 'https://a.example/rss'")
+        row = await cur.fetchone()
+    assert row is not None and row["group_id"] is None

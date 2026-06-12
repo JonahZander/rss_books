@@ -115,6 +115,26 @@ async def _m6_read_state(conn: aiosqlite.Connection) -> None:
     await conn.execute("ALTER TABLE articles ADD COLUMN read_at DATETIME")
 
 
+async def _m7_feed_groups(conn: aiosqlite.Connection) -> None:
+    # Folder-style groups: a feed belongs to at most one group. digests.group_name
+    # snapshots the group at press time (NULL = combined edition) so the EPUB
+    # builder can pick the right TOC shape and renames can't rewrite history.
+    await conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            position INTEGER NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+    )
+    await conn.execute(
+        "ALTER TABLE feeds ADD COLUMN group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL"
+    )
+    await conn.execute("ALTER TABLE digests ADD COLUMN group_name TEXT")
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
     ("digest failure state", _m2_digest_failure),
@@ -122,6 +142,7 @@ MIGRATIONS: list[tuple[str, Migration]] = [
     ("queue, deliveries, settings", _m4_queue_delivery_settings),
     ("feed health and conditional GET", _m5_feed_health),
     ("read state", _m6_read_state),
+    ("feed groups", _m7_feed_groups),
 ]
 
 
