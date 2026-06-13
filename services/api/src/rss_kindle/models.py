@@ -115,6 +115,11 @@ class AppSettings(BaseModel):
     retention_days: int = Field(default=90, ge=1)
     # Reading
     mark_read_on_expand: bool = True
+    # Reader fallback: when the direct (impersonating) fetch is blocked or
+    # returns nothing, hand the URL to an external extraction service.
+    # "none" disables it; "tavily" needs an API key, "jina" is keyless.
+    reader_fallback: Literal["none", "tavily", "jina"] = "none"
+    tavily_api_key: str = ""
     # Press deadline
     deadline_enabled: bool = False
     deadline_type: Literal["daily", "weekly"] = "daily"

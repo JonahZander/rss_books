@@ -6,6 +6,9 @@ from fastapi import APIRouter, HTTPException, Request
 
 from rss_kindle.models import Article, ArticleDetail
 from rss_kindle.services.content_extractor import extract_html
+from rss_kindle.services.readers import ReaderError, build_reader
+from rss_kindle.services.sanitizer import sanitize
+from rss_kindle.services.settings_store import get_app_settings
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
 
@@ -118,22 +121,42 @@ async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail
         row = await cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="article not found")
+    url = row["url"]
 
+    # Try the direct, browser-impersonating fetch first. Remember (don't raise)
+    # any failure so a configured reader fallback gets a chance before we give up.
+    content: str | None = None
+    fetch_error: HTTPException | None = None
     try:
-        raw = await fetch_url_bytes(row["url"])
+        raw = await fetch_url_bytes(url)
+        content = extract_html(raw, url=url)
     except HTTPError as e:
         # bot-walled sites (403/429/…) are an upstream refusal, not our crash.
         # raise_for_status() attaches the response; guard in case it's absent.
         status = e.response.status_code if e.response is not None else "error"
-        raise HTTPException(
+        fetch_error = HTTPException(
             status_code=502,
             detail=f"the site returned HTTP {status} — try the original link instead",
-        ) from e
+        )
     except RequestException as e:
-        raise HTTPException(status_code=502, detail=f"fetch failed: {e}") from e
-    content = extract_html(raw, url=row["url"])
+        fetch_error = HTTPException(status_code=502, detail=f"fetch failed: {e}")
+
+    # Blocked or empty? Hand the URL to the configured reader service (Tavily,
+    # Jina, …); its output is sanitized like everything else we store.
     if not content:
-        raise HTTPException(status_code=422, detail="could not extract article content")
+        reader = build_reader(await get_app_settings(db))
+        if reader is not None:
+            try:
+                extracted = await reader.fetch_html(url)
+            except ReaderError:
+                extracted = None
+            if extracted:
+                content = sanitize(extracted).strip() or None
+
+    if not content:
+        raise fetch_error or HTTPException(
+            status_code=422, detail="could not extract article content"
+        )
 
     async with db.connect() as conn:
         await conn.execute(

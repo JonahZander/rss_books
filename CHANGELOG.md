@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org/).
 
+## [Unreleased]
+
+Better article fetching, and a clearer triage desk.
+
+### Added
+
+- **Reader fallback** for bot-walled sites: when the direct fetch is refused or
+  comes back empty, the article fetcher hands the URL to an external extraction
+  service. Pluggable by design — **Tavily** (API key) and **Jina Reader** (free,
+  keyless) ship in-box; a new provider is one class plus one registry entry.
+  Configure it under Settings → *Article fetching*, or via the `READER_FALLBACK`
+  / `TAVILY_API_KEY` env vars. The provider-registry pattern is adapted from
+  [hermes-agent](https://github.com/NousResearch/hermes-agent) (MIT, © 2025 Nous
+  Research).
+- **Article lifecycle states** on the triage desk — *new → seen → queued → in
+  edition* — replacing the binary read flag, so a quick preview no longer reads
+  as "done" (`Article.state`, computed server-side).
+
+### Changed
+
+- Article pages are fetched with a **browser-impersonating client** (curl_cffi,
+  Chrome TLS/JA3 fingerprint) instead of a spoofed User-Agent, so
+  TLS-fingerprinting bot walls stop refusing the connection outright.
+- Feeds that ship full content (`<content:encoded>` / Atom `<content>`) are
+  stored at poll time, so full-text feeds need no page fetch at all.
+- Masthead: nav links now read as interactive (hover/active affordance, rule
+  separator), distinct from the static tagline.
+
 ## [1.1.0] — 2026-06-12
 
 Feed groups & split editions — the

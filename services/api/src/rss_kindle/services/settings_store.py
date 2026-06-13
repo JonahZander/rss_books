@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Literal, cast
 
 from rss_kindle.config import Settings, get_settings
 from rss_kindle.db import Database
@@ -30,6 +31,10 @@ async def get_app_settings(db: Database, env: Settings | None = None) -> AppSett
         settings.smtp_password = env.smtp_password
     if env.smtp_from is not None:
         settings.smtp_from = env.smtp_from
+    if env.tavily_api_key is not None:
+        settings.tavily_api_key = env.tavily_api_key
+    if env.reader_fallback in ("none", "tavily", "jina"):
+        settings.reader_fallback = cast(Literal["none", "tavily", "jina"], env.reader_fallback)
     return settings
 
 

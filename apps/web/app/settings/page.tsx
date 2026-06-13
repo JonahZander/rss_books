@@ -381,7 +381,7 @@ export default function Settings() {
                 checked={settings.mark_read_on_expand}
                 onChange={(e) => set("mark_read_on_expand", e.target.checked)}
               />
-              <span>Expanding an article marks it read</span>
+              <span>Expanding an article marks it seen</span>
             </label>
             <label className="filter-toggle">
               <input
@@ -406,6 +406,48 @@ export default function Settings() {
             <p className="settings-hint">
               Queued articles and articles already pressed into editions are never cleaned up.
             </p>
+          </section>
+
+          <section className="settings-card corner-marks" aria-label="Reader fallback">
+            <p className="eyebrow eyebrow-ink">Article fetching · Reader fallback</p>
+            <p className="settings-hint">
+              Many sites block server-side fetches — Cloudflare and friends fingerprint the
+              connection itself, not just the user-agent. When the built-in fetch is blocked,
+              hand the link to an external reader service to pull the full text. Only used when
+              the direct fetch fails.
+            </p>
+            <label>
+              <span className="feed-form-label">Fallback service</span>
+              <select
+                value={settings.reader_fallback}
+                onChange={(e) =>
+                  set("reader_fallback", e.target.value as AppSettings["reader_fallback"])
+                }
+              >
+                <option value="none">None — feed summary only</option>
+                <option value="jina">Jina Reader — free, no key</option>
+                <option value="tavily">Tavily — API key, richer extraction</option>
+              </select>
+            </label>
+            {settings.reader_fallback === "tavily" && (
+              <label>
+                <span className="feed-form-label">Tavily API key</span>
+                <input
+                  type="password"
+                  value={settings.tavily_api_key}
+                  onChange={(e) => set("tavily_api_key", e.target.value)}
+                  placeholder="tvly-…"
+                  autoComplete="off"
+                />
+              </label>
+            )}
+            {settings.reader_fallback !== "none" && (
+              <p className="settings-hint">
+                Heads up: the article URL is sent to{" "}
+                {settings.reader_fallback === "tavily" ? "Tavily" : "Jina"}&apos;s servers to
+                fetch the page.
+              </p>
+            )}
           </section>
         </div>
       </main>

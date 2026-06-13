@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_from: str | None = None
 
+    # Optional reader-fallback config for headless/Docker setups without the UI.
+    tavily_api_key: str | None = None
+    reader_fallback: str | None = None
+
 
 def get_settings() -> Settings:
     return Settings()
