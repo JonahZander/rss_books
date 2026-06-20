@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { Feed, Group } from "../lib/api";
 import { api } from "../lib/api";
+import { hostnameOf } from "../lib/url";
 import { useToast } from "./Toasts";
 
 type GroupSelection = number | "none" | null;
@@ -23,15 +24,6 @@ type Props = {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const COLLAPSE_KEY = "sidebar-collapsed";
-
-function hostnameOf(url: string | null): string {
-  if (!url) return "";
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
 
 function relPoll(iso: string | null): string {
   if (!iso) return "never polled";

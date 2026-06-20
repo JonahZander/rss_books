@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from fastapi.responses import FileResponse
 
 from rss_kindle.db import Database
-from rss_kindle.models import Delivery, Digest, DigestCreate
+from rss_kindle.models import Delivery, Digest, DigestArticleEntry, DigestCreate
 from rss_kindle.services.digest_service import create_digest_records, generate_digest
 from rss_kindle.services.emailer import EmailError, send_digest_and_record
 from rss_kindle.services.settings_store import get_app_settings
@@ -61,6 +61,36 @@ async def get_digest(digest_id: int, request: Request) -> Digest:
         raise HTTPException(status_code=404, detail="digest not found")
     deliveries = [Delivery.model_validate(dict(d)) for d in delivery_rows]
     return Digest.model_validate({**dict(row), "deliveries": deliveries})
+
+
+@router.get("/{digest_id}/articles", response_model=list[DigestArticleEntry])
+async def list_digest_articles(digest_id: int, request: Request) -> list[DigestArticleEntry]:
+    """The ordered members of an edition, with each one's compile-time fetch
+    outcome — powers the Editions preview, the "N of M fetched" summary, and the
+    per-article remove buttons."""
+    db = request.app.state.db
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT 1 FROM digests WHERE id = ?", (digest_id,))
+        if await cur.fetchone() is None:
+            raise HTTPException(status_code=404, detail="digest not found")
+        cur = await conn.execute(
+            "SELECT a.id AS article_id, da.position, a.title, a.url, "
+            "(a.full_content IS NOT NULL) AS has_full_content, da.fetch_status, "
+            "f.title AS source, g.name AS group_name "
+            "FROM digest_articles da "
+            "JOIN articles a ON a.id = da.article_id "
+            "JOIN feeds f ON f.id = a.feed_id "
+            "LEFT JOIN groups g ON g.id = f.group_id "
+            "WHERE da.digest_id = ? ORDER BY da.position ASC",
+            (digest_id,),
+        )
+        rows = await cur.fetchall()
+    return [
+        DigestArticleEntry.model_validate(
+            {**dict(r), "has_full_content": bool(r["has_full_content"])}
+        )
+        for r in rows
+    ]
 
 
 @router.post("/{digest_id}/send", response_model=Delivery)
@@ -123,6 +153,50 @@ async def delete_digest(digest_id: int, request: Request) -> None:
         await conn.commit()
     if row["epub_path"]:
         Path(row["epub_path"]).unlink(missing_ok=True)
+
+
+@router.delete("/{digest_id}/articles/{article_id}", response_model=Digest)
+async def remove_digest_article(
+    digest_id: int,
+    article_id: int,
+    request: Request,
+    background: BackgroundTasks,
+) -> Digest:
+    """Drop one article from an edition and rebuild its EPUB in the background.
+    Removing the last member leaves the edition 'failed' (nothing to compile)
+    rather than building an empty book; the article's read state is untouched."""
+    db: Database = request.app.state.db
+    epub_dir: Path = request.app.state.settings.epub_dir
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "DELETE FROM digest_articles WHERE digest_id = ? AND article_id = ?",
+            (digest_id, article_id),
+        )
+        if cur.rowcount == 0:
+            cur = await conn.execute("SELECT 1 FROM digests WHERE id = ?", (digest_id,))
+            detail = "digest not found" if await cur.fetchone() is None else "article not in digest"
+            raise HTTPException(status_code=404, detail=detail)
+        cur = await conn.execute(
+            "SELECT COUNT(*) AS n FROM digest_articles WHERE digest_id = ?",
+            (digest_id,),
+        )
+        count_row = await cur.fetchone()
+        remaining = count_row["n"] if count_row else 0
+        if remaining:
+            await conn.execute(
+                "UPDATE digests SET status = 'pending', error = NULL WHERE id = ?",
+                (digest_id,),
+            )
+        else:
+            await conn.execute(
+                "UPDATE digests SET status = 'failed', "
+                "error = 'edition is empty — every article was removed' WHERE id = ?",
+                (digest_id,),
+            )
+        await conn.commit()
+    if remaining:
+        background.add_task(generate_digest, db, digest_id, epub_dir)
+    return await get_digest(digest_id, request)
 
 
 @router.get("/{digest_id}/download")

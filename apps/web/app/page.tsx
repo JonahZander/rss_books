@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "../components/ArticleList";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DigestQueue } from "../components/DigestQueue";
@@ -23,6 +23,7 @@ export default function Home() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [articlesLoaded, setArticlesLoaded] = useState(false);
   const [queue, setQueue] = useState<Article[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
@@ -41,14 +42,14 @@ export default function Home() {
   }, []);
 
   const refreshArticles = useCallback(async () => {
-    setArticles(
-      await api.listArticles({
-        feedId: selectedFeedId ?? undefined,
-        groupId: selectedGroupId ?? undefined,
-        unread: unreadOnly,
-        q: search || undefined,
-      }),
-    );
+    const list = await api.listArticles({
+      feedId: selectedFeedId ?? undefined,
+      groupId: selectedGroupId ?? undefined,
+      unread: unreadOnly,
+      q: search || undefined,
+    });
+    setArticles(list);
+    setArticlesLoaded(true);
   }, [selectedFeedId, selectedGroupId, unreadOnly, search]);
 
   const refreshQueue = useCallback(async () => {
@@ -62,8 +63,12 @@ export default function Home() {
     api.getSettings().then(setSettings, () => {});
   }, [refreshFeeds, refreshQueue]);
 
+  // Debounce only the search box; feed/group/unread switches should feel instant.
+  const prevSearch = useRef(search);
   useEffect(() => {
-    const id = window.setTimeout(() => void refreshArticles(), search ? 250 : 0);
+    const searchChanged = prevSearch.current !== search;
+    prevSearch.current = search;
+    const id = window.setTimeout(() => void refreshArticles(), searchChanged ? 250 : 0);
     return () => window.clearTimeout(id);
   }, [refreshArticles, search]);
 
@@ -135,11 +140,17 @@ export default function Home() {
 
   const toggleQueue = async (article: Article) => {
     const queued = queue.some((a) => a.id === article.id);
+    const prev = queue;
+    // Flip the checkbox immediately, then reconcile with the server's canonical
+    // queue; roll back if the request fails.
+    setQueue(queued ? prev.filter((a) => a.id !== article.id) : [...prev, article]);
     try {
-      setQueue(
-        queued ? await api.removeFromQueue(article.id) : await api.addToQueue(article.id),
-      );
+      const next = queued
+        ? await api.removeFromQueue(article.id)
+        : await api.addToQueue(article.id);
+      setQueue(next);
     } catch (e) {
+      setQueue(prev);
       toast(e instanceof Error ? e.message : "queue update failed", "error");
     }
   };
@@ -220,6 +231,7 @@ export default function Home() {
         <section className="content" aria-label="Articles">
           <ArticleList
             articles={articles}
+            loaded={articlesLoaded}
             queuedIds={queuedIds}
             unreadOnly={unreadOnly}
             onUnreadOnly={setUnreadOnly}

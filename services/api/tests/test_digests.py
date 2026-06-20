@@ -161,3 +161,98 @@ def test_list_digests(tmp_path, monkeypatch):
         r = client.get("/api/digests")
         assert r.status_code == 200
         assert len(r.json()) == 1
+
+
+def _patched_fetch(mapping: dict[str, str | None]):
+    """Replacement for digest_service.fetch_many: returns canned content per url
+    so compile-time retrieval is deterministic and never hits the network."""
+
+    async def fake(urls, settings):
+        return {u: mapping.get(u) for u in urls}
+
+    return fake
+
+
+def test_compile_fetches_missing_content_and_caches_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        # seeded articles are summary-only (no full_content) — exactly the
+        # enqueue-without-preview case that used to ship empty.
+        arts = client.get("/api/articles").json()
+        assert all(not a["has_full_content"] for a in arts)
+        urls = {a["id"]: a["url"] for a in arts}
+        body = "<p>The complete article body, fetched at compile time.</p>"
+        mapping = {u: body for u in urls.values()}
+
+        with patch(
+            "rss_kindle.services.digest_service.fetch_many",
+            new=_patched_fetch(mapping),
+        ):
+            r = client.post("/api/digests", json={"article_ids": ids, "title": "edition"})
+            digest_id = r.json()[0]["id"]
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+
+        entries = client.get(f"/api/digests/{digest_id}/articles").json()
+        assert entries and all(e["fetch_status"] == "full" for e in entries)
+        # content was persisted back onto the articles for re-compiles / preview
+        for article_id in ids:
+            detail = client.get(f"/api/articles/{article_id}").json()
+            assert detail["full_content"] == body
+            assert detail["has_full_content"] is True
+
+
+def test_compile_blocked_fetch_falls_back_to_summary(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        urls = [a["url"] for a in client.get("/api/articles").json()]
+        with patch(
+            "rss_kindle.services.digest_service.fetch_many",
+            new=_patched_fetch({u: None for u in urls}),  # every fetch blocked
+        ):
+            r = client.post("/api/digests", json={"article_ids": ids})
+            digest_id = r.json()[0]["id"]
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+
+        entries = client.get(f"/api/digests/{digest_id}/articles").json()
+        # sample.atom entries carry summaries, so the fallback is 'summary'
+        assert entries and all(e["fetch_status"] == "summary" for e in entries)
+
+
+def test_remove_article_rebuilds_and_empty_edition_fails(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        assert len(ids) == 2
+        urls = [a["url"] for a in client.get("/api/articles").json()]
+        fake = _patched_fetch({u: "<p>body</p>" for u in urls})
+        with patch("rss_kindle.services.digest_service.fetch_many", new=fake):
+            digest_id = client.post(
+                "/api/digests", json={"article_ids": ids, "title": "edit-me"}
+            ).json()[0]["id"]
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+
+            # drop one member → rebuilds with one fewer article
+            r = client.delete(f"/api/digests/{digest_id}/articles/{ids[0]}")
+            assert r.status_code == 200
+            assert r.json()["article_count"] == 1
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+            remaining = client.get(f"/api/digests/{digest_id}/articles").json()
+            assert [e["article_id"] for e in remaining] == [ids[1]]
+
+            # removing the article state must NOT mark it unread
+            assert client.get(f"/api/articles/{ids[0]}").json()["read_at"] is not None
+
+            # drop the last member → empty edition is 'failed', not an empty book
+            r = client.delete(f"/api/digests/{digest_id}/articles/{ids[1]}")
+            assert r.status_code == 200
+            assert r.json()["status"] == "failed"
+            assert "empty" in r.json()["error"]
+
+        # 404s for unknown members / digests
+        assert client.delete(f"/api/digests/{digest_id}/articles/99999").status_code == 404
+        assert client.delete("/api/digests/99999/articles/1").status_code == 404

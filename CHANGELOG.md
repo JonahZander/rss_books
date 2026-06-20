@@ -21,12 +21,24 @@ Better article fetching, and a clearer triage desk.
 - **Article lifecycle states** on the triage desk — *new → seen → queued → in
   edition* — replacing the binary read flag, so a quick preview no longer reads
   as "done" (`Article.state`, computed server-side).
+- **Edition preview** on the Editions page: expand any edition to read its
+  articles grouped by section (full bodies on demand), see an *"N of M links
+  fetched"* summary with a collapsed list of the links that couldn't be
+  retrieved, and **remove** an article or a whole section — the EPUB rebuilds
+  automatically (`GET`/`DELETE /api/digests/{id}/articles`).
 
 ### Changed
 
 - Article pages are fetched with a **browser-impersonating client** (curl_cffi,
   Chrome TLS/JA3 fingerprint) instead of a spoofed User-Agent, so
   TLS-fingerprinting bot walls stop refusing the connection outright.
+- **Compile now fetches missing content itself.** Previously only *Preview*
+  fetched full text, so articles enqueued without previewing shipped as summaries.
+  Generation now retrieves any missing bodies with the same impersonation +
+  reader fallback (and caches them back onto the article), throttled to be polite
+  — same-host requests are spaced ~2 s with jitter while distinct hosts run in
+  parallel (`services/article_fetcher.py`; per-member outcome in
+  `digest_articles.fetch_status`, migration 9).
 - Feeds that ship full content (`<content:encoded>` / Atom `<content>`) are
   stored at poll time, so full-text feeds need no page fetch at all.
 - Masthead: nav links now read as interactive (hover/active affordance, rule

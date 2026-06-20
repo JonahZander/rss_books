@@ -150,3 +150,24 @@ class Digest(BaseModel):
     created_at: datetime
     article_count: int = 0
     deliveries: list[Delivery] = []
+
+
+# Compile-time retrieval outcome for an edition member: 'full' (real body),
+# 'summary' (fell back to the RSS summary), 'empty' (nothing available). Single
+# source of truth shared by the model and digest_service.
+FetchStatus = Literal["full", "summary", "empty"]
+
+
+class DigestArticleEntry(BaseModel):
+    """One member of an edition, for the Editions preview. `fetch_status` is the
+    compile-time retrieval outcome, None until generated. Bodies load on demand
+    via GET /api/articles/{id}."""
+
+    article_id: int
+    position: int
+    title: str
+    url: str
+    source: str
+    group_name: str | None = None
+    has_full_content: bool = False
+    fetch_status: FetchStatus | None = None

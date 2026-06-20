@@ -9,6 +9,8 @@ import httpx
 
 from rss_kindle.config import USER_AGENT
 from rss_kindle.db import Database
+from rss_kindle.models import FetchStatus
+from rss_kindle.services.article_fetcher import fetch_many
 from rss_kindle.services.cover import render_cover
 from rss_kindle.services.emailer import send_digest_and_record
 from rss_kindle.services.epub_builder import DigestArticle, build_digest_epub
@@ -124,8 +126,8 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
                 raise RuntimeError(f"digest {digest_id} vanished before generation")
 
             cur = await conn.execute(
-                "SELECT a.title, a.url, a.summary, a.full_content, a.published_at, "
-                "f.title AS source, g.name AS group_name "
+                "SELECT a.id AS article_id, a.title, a.url, a.summary, a.full_content, "
+                "a.published_at, f.title AS source, g.name AS group_name "
                 "FROM digest_articles da "
                 "JOIN articles a ON a.id = da.article_id "
                 "JOIN feeds f ON f.id = a.feed_id "
@@ -135,17 +137,37 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
             )
             rows = await cur.fetchall()
 
+        # Compile is the second retrieval path: articles enqueued without a
+        # preview have no stored full_content, so fetch the missing ones here
+        # with the same impersonation + reader fallback Preview uses — politely,
+        # one host at a time. (Done with the DB connection closed; reopened below
+        # to persist.) See docs/.../guide on the two paths.
+        app_settings = await get_app_settings(db)
+        missing_urls = [r["url"] for r in rows if not r["full_content"]]
+        fetched = await fetch_many(missing_urls, app_settings) if missing_urls else {}
+
         # A combined edition (group_name NULL) sections its TOC by group; a
         # per-group edition is the group, so it keeps per-feed sections inside.
         combined = d["group_name"] is None
         articles: list[DigestArticle] = []
+        # (article_id, fetch_status, freshly_fetched_content_or_None) per member,
+        # written back after the EPUB is built.
+        member_outcomes: list[tuple[int, FetchStatus, str | None]] = []
         for r in rows:
-            if r["full_content"]:
-                body, fallback = r["full_content"], False
+            fresh: str | None = None
+            content = r["full_content"] or fetched.get(r["url"])
+            fetch_status: FetchStatus
+            if content:
+                body, fallback = content, False
+                fetch_status = "full"
+                if not r["full_content"]:
+                    fresh = content  # newly retrieved — cache it on the article
             else:
                 summary = sanitize(r["summary"] or "").strip()
                 body = summary or "<p><em>No content available.</em></p>"
                 fallback = True
+                fetch_status = "summary" if summary else "empty"
+            member_outcomes.append((r["article_id"], fetch_status, fresh))
             articles.append(
                 DigestArticle(
                     title=r["title"],
@@ -191,6 +213,18 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
                 "UPDATE digests SET epub_path = ?, status = 'ready', size_bytes = ? WHERE id = ?",
                 (str(output), size_bytes, digest_id),
             )
+            for article_id, fetch_status, fresh in member_outcomes:
+                await conn.execute(
+                    "UPDATE digest_articles SET fetch_status = ? "
+                    "WHERE digest_id = ? AND article_id = ?",
+                    (fetch_status, digest_id, article_id),
+                )
+                if fresh is not None:
+                    await conn.execute(
+                        "UPDATE articles SET full_content = ?, "
+                        "fetched_at = CURRENT_TIMESTAMP WHERE id = ?",
+                        (fresh, article_id),
+                    )
             await conn.commit()
         logger.info(
             "digest %d ready: %s (%d articles, %d bytes)",
@@ -200,7 +234,6 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
             size_bytes,
         )
 
-        app_settings = await get_app_settings(db)
         if app_settings.email_on_ready and app_settings.send_to:
             try:
                 await send_digest_and_record(db, app_settings, digest_id)

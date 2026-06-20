@@ -62,6 +62,18 @@ export type Digest = {
   deliveries: Delivery[];
 };
 
+export type DigestArticleEntry = {
+  article_id: number;
+  position: number;
+  title: string;
+  url: string;
+  source: string;
+  group_name: string | null;
+  has_full_content: boolean;
+  /** Compile-time retrieval outcome; null until the edition was generated. */
+  fetch_status: "full" | "summary" | "empty" | null;
+};
+
 export type AppSettings = {
   smtp_host: string;
   smtp_port: number;
@@ -98,20 +110,29 @@ export type ArticleQuery = {
   offset?: number;
 };
 
-async function j<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let detail = `${res.status}`;
-    try {
-      const body = (await res.json()) as { detail?: unknown };
-      if (body?.detail) {
-        detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-      }
-    } catch {
-      // keep the bare status code
+// Pull FastAPI's `detail` message out of an error response so the UI can show
+// something human ("That feed was already removed") instead of a bare "404".
+async function errorDetail(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (body?.detail) {
+      return typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
     }
-    throw new Error(detail);
+  } catch {
+    // no JSON body — fall back to the status code
   }
+  return `${res.status}`;
+}
+
+async function j<T>(res: Response): Promise<T> {
+  if (!res.ok) throw new Error(await errorDetail(res));
   return (await res.json()) as T;
+}
+
+// For endpoints that return no body on success (deletes): still surface a
+// useful message on failure rather than throwing the numeric status.
+async function ensureOk(res: Response): Promise<void> {
+  if (!res.ok) throw new Error(await errorDetail(res));
 }
 
 function jsonInit(method: string, body?: unknown): RequestInit {
@@ -139,13 +160,9 @@ export const api = {
   patchGroup: (id: number, patch: { name?: string; position?: number }) =>
     fetch(`${BASE}/api/groups/${id}`, jsonInit("PATCH", patch)).then((r) => j<Group>(r)),
   deleteGroup: (id: number) =>
-    fetch(`${BASE}/api/groups/${id}`, { method: "DELETE" }).then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-    }),
+    fetch(`${BASE}/api/groups/${id}`, { method: "DELETE" }).then(ensureOk),
   deleteFeed: (id: number) =>
-    fetch(`${BASE}/api/feeds/${id}`, { method: "DELETE" }).then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-    }),
+    fetch(`${BASE}/api/feeds/${id}`, { method: "DELETE" }).then(ensureOk),
   refreshAll: () =>
     fetch(`${BASE}/api/feeds/refresh`, { method: "POST" }).then((r) =>
       j<{ inserted: number; errors: number }>(r),
@@ -221,10 +238,14 @@ export const api = {
       }),
     ).then((r) => j<Digest[]>(r)),
   getDigest: (id: number) => fetch(`${BASE}/api/digests/${id}`).then((r) => j<Digest>(r)),
+  listDigestArticles: (id: number) =>
+    fetch(`${BASE}/api/digests/${id}/articles`).then((r) => j<DigestArticleEntry[]>(r)),
+  removeDigestArticle: (digestId: number, articleId: number) =>
+    fetch(`${BASE}/api/digests/${digestId}/articles/${articleId}`, { method: "DELETE" }).then(
+      (r) => j<Digest>(r),
+    ),
   deleteDigest: (id: number) =>
-    fetch(`${BASE}/api/digests/${id}`, { method: "DELETE" }).then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-    }),
+    fetch(`${BASE}/api/digests/${id}`, { method: "DELETE" }).then(ensureOk),
   sendDigest: (id: number) =>
     fetch(`${BASE}/api/digests/${id}/send`, { method: "POST" }).then((r) => j<Delivery>(r)),
   downloadDigestUrl: (id: number) => `${BASE}/api/digests/${id}/download`,

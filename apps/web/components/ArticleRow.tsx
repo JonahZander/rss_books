@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Article, ArticleDetail } from "../lib/api";
 import { api } from "../lib/api";
+import { hostnameOf } from "../lib/url";
 
 type Props = {
   article: Article;
@@ -14,13 +15,6 @@ type Props = {
   onRead: (article: Article) => void;
 };
 
-function hostnameOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
 
 function fmtTimestamp(iso: string): string {
   const d = new Date(iso);

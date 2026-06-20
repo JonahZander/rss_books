@@ -5,6 +5,8 @@ import { ArticleRow } from "./ArticleRow";
 
 type Props = {
   articles: Article[];
+  /** false until the first article fetch resolves — suppresses the empty-state flash */
+  loaded: boolean;
   queuedIds: Set<number>;
   unreadOnly: boolean;
   onUnreadOnly: (v: boolean) => void;
@@ -36,6 +38,7 @@ function ymd(): string {
 
 export function ArticleList({
   articles,
+  loaded,
   queuedIds,
   unreadOnly,
   onUnreadOnly,
@@ -50,6 +53,13 @@ export function ArticleList({
 }: Props) {
   const title = currentFeed?.title ?? currentGroup?.name ?? "All dispatches";
   const total = articles.length;
+  // The empty pane means different things — don't blame the user's setup when
+  // they've just searched or read everything.
+  const empty = search.trim()
+    ? { head: "No matches", body: `Nothing matches “${search.trim()}”. Clear the search to see all.` }
+    : unreadOnly
+      ? { head: "All caught up", body: "Nothing unread here — switch off “Unread only” to see read articles." }
+      : { head: "No dispatches yet", body: "Add a feed and refresh to populate the stream." };
 
   return (
     <div>
@@ -88,10 +98,14 @@ export function ArticleList({
         />
       </div>
 
-      {articles.length === 0 ? (
+      {!loaded ? (
+        <p className="empty-state" aria-busy="true">
+          Loading dispatches…
+        </p>
+      ) : articles.length === 0 ? (
         <p className="empty-state">
-          No dispatches in queue
-          <small>Add a feed and refresh to populate the stream.</small>
+          {empty.head}
+          <small>{empty.body}</small>
         </p>
       ) : (
         <div className="article-list">

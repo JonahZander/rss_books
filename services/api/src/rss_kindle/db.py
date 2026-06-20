@@ -135,6 +135,27 @@ async def _m7_feed_groups(conn: aiosqlite.Connection) -> None:
     await conn.execute("ALTER TABLE digests ADD COLUMN group_name TEXT")
 
 
+async def _m8_hot_path_indexes(conn: aiosqlite.Connection) -> None:
+    # Cover the article-list filters (unread default-on, retention sweep) and the
+    # per-article digest-membership lookup, which can't use digest_articles'
+    # (digest_id, article_id) PK because article_id isn't its leading column.
+    await conn.executescript(
+        """
+        CREATE INDEX IF NOT EXISTS idx_articles_read ON articles(read_at);
+        CREATE INDEX IF NOT EXISTS idx_articles_created ON articles(created_at);
+        CREATE INDEX IF NOT EXISTS idx_digest_articles_article ON digest_articles(article_id);
+        """
+    )
+
+
+async def _m9_digest_article_fetch_status(conn: aiosqlite.Connection) -> None:
+    # Per-member outcome of compile-time content retrieval: 'full' (real body,
+    # stored or freshly fetched), 'summary' (fell back to the RSS summary), or
+    # 'empty' (nothing available). NULL until the edition is generated. Lets the
+    # Editions UI report "N of M links fetched" and list the ones that failed.
+    await conn.execute("ALTER TABLE digest_articles ADD COLUMN fetch_status TEXT")
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
     ("digest failure state", _m2_digest_failure),
@@ -143,6 +164,8 @@ MIGRATIONS: list[tuple[str, Migration]] = [
     ("feed health and conditional GET", _m5_feed_health),
     ("read state", _m6_read_state),
     ("feed groups", _m7_feed_groups),
+    ("hot-path indexes", _m8_hot_path_indexes),
+    ("digest article fetch status", _m9_digest_article_fetch_status),
 ]
 
 
@@ -180,6 +203,12 @@ class Database:
         conn = await aiosqlite.connect(self.path)
         conn.row_factory = aiosqlite.Row
         await conn.execute("PRAGMA foreign_keys = ON")
+        # WAL lets readers run during a write and serializes writers behind a
+        # bounded wait instead of failing immediately — without it the scheduler
+        # polling several feeds concurrently (each its own connection) hits
+        # "database is locked". WAL is persistent; busy_timeout is per-connection.
+        await conn.execute("PRAGMA journal_mode = WAL")
+        await conn.execute("PRAGMA busy_timeout = 5000")
         try:
             yield conn
         finally:

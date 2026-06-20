@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { EditionPreview } from "../../components/EditionPreview";
 import { Masthead } from "../../components/Masthead";
 import { useToast } from "../../components/Toasts";
 import { api, emailConfigured, type AppSettings, type Digest } from "../../lib/api";
@@ -34,6 +35,7 @@ export default function Editions() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Digest | null>(null);
   const [sendingId, setSendingId] = useState<number | null>(null);
+  const [previewId, setPreviewId] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     setDigests(await api.listDigests());
@@ -133,6 +135,15 @@ export default function Editions() {
                   <span className={`status-chip chip-${d.status}`}>{STATUS_LABEL[d.status]}</span>
                 </div>
                 <div className="edition-actions">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    aria-expanded={previewId === d.id}
+                    onClick={() => setPreviewId(previewId === d.id ? null : d.id)}
+                  >
+                    <span>{previewId === d.id ? "Hide preview" : "Preview"}</span>
+                    <span className="btn-arrow">{previewId === d.id ? "↑" : "↓"}</span>
+                  </button>
                   {d.status === "ready" && (
                     <a className="btn btn-ghost btn-sm" href={api.downloadDigestUrl(d.id)} download>
                       <span>Download</span>
@@ -159,6 +170,13 @@ export default function Editions() {
                     <span className="btn-arrow">×</span>
                   </button>
                 </div>
+                {previewId === d.id && (
+                  <EditionPreview
+                    digestId={d.id}
+                    notify={(msg, kind) => toast(msg, kind === "error" ? "error" : undefined)}
+                    onChanged={() => void refresh()}
+                  />
+                )}
               </li>
             ))}
           </ul>

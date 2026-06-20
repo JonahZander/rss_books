@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import HTTPError, RequestException
 from fastapi import APIRouter, HTTPException, Request
 
 from rss_kindle.models import Article, ArticleDetail
+from rss_kindle.services.article_fetcher import fetch_url_bytes
 from rss_kindle.services.content_extractor import extract_html
 from rss_kindle.services.readers import ReaderError, build_reader
 from rss_kindle.services.sanitizer import sanitize
@@ -38,16 +38,6 @@ ARTICLE_COLUMNS = (
     "id, feed_id, title, url, summary, published_at, read_at, "
     "(full_content IS NOT NULL) AS has_full_content, " + article_state_sql()
 )
-
-
-async def fetch_url_bytes(url: str) -> bytes:
-    # Modern WAFs fingerprint the TLS handshake (JA3/JA4) and reject any
-    # non-browser client regardless of User-Agent, so we impersonate Chrome
-    # at the transport layer rather than just spoofing the UA header.
-    async with AsyncSession() as session:
-        r = await session.get(url, impersonate="chrome", timeout=20, allow_redirects=True)
-        r.raise_for_status()
-        return r.content
 
 
 def _to_article(row: object) -> Article:
