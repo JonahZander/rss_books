@@ -137,11 +137,11 @@ export default function Editions() {
                 <div className="edition-actions">
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm"
+                    className="btn btn-outline btn-sm"
                     aria-expanded={previewId === d.id}
                     onClick={() => setPreviewId(previewId === d.id ? null : d.id)}
                   >
-                    <span>{previewId === d.id ? "Hide preview" : "Preview"}</span>
+                    <span>{previewId === d.id ? "Hide" : "Review"}</span>
                     <span className="btn-arrow">{previewId === d.id ? "↑" : "↓"}</span>
                   </button>
                   {d.status === "ready" && (

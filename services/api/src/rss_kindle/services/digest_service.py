@@ -107,6 +107,54 @@ async def create_digest_records(
     return digest_ids
 
 
+async def load_digest_preview(db: Database, digest_id: int) -> tuple[str, list[DigestArticle]]:
+    """Title + ordered members of an edition built from already-stored content
+    (no network, no image rewriting) — for the in-app HTML preview. Raises
+    LookupError if the edition is missing or has no members."""
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "SELECT title, group_name FROM digests WHERE id = ?", (digest_id,)
+        )
+        d = await cur.fetchone()
+        if d is None:
+            raise LookupError("digest not found")
+        cur = await conn.execute(
+            "SELECT a.title, a.url, a.summary, a.full_content, a.published_at, "
+            "f.title AS source, g.name AS group_name "
+            "FROM digest_articles da "
+            "JOIN articles a ON a.id = da.article_id "
+            "JOIN feeds f ON f.id = a.feed_id "
+            "LEFT JOIN groups g ON g.id = f.group_id "
+            "WHERE da.digest_id = ? ORDER BY da.position ASC",
+            (digest_id,),
+        )
+        rows = await cur.fetchall()
+    if not rows:
+        raise LookupError("edition is empty")
+
+    combined = d["group_name"] is None
+    articles: list[DigestArticle] = []
+    for r in rows:
+        if r["full_content"]:
+            body, fallback = r["full_content"], False
+        else:
+            summary = sanitize(r["summary"] or "").strip()
+            body = summary or "<p><em>No content available.</em></p>"
+            fallback = True
+        articles.append(
+            DigestArticle(
+                title=r["title"],
+                source=r["source"],
+                url=r["url"],
+                html=body,
+                published_at=r["published_at"],
+                is_summary_fallback=fallback,
+                group=r["group_name"] if combined else None,
+            )
+        )
+    return d["title"], articles
+
+
 async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
     """Build the EPUB for a digest; lands in status 'ready' or 'failed'."""
     try:

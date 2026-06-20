@@ -93,6 +93,13 @@ class QueueUpdate(BaseModel):
     article_ids: list[int]
 
 
+class DigestArticlesRemove(BaseModel):
+    """Batch removal of edition members — drops all in one transaction and
+    rebuilds the EPUB once, rather than once per article."""
+
+    article_ids: list[int]
+
+
 class AppSettings(BaseModel):
     # Delivery: send-to-Kindle email (also works for PocketBook's gateway)
     smtp_host: str = ""

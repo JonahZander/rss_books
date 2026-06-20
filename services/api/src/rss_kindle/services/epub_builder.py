@@ -45,6 +45,7 @@ h1.article-title { font-size: 1.45em; margin: 0.4em 0 0.25em; }
   color: #333;
   margin: 0 0 0.8em;
 }
+.article-source { font-size: 0.85em; margin: 0 0 0.8em; }
 .fallback-note { font-size: 0.85em; color: #333; }
 hr.rule { border: 0; border-top: 1px solid #000; margin: 1em 0; }
 p { margin: 0.5em 0; }
@@ -94,6 +95,48 @@ def _reading_minutes(html_text: str) -> int:
     return max(1, round(words / 230))
 
 
+def _sources(articles: list[DigestArticle]) -> list[str]:
+    return list(dict.fromkeys(a.source for a in articles))
+
+
+def _section_of(article: DigestArticle, grouped: bool) -> str:
+    if grouped:
+        return article.group or "Ungrouped"
+    return article.source
+
+
+def _ordered_sections(articles: list[DigestArticle]) -> tuple[bool, list[str]]:
+    """(grouped?, section names in first-appearance order). When grouping by
+    feed-group, the catch-all 'Ungrouped' section always sorts last — matching
+    the EPUB TOC."""
+    grouped = any(a.group for a in articles)
+    names = list(dict.fromkeys(_section_of(a, grouped) for a in articles))
+    if grouped and "Ungrouped" in names:
+        names = [n for n in names if n != "Ungrouped"] + ["Ungrouped"]
+    return grouped, names
+
+
+def _title_page_html(title: str, articles: list[DigestArticle]) -> str:
+    """Inner markup of the edition title page — shared by the EPUB and the
+    in-app HTML preview so they can't drift."""
+    esc = html_lib.escape
+    sources = _sources(articles)
+    total = len(articles)
+    source_items = "".join(f"<li>{esc(s)}</li>" for s in sources)
+    article_word = "article" if total == 1 else "articles"
+    source_word = "source" if len(sources) == 1 else "sources"
+    return (
+        '<section class="titlepage">'
+        '<p class="eyebrow">RSS / KINDLE SELECTOR &#8212; PRESSED EDITION</p>'
+        f"<h1>{esc(title)}</h1>"
+        f'<p class="edition-meta">{total} {article_word} &#183; '
+        f"{len(sources)} {source_word}</p>"
+        '<hr class="rule"/>'
+        f'<ul class="sources">{source_items}</ul>'
+        "</section>"
+    )
+
+
 def _chapter_body(article: DigestArticle, index: int, total: int) -> str:
     esc = html_lib.escape
     host = urlparse(article.url).hostname or article.url
@@ -108,6 +151,8 @@ def _chapter_body(article: DigestArticle, index: int, total: int) -> str:
         '<div class="chapter">',
         f'<h1 class="article-title">{esc(article.title)}</h1>',
         f'<p class="byline">{" · ".join(byline_bits)}</p>',
+        f'<p class="article-source"><a href="{esc(article.url)}">'
+        f'Read the original at {esc(host)}</a></p>',
         '<hr class="rule"/>',
     ]
     if article.is_summary_fallback:
@@ -117,10 +162,7 @@ def _chapter_body(article: DigestArticle, index: int, total: int) -> str:
         )
     parts.append(article.html)
     parts.append('<hr class="rule"/>')
-    parts.append(
-        f'<p class="article-footer">No. {index:02d}/{total:02d} &#183; '
-        f'<a href="{esc(article.url)}">Read the original at {esc(host)}</a></p>'
-    )
+    parts.append(f'<p class="article-footer">No. {index:02d}/{total:02d}</p>')
     parts.append("</div>")
     return "\n".join(parts)
 
@@ -151,32 +193,15 @@ def build_digest_epub(
     if cover_png:
         book.set_cover("cover.png", cover_png)
 
-    sources = list(dict.fromkeys(a.source for a in articles))
+    sources = _sources(articles)
     total = len(articles)
 
-    source_items = "".join(f"<li>{esc(s)}</li>" for s in sources)
-    article_word = "article" if total == 1 else "articles"
-    source_word = "source" if len(sources) == 1 else "sources"
     title_page = epub.EpubHtml(title="Edition", file_name="title.xhtml", lang="en")
-    title_page.set_content(
-        '<section class="titlepage">'
-        '<p class="eyebrow">RSS / KINDLE SELECTOR &#8212; PRESSED EDITION</p>'
-        f"<h1>{esc(title)}</h1>"
-        f'<p class="edition-meta">{total} {article_word} &#183; '
-        f"{len(sources)} {source_word}</p>"
-        '<hr class="rule"/>'
-        f'<ul class="sources">{source_items}</ul>'
-        "</section>"
-    )
+    title_page.set_content(_title_page_html(title, articles))
     title_page.add_item(css)
     book.add_item(title_page)
 
-    grouped = any(a.group for a in articles)
-
-    def _section_of(article: DigestArticle) -> str:
-        if grouped:
-            return article.group or "Ungrouped"
-        return article.source
+    grouped, _ = _ordered_sections(articles)
 
     chapters: list[tuple[str, epub.EpubHtml]] = []
     for i, art in enumerate(articles, start=1):
@@ -184,7 +209,7 @@ def build_digest_epub(
         chap.set_content(_chapter_body(art, i, total))
         chap.add_item(css)
         book.add_item(chap)
-        chapters.append((_section_of(art), chap))
+        chapters.append((_section_of(art, grouped), chap))
 
     for n, image in enumerate((images or {}).values(), start=1):
         book.add_item(
@@ -212,9 +237,7 @@ def build_digest_epub(
 
     # Sectioned TOC in first-appearance (queue) order: by feed normally, by
     # group when articles carry one — with the Ungrouped section always last.
-    section_names = list(dict.fromkeys(s for s, _ in chapters))
-    if grouped and "Ungrouped" in section_names:
-        section_names = [s for s in section_names if s != "Ungrouped"] + ["Ungrouped"]
+    _, section_names = _ordered_sections(articles)
     book.toc = [
         (epub.Section(name), [c for s, c in chapters if s == name]) for name in section_names
     ]
@@ -232,3 +255,55 @@ def build_digest_epub(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     epub.write_epub(str(output_path), book, {"epub3_pages": False})
     return output_path
+
+
+# Screen-only chrome on top of the e-ink STYLESHEET: a readable measure, a
+# sectioned contents list, and visible separators where the EPUB would page-break.
+_PREVIEW_CHROME = """\
+body { max-width: 40em; margin: 0 auto; padding: 1.5em 1.2em 4em; background: #fff; }
+.preview-toc { margin: 1.5em 0; padding: 0; list-style: none; }
+.preview-toc-section { font-size: 0.72em; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #555; margin: 1em 0 0.3em; }
+.preview-toc a { display: block; padding: 0.15em 0; }
+.chapter { page-break-before: auto; border-top: 3px double #000; padding-top: 1.5em;
+  margin-top: 2em; }
+.chapter:first-of-type { border-top: 0; margin-top: 1em; }
+img { height: auto; }
+"""
+
+
+def render_preview_html(*, title: str, articles: list[DigestArticle]) -> str:
+    """A standalone HTML rendition of an edition for the in-app preview drawer:
+    the same title page, sectioned contents, byline, source link and chapter
+    bodies the EPUB ships — so what you see here is what lands on the device."""
+    esc = html_lib.escape
+    total = len(articles)
+    grouped, section_names = _ordered_sections(articles)
+
+    # Contents list grouped by section, linking to each chapter anchor.
+    toc_parts = ['<nav><p class="eyebrow">Contents</p><ul class="preview-toc">']
+    indexed = list(enumerate(articles, start=1))
+    for name in section_names:
+        toc_parts.append(f'<li class="preview-toc-section">{esc(name)}</li>')
+        for i, art in indexed:
+            if _section_of(art, grouped) == name:
+                toc_parts.append(f'<li><a href="#chap-{i}">{esc(art.title)}</a></li>')
+    toc_parts.append("</ul></nav>")
+
+    chapter_parts = []
+    for i, art in indexed:
+        body = _chapter_body(art, i, total)
+        chapter_parts.append(
+            body.replace('<div class="chapter">', f'<div class="chapter" id="chap-{i}">', 1)
+        )
+
+    return (
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'/>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'/>"
+        f"<title>{esc(title)} — Preview</title>"
+        f"<style>{STYLESHEET}{_PREVIEW_CHROME}</style></head><body>"
+        f"{_title_page_html(title, articles)}"
+        f"{''.join(toc_parts)}"
+        f"{''.join(chapter_parts)}"
+        "</body></html>"
+    )

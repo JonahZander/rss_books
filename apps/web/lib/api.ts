@@ -244,6 +244,14 @@ export const api = {
     fetch(`${BASE}/api/digests/${digestId}/articles/${articleId}`, { method: "DELETE" }).then(
       (r) => j<Digest>(r),
     ),
+  /** Batch-drop several members at once — one rebuild instead of N. */
+  removeDigestArticles: (digestId: number, articleIds: number[]) =>
+    fetch(
+      `${BASE}/api/digests/${digestId}/articles/remove`,
+      jsonInit("POST", { article_ids: articleIds }),
+    ).then((r) => j<Digest>(r)),
+  /** Standalone HTML rendition of the edition (title page, TOC, chapters). */
+  digestPreviewUrl: (id: number) => `${BASE}/api/digests/${id}/preview`,
   deleteDigest: (id: number) =>
     fetch(`${BASE}/api/digests/${id}`, { method: "DELETE" }).then(ensureOk),
   sendDigest: (id: number) =>

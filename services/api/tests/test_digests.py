@@ -256,3 +256,81 @@ def test_remove_article_rebuilds_and_empty_edition_fails(tmp_path, monkeypatch):
         # 404s for unknown members / digests
         assert client.delete(f"/api/digests/{digest_id}/articles/99999").status_code == 404
         assert client.delete("/api/digests/99999/articles/1").status_code == 404
+
+
+def test_batch_remove_articles_rebuilds_once(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        a_ids = _add_feed_with_articles(client, "https://a.example/rss", "A", b"urn:a:")
+        b_ids = _add_feed_with_articles(client, "https://b.example/rss", "B", b"urn:b:")
+        ids = a_ids + b_ids
+        assert len(ids) == 4
+        urls = [a["url"] for a in client.get("/api/articles").json()]
+        fake = _patched_fetch({u: "<p>body</p>" for u in urls})
+        with patch("rss_kindle.services.digest_service.fetch_many", new=fake):
+            digest_id = client.post(
+                "/api/digests", json={"article_ids": ids, "title": "cull-me"}
+            ).json()[0]["id"]
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+
+            # drop two members in one call
+            r = client.post(
+                f"/api/digests/{digest_id}/articles/remove",
+                json={"article_ids": [ids[0], ids[2]]},
+            )
+            assert r.status_code == 200
+            assert r.json()["article_count"] == 2
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+            remaining = client.get(f"/api/digests/{digest_id}/articles").json()
+            assert sorted(e["article_id"] for e in remaining) == sorted([ids[1], ids[3]])
+
+        # empty body → 400; unknown ids → 404; removing all leaves it 'failed'
+        assert (
+            client.post(
+                f"/api/digests/{digest_id}/articles/remove", json={"article_ids": []}
+            ).status_code
+            == 400
+        )
+        assert (
+            client.post(
+                f"/api/digests/{digest_id}/articles/remove", json={"article_ids": [99999]}
+            ).status_code
+            == 404
+        )
+        r = client.post(
+            f"/api/digests/{digest_id}/articles/remove",
+            json={"article_ids": [ids[1], ids[3]]},
+        )
+        assert r.json()["status"] == "failed"
+
+
+def test_preview_renders_edition_html(tmp_path, monkeypatch):
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        urls = [a["url"] for a in client.get("/api/articles").json()]
+        body = "<p>The body that should appear in the preview.</p>"
+        with patch(
+            "rss_kindle.services.digest_service.fetch_many",
+            new=_patched_fetch({u: body for u in urls}),
+        ):
+            digest_id = client.post(
+                "/api/digests", json={"article_ids": ids, "title": "Preview Me"}
+            ).json()[0]["id"]
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+
+        r = client.get(f"/api/digests/{digest_id}/preview")
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/html")
+        html = r.text
+        # title page, the source link this edition now leads with, and chapter body
+        assert "Preview Me" in html
+        assert "Read the original at" in html
+        assert "should appear in the preview" in html
+        titles = [a["title"] for a in client.get("/api/articles").json()]
+        for t in titles:
+            assert t in html
+
+        assert client.get("/api/digests/99999/preview").status_code == 404

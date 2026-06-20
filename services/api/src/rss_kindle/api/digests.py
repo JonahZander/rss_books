@@ -3,12 +3,23 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from rss_kindle.db import Database, placeholders
-from rss_kindle.models import Delivery, Digest, DigestArticleEntry, DigestCreate
-from rss_kindle.services.digest_service import create_digest_records, generate_digest
+from rss_kindle.models import (
+    Delivery,
+    Digest,
+    DigestArticleEntry,
+    DigestArticlesRemove,
+    DigestCreate,
+)
+from rss_kindle.services.digest_service import (
+    create_digest_records,
+    generate_digest,
+    load_digest_preview,
+)
 from rss_kindle.services.emailer import EmailError, send_digest_and_record
+from rss_kindle.services.epub_builder import render_preview_html
 from rss_kindle.services.settings_store import get_app_settings
 
 router = APIRouter(prefix="/api/digests", tags=["digests"])
@@ -155,24 +166,24 @@ async def delete_digest(digest_id: int, request: Request) -> None:
         Path(row["epub_path"]).unlink(missing_ok=True)
 
 
-@router.delete("/{digest_id}/articles/{article_id}", response_model=Digest)
-async def remove_digest_article(
+async def _remove_articles_and_rebuild(
+    db: Database,
+    epub_dir: Path,
     digest_id: int,
-    article_id: int,
-    request: Request,
+    article_ids: list[int],
     background: BackgroundTasks,
-) -> Digest:
-    """Drop one article from an edition and rebuild its EPUB in the background.
-    Removing the last member leaves the edition 'failed' (nothing to compile)
-    rather than building an empty book; the article's read state is untouched."""
-    db: Database = request.app.state.db
-    epub_dir: Path = request.app.state.settings.epub_dir
+) -> int:
+    """Drop the given members from an edition in one transaction; queue a single
+    rebuild if any remain, else mark the edition 'failed' (empty). Returns the
+    number actually removed. Raises HTTPException(404) when nothing matched."""
     async with db.connect() as conn:
+        marks = placeholders(len(article_ids))
         cur = await conn.execute(
-            "DELETE FROM digest_articles WHERE digest_id = ? AND article_id = ?",
-            (digest_id, article_id),
+            f"DELETE FROM digest_articles WHERE digest_id = ? AND article_id IN ({marks})",
+            (digest_id, *article_ids),
         )
-        if cur.rowcount == 0:
+        removed = cur.rowcount
+        if removed == 0:
             cur = await conn.execute("SELECT 1 FROM digests WHERE id = ?", (digest_id,))
             detail = "digest not found" if await cur.fetchone() is None else "article not in digest"
             raise HTTPException(status_code=404, detail=detail)
@@ -196,7 +207,57 @@ async def remove_digest_article(
         await conn.commit()
     if remaining:
         background.add_task(generate_digest, db, digest_id, epub_dir)
+    return removed
+
+
+@router.delete("/{digest_id}/articles/{article_id}", response_model=Digest)
+async def remove_digest_article(
+    digest_id: int,
+    article_id: int,
+    request: Request,
+    background: BackgroundTasks,
+) -> Digest:
+    """Drop one article from an edition and rebuild its EPUB in the background.
+    Removing the last member leaves the edition 'failed' (nothing to compile)
+    rather than building an empty book; the article's read state is untouched."""
+    db: Database = request.app.state.db
+    epub_dir: Path = request.app.state.settings.epub_dir
+    await _remove_articles_and_rebuild(db, epub_dir, digest_id, [article_id], background)
     return await get_digest(digest_id, request)
+
+
+@router.post("/{digest_id}/articles/remove", response_model=Digest)
+async def remove_digest_articles(
+    digest_id: int,
+    payload: DigestArticlesRemove,
+    request: Request,
+    background: BackgroundTasks,
+) -> Digest:
+    """Batch-drop several members at once — one transaction, one rebuild. Powers
+    the Editions review panel's staged 'Apply removals' so culling N articles
+    costs one EPUB build instead of N."""
+    if not payload.article_ids:
+        raise HTTPException(status_code=400, detail="no articles to remove")
+    db: Database = request.app.state.db
+    epub_dir: Path = request.app.state.settings.epub_dir
+    await _remove_articles_and_rebuild(
+        db, epub_dir, digest_id, payload.article_ids, background
+    )
+    return await get_digest(digest_id, request)
+
+
+@router.get("/{digest_id}/preview", response_class=HTMLResponse)
+async def preview_digest(digest_id: int, request: Request) -> HTMLResponse:
+    """A standalone HTML rendition of the edition — title page, sectioned
+    contents and the same chapter bodies the EPUB ships — for the in-app preview
+    drawer. Built from stored content, so it works before/independently of the
+    EPUB build and even for 'failed' editions that still have members."""
+    db: Database = request.app.state.db
+    try:
+        title, articles = await load_digest_preview(db, digest_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return HTMLResponse(render_preview_html(title=title, articles=articles))
 
 
 @router.get("/{digest_id}/download")
