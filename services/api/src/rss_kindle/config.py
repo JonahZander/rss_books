@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,6 +16,18 @@ USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36 rss-kindle-selector/1.1"
 )
+
+
+def make_http_client(**overrides: object) -> httpx.AsyncClient:
+    """The standard async client for fetching feeds/articles/images: our UA,
+    redirects followed, a 20s timeout. One place so every fetch path agrees."""
+    kwargs: dict[str, object] = {
+        "timeout": 20.0,
+        "follow_redirects": True,
+        "headers": {"User-Agent": USER_AGENT},
+    }
+    kwargs.update(overrides)
+    return httpx.AsyncClient(**kwargs)  # type: ignore[arg-type]
 
 
 class Settings(BaseSettings):

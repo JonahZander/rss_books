@@ -20,7 +20,7 @@ from curl_cffi.requests.exceptions import HTTPError, RequestException
 from rss_kindle.models import AppSettings
 from rss_kindle.services.content_extractor import extract_html
 from rss_kindle.services.readers import ReaderError, build_reader
-from rss_kindle.services.sanitizer import sanitize
+from rss_kindle.services.sanitizer import sanitize_or_none
 
 # Politeness window between two requests to the SAME host during a batch compile.
 # Jitter (uniform 0..JITTER) avoids a lockstep cadence a WAF could pattern-match.
@@ -54,7 +54,7 @@ async def fetch_article_content(url: str, settings: AppSettings) -> str | None:
             except ReaderError:
                 extracted = None
             if extracted:
-                content = sanitize(extracted).strip() or None
+                content = sanitize_or_none(extracted)
     return content
 
 

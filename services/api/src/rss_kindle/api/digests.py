@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from fastapi.responses import FileResponse
 
-from rss_kindle.db import Database
+from rss_kindle.db import Database, placeholders
 from rss_kindle.models import Delivery, Digest, DigestArticleEntry, DigestCreate
 from rss_kindle.services.digest_service import create_digest_records, generate_digest
 from rss_kindle.services.emailer import EmailError, send_digest_and_record
@@ -123,7 +123,7 @@ async def create_digest(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    marks = ", ".join("?" for _ in digest_ids)
+    marks = placeholders(len(digest_ids))
     async with db.connect() as conn:
         cur = await conn.execute(
             f"SELECT {DIGEST_COLUMNS} FROM digests WHERE id IN ({marks})",

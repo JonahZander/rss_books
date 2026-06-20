@@ -50,6 +50,11 @@ CREATE TABLE IF NOT EXISTS digest_articles (
 );
 """
 
+def placeholders(count: int) -> str:
+    """`?, ?, …` for a SQL `IN (...)` clause of `count` bound parameters."""
+    return ", ".join("?" for _ in range(count))
+
+
 Migration = Callable[[aiosqlite.Connection], Awaitable[None]]
 
 

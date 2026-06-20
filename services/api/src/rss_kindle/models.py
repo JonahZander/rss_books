@@ -38,16 +38,21 @@ class Group(BaseModel):
     position: int
 
 
+def _strip_required(v: str) -> str:
+    """Trim a group name and reject it when nothing is left."""
+    v = v.strip()
+    if not v:
+        raise ValueError("name must not be empty")
+    return v
+
+
 class GroupCreate(BaseModel):
     name: str
 
     @field_validator("name")
     @classmethod
     def _strip_name(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("name must not be empty")
-        return v
+        return _strip_required(v)
 
 
 class GroupUpdate(BaseModel):
@@ -57,12 +62,7 @@ class GroupUpdate(BaseModel):
     @field_validator("name")
     @classmethod
     def _strip_name(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        v = v.strip()
-        if not v:
-            raise ValueError("name must not be empty")
-        return v
+        return None if v is None else _strip_required(v)
 
 
 class Article(BaseModel):
@@ -138,10 +138,14 @@ class Delivery(BaseModel):
     created_at: datetime
 
 
+# Edition compilation lifecycle: pending → generating → ready | failed.
+DigestStatus = Literal["pending", "generating", "ready", "failed"]
+
+
 class Digest(BaseModel):
     id: int
     title: str
-    status: str
+    status: DigestStatus
     group_name: str | None = None
     epub_path: str | None = None
     error: str | None = None

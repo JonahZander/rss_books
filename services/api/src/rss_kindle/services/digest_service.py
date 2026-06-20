@@ -5,10 +5,8 @@ import re
 from datetime import date
 from pathlib import Path
 
-import httpx
-
-from rss_kindle.config import USER_AGENT
-from rss_kindle.db import Database
+from rss_kindle.config import make_http_client
+from rss_kindle.db import Database, placeholders
 from rss_kindle.models import FetchStatus
 from rss_kindle.services.article_fetcher import fetch_many
 from rss_kindle.services.cover import render_cover
@@ -52,7 +50,7 @@ async def create_digest_records(
         base = title or date.today().isoformat()
         editions: list[tuple[str, str | None, list[int]]] = []
         if split == "per_group":
-            marks = ", ".join("?" for _ in ids)
+            marks = placeholders(len(ids))
             cur = await conn.execute(
                 f"SELECT a.id, g.name AS group_name FROM articles a "
                 f"JOIN feeds f ON f.id = a.feed_id "
@@ -97,7 +95,7 @@ async def create_digest_records(
             digest_ids.append(digest_id)
 
         # compiling an edition always counts as having read its articles
-        marks = ", ".join("?" for _ in ids)
+        marks = placeholders(len(ids))
         await conn.execute(
             f"UPDATE articles SET read_at = CURRENT_TIMESTAMP "
             f"WHERE id IN ({marks}) AND read_at IS NULL",
@@ -180,11 +178,7 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
                 )
             )
 
-        async with httpx.AsyncClient(
-            timeout=20.0,
-            follow_redirects=True,
-            headers={"User-Agent": USER_AGENT},
-        ) as client:
+        async with make_http_client() as client:
             rewritten, images = await prepare_images([(a.html, a.url) for a in articles], client)
         for art, new_html in zip(articles, rewritten, strict=True):
             art.html = new_html

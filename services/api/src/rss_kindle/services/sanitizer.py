@@ -49,3 +49,10 @@ def sanitize(html: str) -> str:
         url_schemes={"http", "https"},
         link_rel="noopener noreferrer",
     )
+
+
+def sanitize_or_none(html: str) -> str | None:
+    """Sanitize, then collapse an empty result to None — the shape extraction
+    paths want when "nothing usable was left" must be distinguishable from "".
+    """
+    return sanitize(html).strip() or None

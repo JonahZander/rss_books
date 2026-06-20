@@ -10,10 +10,11 @@ from typing import Any
 
 import httpx
 
+from rss_kindle.config import make_http_client
 from rss_kindle.db import Database
 from rss_kindle.models import AppSettings
 from rss_kindle.services.digest_service import create_digest_records, generate_digest
-from rss_kindle.services.poller import USER_AGENT, poll_feed
+from rss_kindle.services.poller import poll_feed
 from rss_kindle.services.settings_store import get_app_settings, get_value, set_value
 
 logger = logging.getLogger(__name__)
@@ -79,11 +80,7 @@ class Scheduler:
         settings = await get_app_settings(self.db)
         if settings.poll_enabled:
             if client is None:
-                async with httpx.AsyncClient(
-                    timeout=20.0,
-                    follow_redirects=True,
-                    headers={"User-Agent": USER_AGENT},
-                ) as own_client:
+                async with make_http_client() as own_client:
                     await self._poll_due_feeds(own_client)
             else:
                 await self._poll_due_feeds(client)
