@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
   open: boolean;
@@ -20,6 +21,13 @@ export function ConfirmDialog({
   onCancel,
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Defer portal to the client so SSR/static-export markup matches.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -31,9 +39,9 @@ export function ConfirmDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onCancel]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className="dialog-overlay" onClick={onCancel}>
       <div
         className="dialog corner-marks"
@@ -55,6 +63,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

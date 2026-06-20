@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 /** Right-side slide-over panel. Presentational: the parent owns `open` and the
  * content. Closes on Escape or backdrop click; traps initial focus on itself. */
@@ -20,6 +21,16 @@ export function Drawer({
   footer?: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  // Portal to <body>: the drawer is rendered inside an animated (transformed)
+  // panel, which would otherwise make position:fixed relative to that panel
+  // instead of the viewport — clipping the drawer into a tiny box.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Defer portal to the client so SSR/static-export markup matches.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -31,9 +42,9 @@ export function Drawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className="drawer-overlay" onClick={onClose}>
       <aside
         ref={panelRef}
@@ -57,6 +68,7 @@ export function Drawer({
         <div className="drawer-body">{children}</div>
         {footer && <footer className="drawer-foot">{footer}</footer>}
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
