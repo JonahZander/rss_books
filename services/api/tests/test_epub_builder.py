@@ -2,7 +2,12 @@ import zipfile
 from pathlib import Path
 
 from rss_kindle.services.cover import render_cover
-from rss_kindle.services.epub_builder import DigestArticle, _reading_minutes, build_digest_epub
+from rss_kindle.services.epub_builder import (
+    DigestArticle,
+    _reading_minutes,
+    build_digest_epub,
+    render_preview_html,
+)
 from rss_kindle.services.image_pipeline import DigestImage
 
 
@@ -129,6 +134,60 @@ def test_toc_sections_by_group_when_articles_carry_groups(tmp_path: Path) -> Non
         assert "Feed W" not in nav  # feeds are no longer section heads…
         chap1 = z.read("EPUB/chap_001.xhtml").decode("utf-8")
         assert "Feed W" in chap1  # …but stay in the byline
+
+
+_QR_ARTICLES = [
+    DigestArticle(
+        title="With links",
+        source="Feed One",
+        url="https://one.example/post",
+        html='<p>See <a href="https://ref.example/a">this</a> and '
+        '<a href="https://ref.example/b">that</a>.</p>',
+    )
+]
+
+
+def test_no_qr_by_default(tmp_path: Path) -> None:
+    out = build_digest_epub(
+        title="t", articles=_QR_ARTICLES, output_path=tmp_path / "off.epub"
+    )
+    with zipfile.ZipFile(out) as z:
+        assert not any(n.startswith("EPUB/qr/") for n in z.namelist())
+        chap = z.read("EPUB/chap_001.xhtml").decode("utf-8")
+        assert "link-qr" not in chap
+
+
+def test_qr_articles_codes_only_the_source_link(tmp_path: Path) -> None:
+    out = build_digest_epub(
+        title="t", articles=_QR_ARTICLES, output_path=tmp_path / "art.epub", link_qr="articles"
+    )
+    with zipfile.ZipFile(out) as z:
+        qr_files = [n for n in z.namelist() if n.startswith("EPUB/qr/")]
+        # exactly one QR — the chapter source link, not the two body links
+        assert len(qr_files) == 1
+        chap = z.read("EPUB/chap_001.xhtml").decode("utf-8")
+        assert chap.count("link-qr") == 1
+        assert z.read(qr_files[0])[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_qr_all_codes_every_link(tmp_path: Path) -> None:
+    out = build_digest_epub(
+        title="t", articles=_QR_ARTICLES, output_path=tmp_path / "all.epub", link_qr="all"
+    )
+    with zipfile.ZipFile(out) as z:
+        qr_files = [n for n in z.namelist() if n.startswith("EPUB/qr/")]
+        # source link + the two body links = three distinct codes
+        assert len(qr_files) == 3
+        chap = z.read("EPUB/chap_001.xhtml").decode("utf-8")
+        assert chap.count("link-qr") == 3
+        # the body anchors survive alongside their QR
+        assert 'href="https://ref.example/a"' in chap
+
+
+def test_preview_inlines_qr_data_uris(tmp_path: Path) -> None:
+    html = render_preview_html(title="t", articles=_QR_ARTICLES, link_qr="all")
+    assert html.count('class="link-qr"') == 3
+    assert "data:image/png;base64," in html
 
 
 def test_toc_sections_by_feed_when_no_groups(tmp_path: Path) -> None:

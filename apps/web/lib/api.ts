@@ -91,6 +91,7 @@ export type AppSettings = {
   retention_enabled: boolean;
   retention_days: number;
   mark_read_on_expand: boolean;
+  link_qr: "off" | "articles" | "all";
   reader_fallback: "none" | "tavily" | "jina";
   tavily_api_key: string;
   deadline_enabled: boolean;

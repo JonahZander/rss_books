@@ -416,6 +416,23 @@ export default function Settings() {
             <p className="settings-hint">
               Queued articles and articles already pressed into editions are never cleaned up.
             </p>
+            <label>
+              <span className="feed-form-label">Inline QR codes for links</span>
+              <select
+                value={settings.link_qr}
+                onChange={(e) => set("link_qr", e.target.value as AppSettings["link_qr"])}
+              >
+                <option value="off">Off — keep links as text</option>
+                <option value="articles">Article source links only</option>
+                <option value="all">All links in the article</option>
+              </select>
+            </label>
+            <p className="settings-hint">
+              Many e-readers can&apos;t open embedded links. Adding a QR code next to a link lets
+              you scan it with your phone instead. &ldquo;Article source links&rdquo; codes each
+              piece&apos;s &ldquo;Read the original&rdquo; link; &ldquo;All links&rdquo; also codes
+              every hyperlink in the body.
+            </p>
           </section>
 
           <section className="settings-card corner-marks" aria-label="Reader fallback">

@@ -2,13 +2,22 @@ from __future__ import annotations
 
 import html as html_lib
 import re
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 from ebooklib import epub
+from lxml import html as lxml_html
 
 from rss_kindle.services.image_pipeline import DigestImage
+from rss_kindle.services.qr import make_qr_data_uri, make_qr_png
+
+# Inline QR codes for links the e-reader can't follow: "off" leaves links as
+# plain (often non-tappable) text; "articles" adds a QR for each chapter's own
+# source link; "all" additionally codes every hyperlink in the body.
+LinkQr = Literal["off", "articles", "all"]
 
 
 @dataclass
@@ -23,6 +32,58 @@ class DigestArticle:
     # Feed-group name for combined editions: when any article carries one, the
     # TOC sections by group instead of by feed. None everywhere = 1.0 shape.
     group: str | None = None
+
+
+# A QR renderer turns a URL into an inline <img> tag. Two flavours: the EPUB
+# one registers a PNG image-item and references it by filename; the preview one
+# inlines a data: URI. Both share the markup so the preview can't drift.
+QrRenderer = Callable[[str], str]
+
+
+def _qr_img_tag(src: str, url: str) -> str:
+    return f'<img class="link-qr" src="{src}" alt="QR code linking to {html_lib.escape(url)}"/>'
+
+
+@dataclass
+class _EpubQrEmbedder:
+    """Collects one PNG per distinct URL, referenced from chapter HTML by a
+    stable filename — so the same link reused across chapters embeds once."""
+
+    images: dict[str, bytes] = field(default_factory=dict)
+    _filenames: dict[str, str] = field(default_factory=dict)
+
+    def __call__(self, url: str) -> str:
+        filename = self._filenames.get(url)
+        if filename is None:
+            filename = f"qr/qr_{len(self._filenames) + 1:04d}.png"
+            self._filenames[url] = filename
+            self.images[filename] = make_qr_png(url)
+        return _qr_img_tag(filename, url)
+
+
+def _preview_qr(url: str) -> str:
+    return _qr_img_tag(make_qr_data_uri(url), url)
+
+
+def _inject_body_qrs(html_text: str, render_qr: QrRenderer) -> str:
+    """Append an inline QR after every <a> in a chapter body. Operates on the
+    already-sanitized HTML at build time, so the injected <img> never passes
+    through the nh3 allowlist."""
+    if not html_text.strip():
+        return html_text
+    frag = lxml_html.fragment_fromstring(html_text, create_parent="qr-wrap")
+    for anchor in frag.findall(".//a"):
+        href = anchor.get("href")
+        if not href:
+            continue
+        img = lxml_html.fragment_fromstring(render_qr(href))
+        # keep the text that followed the link attached after the new QR
+        img.tail = anchor.tail
+        anchor.tail = None
+        anchor.addnext(img)
+    return (frag.text or "") + "".join(
+        lxml_html.tostring(child, encoding="unicode") for child in frag
+    )
 
 
 # Tuned for 6-7" greyscale e-ink: generic serif stack (no embedded fonts —
@@ -67,6 +128,14 @@ pre {
 code { font-family: "Courier New", monospace; font-size: 0.85em; }
 pre code { font-size: 1em; }
 img { max-width: 100%; }
+img.link-qr {
+  display: inline-block;
+  width: 96px;
+  height: 96px;
+  vertical-align: middle;
+  margin: 0 0.25em;
+  image-rendering: pixelated;
+}
 figure { margin: 1em 0; }
 figcaption { font-size: 0.8em; color: #333; }
 table { border-collapse: collapse; font-size: 0.85em; margin: 0.8em 0; }
@@ -137,7 +206,13 @@ def _title_page_html(title: str, articles: list[DigestArticle]) -> str:
     )
 
 
-def _chapter_body(article: DigestArticle, index: int, total: int) -> str:
+def _chapter_body(
+    article: DigestArticle,
+    index: int,
+    total: int,
+    render_qr: QrRenderer | None = None,
+    qr_all: bool = False,
+) -> str:
     esc = html_lib.escape
     host = urlparse(article.url).hostname or article.url
     byline_bits = [esc(article.source)]
@@ -147,12 +222,13 @@ def _chapter_body(article: DigestArticle, index: int, total: int) -> str:
         byline_bits.append(esc(str(article.published_at)[:10]))
     byline_bits.append(f"{_reading_minutes(article.html)} min read")
 
+    source_qr = render_qr(article.url) if render_qr else ""
     parts = [
         '<div class="chapter">',
         f'<h1 class="article-title">{esc(article.title)}</h1>',
         f'<p class="byline">{" · ".join(byline_bits)}</p>',
         f'<p class="article-source"><a href="{esc(article.url)}">'
-        f'Read the original at {esc(host)}</a></p>',
+        f"Read the original at {esc(host)}</a>{source_qr}</p>",
         '<hr class="rule"/>',
     ]
     if article.is_summary_fallback:
@@ -160,7 +236,10 @@ def _chapter_body(article: DigestArticle, index: int, total: int) -> str:
             '<p class="fallback-note"><em>Full text could not be fetched &#8212; '
             f'the feed summary follows.</em> <a href="{esc(article.url)}">Read online.</a></p>'
         )
-    parts.append(article.html)
+    body_html = article.html
+    if qr_all and render_qr is not None:
+        body_html = _inject_body_qrs(body_html, render_qr)
+    parts.append(body_html)
     parts.append('<hr class="rule"/>')
     parts.append(f'<p class="article-footer">No. {index:02d}/{total:02d}</p>')
     parts.append("</div>")
@@ -175,8 +254,11 @@ def build_digest_epub(
     images: dict[str, DigestImage] | None = None,
     cover_png: bytes | None = None,
     identifier: str | None = None,
+    link_qr: LinkQr = "off",
 ) -> Path:
     esc = html_lib.escape
+    qr = _EpubQrEmbedder() if link_qr != "off" else None
+    qr_all = link_qr == "all"
     book = epub.EpubBook()
     book.set_identifier(identifier or f"urn:rss-kindle-selector:digest:{title}")
     book.set_title(f"{title} — Pressed Edition")
@@ -206,10 +288,21 @@ def build_digest_epub(
     chapters: list[tuple[str, epub.EpubHtml]] = []
     for i, art in enumerate(articles, start=1):
         chap = epub.EpubHtml(title=art.title, file_name=f"chap_{i:03d}.xhtml", lang="en")
-        chap.set_content(_chapter_body(art, i, total))
+        chap.set_content(_chapter_body(art, i, total, render_qr=qr, qr_all=qr_all))
         chap.add_item(css)
         book.add_item(chap)
         chapters.append((_section_of(art, grouped), chap))
+
+    if qr is not None:
+        for n, (filename, data) in enumerate(qr.images.items(), start=1):
+            book.add_item(
+                epub.EpubItem(
+                    uid=f"qr_{n:04d}",
+                    file_name=filename,
+                    media_type="image/png",
+                    content=data,
+                )
+            )
 
     for n, image in enumerate((images or {}).values(), start=1):
         book.add_item(
@@ -272,12 +365,17 @@ img { height: auto; }
 """
 
 
-def render_preview_html(*, title: str, articles: list[DigestArticle]) -> str:
+def render_preview_html(
+    *, title: str, articles: list[DigestArticle], link_qr: LinkQr = "off"
+) -> str:
     """A standalone HTML rendition of an edition for the in-app preview drawer:
     the same title page, sectioned contents, byline, source link and chapter
-    bodies the EPUB ships — so what you see here is what lands on the device."""
+    bodies the EPUB ships — so what you see here is what lands on the device.
+    QR codes inline as data: URIs so the preview matches the EPUB."""
     esc = html_lib.escape
     total = len(articles)
+    render_qr = _preview_qr if link_qr != "off" else None
+    qr_all = link_qr == "all"
     grouped, section_names = _ordered_sections(articles)
 
     # Contents list grouped by section, linking to each chapter anchor.
@@ -292,7 +390,7 @@ def render_preview_html(*, title: str, articles: list[DigestArticle]) -> str:
 
     chapter_parts = []
     for i, art in indexed:
-        body = _chapter_body(art, i, total)
+        body = _chapter_body(art, i, total, render_qr=render_qr, qr_all=qr_all)
         chapter_parts.append(
             body.replace('<div class="chapter">', f'<div class="chapter" id="chap-{i}">', 1)
         )

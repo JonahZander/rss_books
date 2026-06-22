@@ -257,7 +257,10 @@ async def preview_digest(digest_id: int, request: Request) -> HTMLResponse:
         title, articles = await load_digest_preview(db, digest_id)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return HTMLResponse(render_preview_html(title=title, articles=articles))
+    settings = await get_app_settings(db)
+    return HTMLResponse(
+        render_preview_html(title=title, articles=articles, link_qr=settings.link_qr)
+    )
 
 
 @router.get("/{digest_id}/download")
