@@ -14,6 +14,7 @@ from rss_kindle.config import USER_AGENT
 from rss_kindle.db import Database
 from rss_kindle.models import Feed, FeedCreate, FeedUpdate
 from rss_kindle.services.feed_poller import placeholder_title, poll_feed_content
+from rss_kindle.services.saved_links import NOT_SAVED_LINKS
 
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
 
@@ -60,7 +61,8 @@ async def list_feeds(request: Request) -> list[Feed]:
     db = request.app.state.db
     async with db.connect() as conn:
         cur = await conn.execute(
-            f"SELECT {FEED_COLUMNS} FROM feeds ORDER BY created_at DESC, id DESC"
+            f"SELECT {FEED_COLUMNS} FROM feeds WHERE {NOT_SAVED_LINKS} "
+            "ORDER BY created_at DESC, id DESC"
         )
         rows = await cur.fetchall()
     return [Feed.model_validate(dict(r)) for r in rows]
@@ -363,7 +365,7 @@ async def refresh_feed(feed_id: int, request: Request) -> dict[str, int]:
 async def refresh_all_feeds(request: Request) -> dict[str, int]:
     db = request.app.state.db
     async with db.connect() as conn:
-        cur = await conn.execute("SELECT id, url FROM feeds")
+        cur = await conn.execute(f"SELECT id, url FROM feeds WHERE {NOT_SAVED_LINKS}")
         rows = await cur.fetchall()
     total = 0
     errors = 0

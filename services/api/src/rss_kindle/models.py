@@ -93,6 +93,14 @@ class QueueUpdate(BaseModel):
     article_ids: list[int]
 
 
+class QueueLink(BaseModel):
+    """Drop an arbitrary URL straight into the queue. The body is fetched at
+    compile time like any enqueued article without stored content."""
+
+    url: HttpUrl
+    title: str | None = None
+
+
 class DigestArticlesRemove(BaseModel):
     """Batch removal of edition members — drops all in one transaction and
     rebuilds the EPUB once, rather than once per article."""

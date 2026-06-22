@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import type { Article, Digest } from "../lib/api";
 import { api } from "../lib/api";
 import { useToast } from "./Toasts";
@@ -11,6 +11,7 @@ type Props = {
   groupsExist: boolean;
   onRemove: (article: Article) => void;
   onClear: () => void;
+  onAddLink: (url: string, title?: string) => Promise<void>;
   onCompiled: () => Promise<void>;
 };
 
@@ -38,9 +39,12 @@ export function DigestQueue({
   groupsExist,
   onRemove,
   onClear,
+  onAddLink,
   onCompiled,
 }: Props) {
   const toast = useToast();
+  const [linkUrl, setLinkUrl] = useState("");
+  const [addingLink, setAddingLink] = useState(false);
   const [digests, setDigests] = useState<Digest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [compiling, setCompiling] = useState(false);
@@ -92,6 +96,22 @@ export function DigestQueue({
       setError(e instanceof Error ? e.message : "failed");
     } finally {
       setCompiling(false);
+    }
+  };
+
+  const addLink = async (e: FormEvent) => {
+    e.preventDefault();
+    const url = linkUrl.trim();
+    if (!url || addingLink) return;
+    setAddingLink(true);
+    try {
+      await onAddLink(url);
+      setLinkUrl("");
+      toast("Link added to queue");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "could not add link", "error");
+    } finally {
+      setAddingLink(false);
     }
   };
 
@@ -150,6 +170,26 @@ export function DigestQueue({
           ))}
         </ol>
       )}
+
+      <form onSubmit={(e) => void addLink(e)} className="queue-link-form">
+        <label className="feed-form-label" htmlFor="queue-link">
+          Add a link
+        </label>
+        <div className="queue-link-row">
+          <input
+            id="queue-link"
+            type="url"
+            inputMode="url"
+            placeholder="https://example.com/article"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+          />
+          <button type="submit" className="btn btn-ghost" disabled={addingLink || !linkUrl.trim()}>
+            <span>{addingLink ? "Adding…" : "Queue link"}</span>
+            <span className="btn-arrow">＋</span>
+          </button>
+        </div>
+      </form>
 
       {groupsExist && (
         <div className="segmented" role="radiogroup" aria-label="Edition mode">

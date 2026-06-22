@@ -216,6 +216,11 @@ export const api = {
   getQueue: () => fetch(`${BASE}/api/queue`).then((r) => j<Article[]>(r)),
   addToQueue: (articleId: number) =>
     fetch(`${BASE}/api/queue/${articleId}`, { method: "POST" }).then((r) => j<Article[]>(r)),
+  /** Enqueue an arbitrary URL; its body is fetched when the edition compiles. */
+  addLinkToQueue: (url: string, title?: string) =>
+    fetch(`${BASE}/api/queue/link`, jsonInit("POST", { url, title: title ?? null })).then((r) =>
+      j<Article[]>(r),
+    ),
   removeFromQueue: (articleId: number) =>
     fetch(`${BASE}/api/queue/${articleId}`, { method: "DELETE" }).then((r) => j<Article[]>(r)),
   replaceQueue: (articleIds: number[]) =>

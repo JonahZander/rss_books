@@ -1273,6 +1273,28 @@ a {
   border-bottom: 1px solid var(--hairline);
 }
 
+.queue-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.queue-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.queue-link-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-link-row .btn {
+  white-space: nowrap;
+}
+
 .queue-actions {
   display: flex;
   flex-direction: column;

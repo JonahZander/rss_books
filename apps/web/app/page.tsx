@@ -155,6 +155,12 @@ export default function Home() {
     }
   };
 
+  const addLink = async (url: string, title?: string) => {
+    // The new article belongs to the hidden Saved-links feed, so it won't show
+    // in the article list; reflecting it in the queue is enough.
+    setQueue(await api.addLinkToQueue(url, title));
+  };
+
   const onRead = useCallback((updated: Article) => {
     setArticles((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     setFeeds((prev) =>
@@ -253,6 +259,7 @@ export default function Home() {
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);
           }}
+          onAddLink={addLink}
           onCompiled={onCompiled}
         />
       </main>
