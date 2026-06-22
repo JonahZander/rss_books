@@ -247,6 +247,7 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
             images=images,
             cover_png=cover_png,
             identifier=f"urn:rss-kindle-selector:digest:{digest_id}",
+            link_qr=app_settings.link_qr,
         )
 
         size_bytes = output.stat().st_size

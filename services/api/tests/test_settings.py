@@ -57,6 +57,19 @@ def test_env_overrides_win(tmp_path, monkeypatch):
         assert s["smtp_host"] == "smtp.env.example"
 
 
+def test_link_qr_roundtrip(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        s = client.get("/api/settings").json()
+        assert s["link_qr"] == "off"
+        s["link_qr"] = "all"
+        assert client.put("/api/settings", json=s).status_code == 200
+        assert client.get("/api/settings").json()["link_qr"] == "all"
+        # only the three known modes are accepted
+        s["link_qr"] = "sometimes"
+        assert client.put("/api/settings", json=s).status_code == 422
+
+
 def test_deadline_split_roundtrip(tmp_path):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:

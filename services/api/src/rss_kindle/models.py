@@ -122,6 +122,10 @@ class AppSettings(BaseModel):
     retention_days: int = Field(default=90, ge=1)
     # Reading
     mark_read_on_expand: bool = True
+    # Inline QR codes for links the e-reader can't tap: "off" leaves links as
+    # plain text, "articles" codes each article's own source link, "all" also
+    # codes every hyperlink in the body.
+    link_qr: Literal["off", "articles", "all"] = "off"
     # Reader fallback: when the direct (impersonating) fetch is blocked or
     # returns nothing, hand the URL to an external extraction service.
     # "none" disables it; "tavily" needs an API key, "jina" is keyless.
