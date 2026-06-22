@@ -64,6 +64,27 @@ def test_create_digest_generates_epub(tmp_path, monkeypatch):
         assert len(r.content) > 1000
 
 
+def test_link_qr_setting_embeds_codes_in_epub(tmp_path, monkeypatch):
+    import io
+    import zipfile
+
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        s = client.get("/api/settings").json()
+        s["link_qr"] = "articles"
+        assert client.put("/api/settings", json=s).status_code == 200
+
+        r = client.post("/api/digests", json={"article_ids": ids})
+        digest_id = r.json()[0]["id"]
+        assert _wait_settled(client, digest_id)["status"] == "ready"
+
+        epub_bytes = client.get(f"/api/digests/{digest_id}/download").content
+        with zipfile.ZipFile(io.BytesIO(epub_bytes)) as z:
+            assert any(n.startswith("EPUB/qr/") for n in z.namelist())
+
+
 def test_digest_build_failure_sets_failed_status(tmp_path, monkeypatch):
     monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
     app = create_app(db_path=tmp_path / "t.db")
