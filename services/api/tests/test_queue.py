@@ -93,6 +93,38 @@ def test_digest_from_queue_clears_queue(tmp_path, monkeypatch):
         assert d["size_bytes"] > 0
 
 
+def test_queue_add_arbitrary_link(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        url = "https://example.com/some-great-article"
+        r = client.post("/api/queue/link", json={"url": url})
+        assert r.status_code == 200
+        queue = r.json()
+        assert [a["url"] for a in queue] == [url]
+        assert queue[0]["state"] == "queued"
+        # a derived, legible title when none is supplied
+        assert queue[0]["title"] == "some great article"
+
+        # re-adding the same URL is idempotent (one queue entry, one article)
+        r = client.post("/api/queue/link", json={"url": url})
+        assert [a["url"] for a in r.json()] == [url]
+
+        # an explicit title wins
+        r = client.post(
+            "/api/queue/link", json={"url": "https://example.org/x", "title": "My pick"}
+        )
+        assert {a["title"] for a in r.json()} == {"some great article", "My pick"}
+
+        # the hidden saved-links feed never surfaces in the sidebar
+        assert client.get("/api/feeds").json() == []
+
+
+def test_queue_link_rejects_non_url(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        assert client.post("/api/queue/link", json={"url": "not a url"}).status_code == 422
+
+
 def test_digest_from_empty_queue_400(tmp_path):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:

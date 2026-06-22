@@ -15,6 +15,7 @@ from rss_kindle.db import Database
 from rss_kindle.models import AppSettings
 from rss_kindle.services.digest_service import create_digest_records, generate_digest
 from rss_kindle.services.poller import poll_feed
+from rss_kindle.services.saved_links import NOT_SAVED_LINKS
 from rss_kindle.services.settings_store import get_app_settings, get_value, set_value
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ class Scheduler:
         async with self.db.connect() as conn:
             cur = await conn.execute(
                 "SELECT id, url, etag, last_modified, last_polled, "
-                "poll_interval_minutes, consecutive_failures FROM feeds"
+                f"poll_interval_minutes, consecutive_failures FROM feeds WHERE {NOT_SAVED_LINKS}"
             )
             rows = list(await cur.fetchall())
         due = [dict(r) for r in rows if feed_due(r, now)]

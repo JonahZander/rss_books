@@ -6,7 +6,8 @@ import aiosqlite
 from fastapi import APIRouter, HTTPException, Request
 
 from rss_kindle.api.articles import article_state_sql
-from rss_kindle.models import Article, QueueUpdate
+from rss_kindle.models import Article, QueueLink, QueueUpdate
+from rss_kindle.services.saved_links import add_saved_link
 
 router = APIRouter(prefix="/api/queue", tags=["queue"])
 
@@ -49,6 +50,23 @@ async def replace_queue(payload: QueueUpdate, request: Request) -> list[Article]
             return await _queue(conn)
     except sqlite3.IntegrityError as e:
         raise HTTPException(status_code=404, detail="article not found") from e
+
+
+@router.post("/link", response_model=list[Article])
+async def add_link_to_queue(payload: QueueLink, request: Request) -> list[Article]:
+    """Enqueue an arbitrary URL. Stored as an article in the hidden Saved-links
+    feed (idempotent by URL) and appended to the queue; its body is fetched when
+    the edition is compiled."""
+    db = request.app.state.db
+    async with db.connect() as conn:
+        article_id = await add_saved_link(conn, str(payload.url), payload.title)
+        await conn.execute(
+            "INSERT OR IGNORE INTO digest_queue (article_id, position) "
+            "SELECT ?, COALESCE(MAX(position) + 1, 0) FROM digest_queue",
+            (article_id,),
+        )
+        await conn.commit()
+        return await _queue(conn)
 
 
 @router.post("/{article_id}", response_model=list[Article])
