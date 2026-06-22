@@ -14,6 +14,7 @@ export default function Settings() {
   const [testing, setTesting] = useState(false);
   const [sendToDraft, setSendToDraft] = useState("");
   const [opdsBase, setOpdsBase] = useState("");
+  const [opdsHttpsBase, setOpdsHttpsBase] = useState("");
 
   useEffect(() => {
     api.getSettings().then(setSettings, (e) => {
@@ -21,6 +22,9 @@ export default function Settings() {
     });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpdsBase(window.location.origin);
+    // The container also serves HTTPS on :8443 for readers that only speak TLS
+    // (e.g. Crosspoint forces https://). Same host, fixed TLS port.
+    setOpdsHttpsBase(`https://${window.location.hostname}:8443`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -244,6 +248,12 @@ export default function Settings() {
               add this catalog URL in the reader.
             </p>
             <code className="opds-url">{opdsBase}/opds</code>
+            <p className="settings-hint">
+              If your reader only accepts <strong>https://</strong> (e.g. Crosspoint), use the
+              TLS endpoint instead. It serves a self-signed certificate, so enable
+              &ldquo;skip/ignore certificate&rdquo; on the device if it offers it.
+            </p>
+            <code className="opds-url">{opdsHttpsBase}/opds</code>
             <label className="filter-toggle">
               <input
                 type="checkbox"

@@ -24,12 +24,15 @@ COPY --from=web /build/apps/web/out /app/static
 ENV DB_PATH=/data/rss_kindle.db \
     EPUB_DIR=/data/epubs \
     STATIC_DIR=/app/static \
+    TLS_CERT_FILE=/data/certs/server.crt \
+    TLS_KEY_FILE=/data/certs/server.key \
     PATH="/app/.venv/bin:$PATH"
 
 VOLUME /data
-EXPOSE 8765
+# 8765 = plain HTTP (same-origin web UI); 8443 = HTTPS (for TLS-only clients)
+EXPOSE 8765 8443
 
 HEALTHCHECK --interval=60s --timeout=5s --start-period=10s \
   CMD python -c "import urllib.request,sys; sys.exit(0 if b'ok' in urllib.request.urlopen('http://127.0.0.1:8765/health', timeout=4).read() else 1)"
 
-CMD ["uvicorn", "rss_kindle.api.main:app", "--host", "0.0.0.0", "--port", "8765"]
+CMD ["python", "-m", "rss_kindle.api.serve"]

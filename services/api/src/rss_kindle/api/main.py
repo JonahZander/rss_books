@@ -26,6 +26,10 @@ def create_app(db_path: Path | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        # TRIPWIRE: in production we run two uvicorn servers (HTTP + HTTPS) over
+        # this one app (see api/serve.py), so this lifespan executes TWICE per
+        # process. Any startup work added here must be idempotent or guarded
+        # (see the scheduler guard below) — otherwise it runs twice.
         db.path.parent.mkdir(parents=True, exist_ok=True)
         settings.epub_dir.mkdir(parents=True, exist_ok=True)
         await db.init()

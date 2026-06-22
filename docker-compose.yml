@@ -2,13 +2,17 @@ services:
   rss-kindle-selector:
     build: .
     ports:
-      - "8765:8765"
+      - "8765:8765"   # plain HTTP — same-origin web UI
+      - "8443:8443"   # HTTPS — for OPDS clients that only speak TLS (e.g. Crosspoint)
     volumes:
       # named volume: your database and editions survive image rebuilds
       - rss_kindle_data:/data
     restart: unless-stopped
     # SMTP credentials can live here instead of the settings UI:
     # environment:
+    #   # Embed your laptop's LAN IP in the self-signed cert (only needed if the
+    #   # reader verifies the hostname; clients that skip verification ignore it):
+    #   TLS_SAN_IPS: 192.168.0.138
     #   SMTP_HOST: smtp.fastmail.com
     #   SMTP_USERNAME: you@example.com
     #   SMTP_PASSWORD: app-password

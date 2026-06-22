@@ -51,6 +51,20 @@ class Settings(BaseSettings):
     tavily_api_key: str | None = None
     reader_fallback: str | None = None
 
+    # Serving: plain HTTP for the same-origin UI, plus an optional HTTPS
+    # listener for clients that only speak TLS (e.g. the Crosspoint e-reader,
+    # whose OPDS client forces https://). Both run in one process sharing one
+    # app, so the scheduler/poller still run exactly once.
+    http_port: int = 8765
+    https_port: int = 8443
+    tls_enabled: bool = True
+    tls_cert_file: Path = Field(default=Path("./data/certs/server.crt"))
+    tls_key_file: Path = Field(default=Path("./data/certs/server.key"))
+    # Extra IPs to embed as SAN entries in the auto-generated self-signed cert,
+    # comma-separated (e.g. "192.168.0.138"). Only matters for clients that
+    # verify the hostname; clients that skip verification ignore this.
+    tls_san_ips: str = ""
+
 
 def get_settings() -> Settings:
     return Settings()
