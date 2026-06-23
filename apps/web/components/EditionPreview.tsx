@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type ArticleDetail, type DigestArticleEntry } from "../lib/api";
+import { ArticleReaderDrawer } from "./ArticleReaderDrawer";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Drawer } from "./Drawer";
 import { hostnameOf } from "../lib/url";
@@ -18,7 +19,8 @@ const FETCH_STATUS_LABEL: Record<NonNullable<DigestArticleEntry["fetch_status"]>
 };
 
 /** The article-reading drawer: one member's body, with prev/next across the
- * whole edition so you can read through without collapsing back to the list. */
+ * whole edition so you can read through without collapsing back to the list.
+ * Shares the slide-over reader with the triage desk. */
 function ReadDrawer({
   entries,
   index,
@@ -53,58 +55,22 @@ function ReadDrawer({
   const status = entry.fetch_status ? FETCH_STATUS_LABEL[entry.fetch_status] : "—";
 
   return (
-    <Drawer
-      open
+    <ArticleReaderDrawer
       eyebrow={`${sectionOf(entry)} · ${status} in this edition`}
       title={entry.title}
+      url={entry.url}
+      index={index}
+      count={entries.length}
+      onIndex={onIndex}
       onClose={onClose}
-      footer={
-        <div className="drawer-nav">
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={index === 0}
-            onClick={() => onIndex(index - 1)}
-          >
-            <span className="btn-arrow">←</span>
-            <span>Previous</span>
-          </button>
-          <span className="drawer-nav-pos">
-            {index + 1} / {entries.length}
-          </span>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={index === entries.length - 1}
-            onClick={() => onIndex(index + 1)}
-          >
-            <span>Next</span>
-            <span className="btn-arrow">→</span>
-          </button>
-        </div>
+      loading={loading}
+      detail={detail}
+      fallback={
+        entry.fetch_status === "full"
+          ? "(no stored content)"
+          : "This edition uses the feed summary — the full text could not be fetched."
       }
-    >
-      <p className="drawer-source">
-        <a href={entry.url} target="_blank" rel="noreferrer">
-          Read the original at {hostnameOf(entry.url)} ↗
-        </a>
-      </p>
-      {loading && <p className="article-body-loading">Loading content</p>}
-      {!loading &&
-        (detail?.full_content ? (
-          // full_content is sanitized server-side (nh3 allowlist)
-          <div
-            className="article-body-content prose"
-            dangerouslySetInnerHTML={{ __html: detail.full_content }}
-          />
-        ) : (
-          <div className="article-body-content plain">
-            {entry.fetch_status === "full"
-              ? "(no stored content)"
-              : "This edition uses the feed summary — the full text could not be fetched."}
-          </div>
-        ))}
-    </Drawer>
+    />
   );
 }
 

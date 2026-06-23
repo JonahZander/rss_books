@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import type { Article, ArticleDetail } from "../lib/api";
-import { api } from "../lib/api";
+import type { Article } from "../lib/api";
 import { hostnameOf } from "../lib/url";
 
 type Props = {
@@ -10,9 +8,8 @@ type Props = {
   index: number;
   total: number;
   queued: boolean;
-  markReadOnExpand: boolean;
   onToggleQueue: () => void;
-  onRead: (article: Article) => void;
+  onOpen: () => void;
 };
 
 
@@ -65,52 +62,7 @@ function lifecycleOf(article: Article, queued: boolean): Lifecycle {
   return "new";
 }
 
-export function ArticleRow({
-  article,
-  index,
-  total,
-  queued,
-  markReadOnExpand,
-  onToggleQueue,
-  onRead,
-}: Props) {
-  const [expanded, setExpanded] = useState(false);
-  const [detail, setDetail] = useState<ArticleDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const toggle = async () => {
-    const willExpand = !expanded;
-    setExpanded(willExpand);
-    if (!willExpand) return;
-
-    if (markReadOnExpand && !article.read_at) {
-      api
-        .markRead(article.id)
-        .then(onRead)
-        .catch(() => {});
-    }
-    if (!detail) {
-      setLoading(true);
-      setError(null);
-      try {
-        const d = article.has_full_content
-          ? await api.getArticle(article.id)
-          : await api.fetchArticle(article.id);
-        setDetail(d);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "failed to load");
-        try {
-          setDetail(await api.getArticle(article.id));
-        } catch {
-          // keep the error state
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
+export function ArticleRow({ article, index, total, queued, onToggleQueue, onOpen }: Props) {
   const width = String(total).length;
   const idx = pad(index + 1, Math.max(2, width));
   const totalStr = pad(total, Math.max(2, width));
@@ -118,7 +70,7 @@ export function ArticleRow({
 
   return (
     <article
-      className={`article-row ${queued ? "selected" : ""} ${expanded ? "expanded" : ""} state-${lifecycle}`}
+      className={`article-row ${queued ? "selected" : ""} state-${lifecycle}`}
       style={{ "--row-index": Math.min(index, 12) } as React.CSSProperties}
     >
       <header className="article-header">
@@ -135,7 +87,7 @@ export function ArticleRow({
             aria-label={`Queue ${article.title}`}
           />
         </label>
-        <button type="button" className="article-title" onClick={toggle} aria-expanded={expanded}>
+        <button type="button" className="article-title" onClick={onOpen}>
           <span className="chev" aria-hidden>
             ›
           </span>
@@ -158,36 +110,12 @@ export function ArticleRow({
         </span>
       </div>
 
-      {!expanded &&
-        (() => {
-          const text = plainSummary(article.summary);
-          if (!text) return null;
-          const trimmed = text.length > 220 ? text.slice(0, 220).trimEnd() + "…" : text;
-          return <p className="article-summary">{trimmed}</p>;
-        })()}
-
-      {expanded && (
-        <div className="article-body">
-          <div className="article-body-label">
-            <span className="stamp">Extract</span>
-            <span>Trafilatura · {article.has_full_content ? "Cached" : "Fetched just now"}</span>
-          </div>
-          {loading && <p className="article-body-loading">Fetching full content</p>}
-          {error && <p className="article-body-error">⚠ {error}</p>}
-          {detail &&
-            (detail.full_content ? (
-              // full_content is sanitized server-side (nh3 allowlist)
-              <div
-                className="article-body-content prose"
-                dangerouslySetInnerHTML={{ __html: detail.full_content }}
-              />
-            ) : (
-              <div className="article-body-content plain">
-                {plainSummary(detail.summary) || "(no content available)"}
-              </div>
-            ))}
-        </div>
-      )}
+      {(() => {
+        const text = plainSummary(article.summary);
+        if (!text) return null;
+        const trimmed = text.length > 220 ? text.slice(0, 220).trimEnd() + "…" : text;
+        return <p className="article-summary">{trimmed}</p>;
+      })()}
     </article>
   );
 }
