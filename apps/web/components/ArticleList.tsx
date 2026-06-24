@@ -22,6 +22,11 @@ type Props = {
   currentFeed: Feed | null;
   currentGroup: { name: string } | null;
   lastPoll: string | null;
+  page: number;
+  pageSize: number;
+  hasNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
 };
 
 function hhmmss(iso: string | null): string {
@@ -137,12 +142,23 @@ export function ArticleList({
   currentFeed,
   currentGroup,
   lastPoll,
+  page,
+  pageSize,
+  hasNext,
+  onPrev,
+  onNext,
 }: Props) {
   const title = currentFeed?.title ?? currentGroup?.name ?? "All dispatches";
   const total = articles.length;
+  const numberOffset = page * pageSize;
   // null = closed. A stale index (list shrank under an open reader) simply
   // renders nothing — guarded at the render site below.
   const [readIndex, setReadIndex] = useState<number | null>(null);
+
+  // Jump back to the top of the scroll column whenever the page turns.
+  useEffect(() => {
+    document.querySelector(".content")?.scrollTo({ top: 0 });
+  }, [page]);
 
   // The empty pane means different things — don't blame the user's setup when
   // they've just searched or read everything.
@@ -204,13 +220,36 @@ export function ArticleList({
             <ArticleRow
               key={a.id}
               article={a}
-              index={i}
-              total={total}
+              number={numberOffset + i + 1}
               queued={queuedIds.has(a.id)}
               onToggleQueue={() => onToggleQueue(a)}
               onOpen={() => setReadIndex(i)}
             />
           ))}
+        </div>
+      )}
+
+      {loaded && (page > 0 || hasNext) && (
+        <div className="pager">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onPrev}
+            disabled={page === 0}
+          >
+            <span className="btn-arrow">←</span>
+            <span>Prev</span>
+          </button>
+          <span className="pager-label">Page {page + 1}</span>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onNext}
+            disabled={!hasNext}
+          >
+            <span>Next</span>
+            <span className="btn-arrow">→</span>
+          </button>
         </div>
       )}
 

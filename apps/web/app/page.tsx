@@ -18,6 +18,8 @@ import {
 
 type MobilePanel = "feeds" | "articles" | "queue";
 
+const PAGE_SIZE = 200;
+
 export default function Home() {
   const toast = useToast();
   const [feeds, setFeeds] = useState<Feed[]>([]);
@@ -30,6 +32,8 @@ export default function Home() {
   const [selectedGroupId, setSelectedGroupId] = useState<number | "none" | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
   const [lastPoll, setLastPoll] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Feed | null>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<Group | null>(null);
@@ -47,10 +51,14 @@ export default function Home() {
       groupId: selectedGroupId ?? undefined,
       unread: unreadOnly,
       q: search || undefined,
+      limit: PAGE_SIZE,
+      offset: page * PAGE_SIZE,
     });
     setArticles(list);
+    // A full page implies there may be more; one short page ends the run.
+    setHasNext(list.length === PAGE_SIZE);
     setArticlesLoaded(true);
-  }, [selectedFeedId, selectedGroupId, unreadOnly, search]);
+  }, [selectedFeedId, selectedGroupId, unreadOnly, search, page]);
 
   const refreshQueue = useCallback(async () => {
     setQueue(await api.getQueue());
@@ -113,13 +121,26 @@ export default function Home() {
   const selectFeed = useCallback((id: number | null) => {
     setSelectedFeedId(id);
     setSelectedGroupId(null);
+    setPage(0);
     setMobilePanel("articles");
   }, []);
 
   const selectGroup = useCallback((id: number | "none" | null) => {
     setSelectedGroupId(id);
     setSelectedFeedId(null);
+    setPage(0);
     setMobilePanel("articles");
+  }, []);
+
+  // Filter/search changes always return to the first page.
+  const changeUnreadOnly = useCallback((v: boolean) => {
+    setUnreadOnly(v);
+    setPage(0);
+  }, []);
+
+  const changeSearch = useCallback((v: string) => {
+    setSearch(v);
+    setPage(0);
   }, []);
 
   const pollAll = async () => {
@@ -240,15 +261,20 @@ export default function Home() {
             loaded={articlesLoaded}
             queuedIds={queuedIds}
             unreadOnly={unreadOnly}
-            onUnreadOnly={setUnreadOnly}
+            onUnreadOnly={changeUnreadOnly}
             search={search}
-            onSearch={setSearch}
+            onSearch={changeSearch}
             markReadOnExpand={settings?.mark_read_on_expand ?? true}
             onToggleQueue={toggleQueue}
             onRead={onRead}
             currentFeed={currentFeed}
             currentGroup={currentGroup}
             lastPoll={lastPoll}
+            page={page}
+            pageSize={PAGE_SIZE}
+            hasNext={hasNext}
+            onPrev={() => setPage((p) => Math.max(0, p - 1))}
+            onNext={() => setPage((p) => p + 1)}
           />
         </section>
         <DigestQueue

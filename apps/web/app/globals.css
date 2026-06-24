@@ -681,6 +681,8 @@ a {
 .content {
   padding: 26px 34px 60px;
   overflow-y: auto;
+  /* Opaque so the body HUD grid doesn't show behind the article list. */
+  background: var(--paper);
   animation: fadeIn 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   animation-delay: 160ms;
 }
@@ -889,7 +891,7 @@ a {
 
 .article-header {
   display: grid;
-  grid-template-columns: 46px 22px 1fr auto;
+  grid-template-columns: 28px 22px 1fr;
   gap: 14px;
   align-items: baseline;
 }
@@ -1736,6 +1738,27 @@ a {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
+}
+
+/* Pagination footer under the article list. */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+
+.pager-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  min-width: 72px;
+  text-align: center;
 }
 
 .filter-toggle {
@@ -2586,7 +2609,7 @@ a {
   }
 
   .article-header {
-    grid-template-columns: 24px 1fr auto;
+    grid-template-columns: 24px 1fr;
   }
 
   .article-index {

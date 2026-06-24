@@ -5,8 +5,8 @@ import { hostnameOf } from "../lib/url";
 
 type Props = {
   article: Article;
-  index: number;
-  total: number;
+  /** 1-based position in the overall list (absolute across pages). */
+  number: number;
   queued: boolean;
   onToggleQueue: () => void;
   onOpen: () => void;
@@ -62,21 +62,17 @@ function lifecycleOf(article: Article, queued: boolean): Lifecycle {
   return "new";
 }
 
-export function ArticleRow({ article, index, total, queued, onToggleQueue, onOpen }: Props) {
-  const width = String(total).length;
-  const idx = pad(index + 1, Math.max(2, width));
-  const totalStr = pad(total, Math.max(2, width));
+export function ArticleRow({ article, number, queued, onToggleQueue, onOpen }: Props) {
+  const idx = pad(number, 2);
   const lifecycle = lifecycleOf(article, queued);
 
   return (
     <article
       className={`article-row ${queued ? "selected" : ""} state-${lifecycle}`}
-      style={{ "--row-index": Math.min(index, 12) } as React.CSSProperties}
+      style={{ "--row-index": Math.min(number - 1, 12) } as React.CSSProperties}
     >
       <header className="article-header">
-        <span className="article-index">
-          {idx}/{totalStr}
-        </span>
+        <span className="article-index">{idx}</span>
         <label className="checkbox-hit">
           <input
             type="checkbox"
@@ -93,10 +89,6 @@ export function ArticleRow({ article, index, total, queued, onToggleQueue, onOpe
           </span>
           <span>{article.title}</span>
         </button>
-        <span className="article-status">
-          <span className={`status-square ${article.has_full_content ? "filled" : ""}`} />
-          {article.has_full_content ? "Cached" : "Summary"}
-        </span>
       </header>
 
       <div className="article-meta">
