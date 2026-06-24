@@ -70,6 +70,7 @@ export function ArticleRow({ article, number, queued, onToggleQueue, onOpen }: P
     <article
       className={`article-row ${queued ? "selected" : ""} state-${lifecycle}`}
       style={{ "--row-index": Math.min(number - 1, 12) } as React.CSSProperties}
+      onClick={onOpen}
     >
       <header className="article-header">
         <span className="article-index">{idx}</span>
@@ -83,16 +84,20 @@ export function ArticleRow({ article, number, queued, onToggleQueue, onOpen }: P
             aria-label={`Queue ${article.title}`}
           />
         </label>
+        {/* Keep a real button for keyboard focus; clicking anywhere on the row
+            also opens the reader (handled on the article element). */}
         <button type="button" className="article-title" onClick={onOpen}>
-          <span className="chev" aria-hidden>
-            ›
-          </span>
           <span>{article.title}</span>
         </button>
       </header>
 
       <div className="article-meta">
-        <a href={article.url} target="_blank" rel="noreferrer">
+        <a
+          href={article.url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+        >
           {hostnameOf(article.url)} ↗
         </a>
         {article.published_at && <span>{fmtTimestamp(article.published_at)}</span>}

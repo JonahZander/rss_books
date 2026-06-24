@@ -56,9 +56,6 @@ export function Masthead({ readouts }: Props) {
     return () => window.clearInterval(id);
   }, []);
 
-  const pad2 = (n: number) => String(n).padStart(2, "0");
-  const pad3 = (n: number) => String(n).padStart(3, "0");
-
   return (
     <header className="masthead">
       <div>
@@ -87,13 +84,9 @@ export function Masthead({ readouts }: Props) {
       </div>
 
       <div className="masthead-readout">
-        {readouts && (
-          <>
-            <Readout label="Feeds" value={pad2(readouts.feedCount)} />
-            <Readout label="Articles" value={pad3(readouts.articleCount)} />
-            <Readout label="Queue" value={pad2(readouts.queueCount)} amber={readouts.queueCount > 0} />
-          </>
-        )}
+        {/* The article and queue counts live in the content header and queue
+            rail respectively; the masthead carries only Feeds + clock. */}
+        {readouts && <Readout label="Feeds" value={String(readouts.feedCount)} />}
         <span className="clock" aria-label="local time">
           {clock}
         </span>

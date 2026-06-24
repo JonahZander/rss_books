@@ -749,6 +749,7 @@ a {
 
 .article-row {
   position: relative;
+  cursor: pointer;
   border-bottom: 1px solid var(--hairline);
   padding: 18px 0 18px 14px;
   transition:
@@ -979,21 +980,8 @@ a {
   cursor: pointer;
   text-align: left;
   display: flex;
-  gap: 8px;
   align-items: baseline;
   width: 100%;
-}
-
-.article-title .chev {
-  font-family: var(--font-mono);
-  color: var(--ink-3);
-  font-size: 13px;
-  flex: 0 0 auto;
-  transition: transform 160ms ease;
-}
-
-.article-row.expanded .chev {
-  transform: rotate(90deg);
 }
 
 .article-status {

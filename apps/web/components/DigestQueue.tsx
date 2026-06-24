@@ -220,7 +220,7 @@ export function DigestQueue({
           onClick={() => void compile()}
           disabled={count === 0 || compiling}
         >
-          <span>{compiling ? "Compiling…" : "Compile · EPUB"}</span>
+          <span>{compiling ? "Compiling…" : "Compile edition"}</span>
           <span className="btn-arrow">→</span>
         </button>
 
