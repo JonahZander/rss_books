@@ -902,11 +902,12 @@ a {
   align-items: baseline;
 }
 
-/* Badge starts at the column's left edge so badges of different lengths
-   (New / Seen / Queued / In edition) all begin at the same x, stacking
-   into a clean vertical column down the right side of the list. */
+/* Badge sits flush against the row's right edge, off to the side of the
+   title. Right-aligned so badges of different lengths (New / Seen / Queued /
+   In edition) all share the same right edge, stacking into a clean vertical
+   column down the side of the list. */
 .article-header .lifecycle-stamp {
-  justify-self: start;
+  justify-self: end;
   align-self: center;
   white-space: nowrap;
 }
