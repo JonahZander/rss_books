@@ -235,9 +235,8 @@ a {
   text-transform: uppercase;
 }
 
-.masthead-title .slash {
-  padding: 0 0.25ch;
-  font-weight: 700;
+.masthead-title .brand-accent {
+  font-weight: 900;
   background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
   -webkit-background-clip: text;
   background-clip: text;

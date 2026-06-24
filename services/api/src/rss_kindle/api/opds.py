@@ -72,7 +72,7 @@ async def opds_root(request: Request) -> Response:
 
     feed = _el(None, "feed")
     _el(feed, "id", "urn:rss-kindle-selector:opds")
-    _el(feed, "title", "RSS Kindle Selector")
+    _el(feed, "title", "RSS Books")
     _el(feed, "updated", _now_iso())
     _el(feed, "link", rel="self", href=f"{base}/opds", type=NAV_TYPE)
     _el(feed, "link", rel="start", href=f"{base}/opds", type=NAV_TYPE)
@@ -115,7 +115,7 @@ async def opds_digests(request: Request) -> Response:
         _el(entry, "id", f"urn:rss-kindle-selector:digest:{row['id']}")
         _el(entry, "updated", _row_iso(row["created_at"]))
         author = _el(entry, "author")
-        _el(author, "name", "rss-kindle-selector")
+        _el(author, "name", "RSS Books")
         count = row["article_count"]
         size_mb = (row["size_bytes"] or 0) / 2**20
         plural = "article" if count == 1 else "articles"

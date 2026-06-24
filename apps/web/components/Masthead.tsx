@@ -60,13 +60,13 @@ export function Masthead({ readouts }: Props) {
     <header className="masthead">
       <div>
         <h1 className="masthead-title">
-          RSS<span className="slash">/</span>Kindle Selector
+          RSS <span className="brand-accent">Books</span>
         </h1>
         <div className="masthead-sub">
           <span className="masthead-tagline">
-            <span>Model&nbsp;RKS&#8209;01</span>
+            <span>Model&nbsp;RB&#8209;01</span>
             <span className="dot" aria-hidden />
-            <span>Self&#8209;hosted news desk</span>
+            <span>Self&#8209;hosted book press</span>
           </span>
           <nav className="masthead-nav" aria-label="Primary">
             {NAV.map((item) => (

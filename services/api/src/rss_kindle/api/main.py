@@ -49,7 +49,7 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             await scheduler_task
             app.state.scheduler_task = None
 
-    app = FastAPI(title="RSS Kindle Selector", lifespan=lifespan)
+    app = FastAPI(title="RSS Books", lifespan=lifespan)
     app.state.db = db
     app.state.settings = settings
 

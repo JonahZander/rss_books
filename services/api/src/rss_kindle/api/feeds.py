@@ -292,7 +292,7 @@ async def export_opml(request: Request) -> Response:
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<opml version="2.0">\n'
-        "  <head>\n    <title>rss-kindle-selector feeds</title>\n  </head>\n"
+        "  <head>\n    <title>RSS Books feeds</title>\n  </head>\n"
         f"  <body>\n{outlines}\n  </body>\n"
         "</opml>\n"
     )

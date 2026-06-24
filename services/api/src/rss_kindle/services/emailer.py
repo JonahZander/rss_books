@@ -55,7 +55,7 @@ async def send_test_email(settings: AppSettings, to: list[str] | None = None) ->
     msg = EmailMessage()
     msg["From"] = settings.smtp_from
     msg["To"] = ", ".join(recipients)
-    msg["Subject"] = "rss-kindle-selector test"
+    msg["Subject"] = "RSS Books test"
     msg.set_content(
         "Your delivery settings work. Editions will arrive like this, as EPUB attachments.\n"
     )
@@ -79,7 +79,7 @@ async def send_digest_email(
     msg["From"] = settings.smtp_from
     msg["To"] = ", ".join(to)
     msg["Subject"] = f"Pressed edition {digest_title}"
-    msg.set_content("Attached: your hand-picked edition, pressed by rss-kindle-selector.\n")
+    msg.set_content("Attached: your hand-picked edition, pressed by RSS Books.\n")
     msg.add_attachment(
         epub_path.read_bytes(),
         maintype="application",

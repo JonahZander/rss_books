@@ -320,8 +320,8 @@ def build_digest_epub(
         '<section class="colophon">'
         '<p class="eyebrow">COLOPHON</p>'
         "<p>This edition was pressed by "
-        '<a href="https://github.com/JonahZander/rss_kindle_selector">rss-kindle-selector</a>, '
-        "the self-hosted news desk for your e-reader. Every article was picked by hand.</p>"
+        '<a href="https://github.com/JonahZander/rss_kindle_selector">RSS Books</a>, '
+        "the self-hosted book press for your e-reader. Every article was picked by hand.</p>"
         f"<ul>{feed_items}</ul>"
         "</section>"
     )

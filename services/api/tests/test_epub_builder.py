@@ -96,7 +96,7 @@ def test_epub_structure(tmp_path: Path) -> None:
         assert "feed summary" in chap3.lower()
 
         colophon = z.read("EPUB/colophon.xhtml").decode("utf-8")
-        assert "rss-kindle-selector" in colophon
+        assert "RSS Books" in colophon
 
         css = z.read("EPUB/style/digest.css").decode("utf-8")
         assert "max-width: 100%" in css

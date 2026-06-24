@@ -29,9 +29,9 @@ const jetbrains = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "RSS / Kindle Selector",
+  title: "RSS Books",
   description:
-    "The self-hosted news desk for your e-reader. Pick your news, press an edition, read it anywhere.",
+    "The self-hosted book press for your e-reader. Pick your news, press an edition, read it anywhere.",
 };
 
 export const viewport: Viewport = {
