@@ -42,6 +42,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${archivo.variable} ${plex.variable} ${jetbrains.variable}`}>
+      <head>
+        {/* Apply the scanline preference before first paint to avoid a flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("rks-scanlines")==="off")document.documentElement.classList.add("scanlines-off")}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         <ToastProvider>{children}</ToastProvider>
       </body>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Masthead } from "../../components/Masthead";
+import { ScanlineToggle } from "../../components/ScanlineToggle";
 import { useToast } from "../../components/Toasts";
 import { api, type AppSettings } from "../../lib/api";
 
@@ -92,6 +93,14 @@ export default function Settings() {
         </div>
 
         <div className="settings-grid">
+          <section className="settings-card corner-marks" aria-label="Appearance">
+            <p className="eyebrow eyebrow-ink">Appearance</p>
+            <p className="settings-hint">
+              The CRT scanline overlay is a purely visual texture, stored in this browser only.
+            </p>
+            <ScanlineToggle />
+          </section>
+
           <section className="settings-card corner-marks" aria-label="Email delivery">
             <p className="eyebrow eyebrow-ink">Delivery · Send-to-Kindle email</p>
             <p className="settings-hint">
