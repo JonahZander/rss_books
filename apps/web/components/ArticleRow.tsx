@@ -89,6 +89,12 @@ export function ArticleRow({ article, number, queued, onToggleQueue, onOpen }: P
         <button type="button" className="article-title" onClick={onOpen}>
           <span>{article.title}</span>
         </button>
+        {/* Lifecycle badge lives in a fixed right-hand column so every row's
+            stamp sits in the same spot regardless of label length. */}
+        <span className={`lifecycle-stamp lc-${lifecycle}`}>
+          <span className="status-square" aria-hidden />
+          {LIFECYCLE_LABEL[lifecycle]}
+        </span>
       </header>
 
       <div className="article-meta">
@@ -101,10 +107,6 @@ export function ArticleRow({ article, number, queued, onToggleQueue, onOpen }: P
           {hostnameOf(article.url)} ↗
         </a>
         {article.published_at && <span>{fmtTimestamp(article.published_at)}</span>}
-        <span className={`lifecycle-stamp lc-${lifecycle}`}>
-          <span className="status-square" aria-hidden />
-          {LIFECYCLE_LABEL[lifecycle]}
-        </span>
       </div>
 
       {(() => {

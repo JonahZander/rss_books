@@ -788,6 +788,11 @@ a {
   padding: 1px 6px 1px 5px;
   border: 1px solid var(--hairline);
   color: var(--ink-3);
+  /* Explicit type — the stamp no longer inherits the meta line's mono styling. */
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
 
@@ -891,9 +896,19 @@ a {
 
 .article-header {
   display: grid;
-  grid-template-columns: 28px 22px 1fr;
+  /* Trailing fixed column keeps every lifecycle badge in the same spot. */
+  grid-template-columns: 28px 22px 1fr 104px;
   gap: 14px;
   align-items: baseline;
+}
+
+/* Badge starts at the column's left edge so badges of different lengths
+   (New / Seen / Queued / In edition) all begin at the same x, stacking
+   into a clean vertical column down the right side of the list. */
+.article-header .lifecycle-stamp {
+  justify-self: start;
+  align-self: center;
+  white-space: nowrap;
 }
 
 .article-index {
@@ -2596,7 +2611,7 @@ a {
   }
 
   .article-header {
-    grid-template-columns: 24px 1fr;
+    grid-template-columns: 24px 1fr auto;
   }
 
   .article-index {
