@@ -5,11 +5,13 @@ import io
 
 import segno
 
-# Tuned for 6-7" greyscale e-ink: a small fixed module scale keeps the code
-# scannable from a phone held to the screen without dominating the page. The
+# Tuned for 6-7" greyscale e-ink. Render at 6px per module so the PNG is crisp
+# and is displayed at its NATIVE pixel size (see img.link-qr in the EPUB CSS) —
+# never resized by the reader. A fractional resize (the old 96px box did this)
+# smears module edges and breaks scanning, the worse the longer the URL. The
 # quiet zone (border) is the QR-spec minimum of 4 modules — too small and
 # scanners struggle.
-_SCALE = 3
+_SCALE = 6
 _BORDER = 4
 
 

@@ -129,11 +129,11 @@ code { font-family: "Courier New", monospace; font-size: 0.85em; }
 pre code { font-size: 1em; }
 img { max-width: 100%; }
 img.link-qr {
-  display: inline-block;
-  width: 96px;
-  height: 96px;
-  vertical-align: middle;
-  margin: 0 0.25em;
+  /* Shown at the PNG's native size — no width/height, so the reader never
+     resamples it (fractional scaling destroys QR scannability). Block so the
+     ~200-340px code sits on its own line instead of wrecking text lines. */
+  display: block;
+  margin: 0.5em 0;
   image-rendering: pixelated;
 }
 figure { margin: 1em 0; }
