@@ -78,22 +78,29 @@ function TriageReader({
   onRead: (article: Article) => void;
 }) {
   const article = articles[index];
+  // Per-session content cache, keyed by article id. Re-opening an article we've
+  // already pulled this session returns straight from here — no second fetch.
+  const cache = useRef<Map<number, ArticleDetail>>(new Map());
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  // Articles whose content we've already pulled this session — re-opening one
-  // shouldn't re-fetch (and re-mark-read) it.
-  const seen = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     let live = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
+    const cached = cache.current.get(article.id);
+    if (cached) {
+      // Already fetched this session — show it immediately, skip the network.
+      setDetail(cached);
+      setLoading(false);
+      return;
+    }
+
     setDetail(null);
     setLoading(true);
 
-    if (markReadOnExpand && !article.read_at && !seen.current.has(article.id)) {
+    if (markReadOnExpand && !article.read_at) {
       api.markRead(article.id).then(onRead).catch(() => {});
     }
-    seen.current.add(article.id);
 
     // Cached content comes straight back; uncached articles are fetched on
     // demand, falling back to whatever is stored if the live fetch fails.
@@ -101,7 +108,11 @@ function TriageReader({
       ? api.getArticle(article.id)
       : api.fetchArticle(article.id).catch(() => api.getArticle(article.id));
     load
-      .then((d) => live && setDetail(d))
+      .then((d) => {
+        if (!live) return;
+        cache.current.set(article.id, d);
+        setDetail(d);
+      })
       .catch(() => live && setDetail(null))
       .finally(() => live && setLoading(false));
     return () => {
