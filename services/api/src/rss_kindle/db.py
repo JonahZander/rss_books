@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -185,31 +186,44 @@ MIGRATIONS: list[tuple[str, Migration]] = [
 class Database:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
+        # In production two uvicorn servers (HTTP + HTTPS) share one app and
+        # therefore one Database instance (see api/serve.py), and each server's
+        # lifespan calls init(); the lock makes those concurrent calls safe.
+        self._init_lock = asyncio.Lock()
 
     async def init(self) -> None:
-        async with self.connect() as conn:
-            cur = await conn.execute("PRAGMA user_version")
-            row = await cur.fetchone()
-            version = int(row[0]) if row else 0
+        async with self._init_lock:
+            async with self.connect() as conn:
+                cur = await conn.execute("PRAGMA user_version")
+                row = await cur.fetchone()
+                version = int(row[0]) if row else 0
 
-            if version == 0:
-                # Distinguish a fresh database from a 0.1-era database that
-                # predates the migration mechanism (tables exist, version 0).
-                cur = await conn.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='feeds'"
-                )
-                if await cur.fetchone() is not None:
-                    version = 1
-                    await conn.execute("PRAGMA user_version = 1")
+                if version == 0:
+                    # Distinguish a fresh database from a 0.1-era database that
+                    # predates the migration mechanism (tables exist, version 0).
+                    cur = await conn.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='feeds'"
+                    )
+                    if await cur.fetchone() is not None:
+                        version = 1
+                        await conn.execute("PRAGMA user_version = 1")
+                        await conn.commit()
+
+                for number, (name, migrate) in enumerate(MIGRATIONS, start=1):
+                    # Re-read the version so an initializer on another connection
+                    # (e.g. a second process on a shared volume) doesn't double-apply
+                    # a migration it lost the race for. Best-effort narrowing, not a
+                    # cross-process lock: executescript-based migrations implicitly
+                    # commit, so the ladder can't run under one write transaction.
+                    cur = await conn.execute("PRAGMA user_version")
+                    row = await cur.fetchone()
+                    version = max(version, int(row[0]) if row else 0)
+                    if number <= version:
+                        continue
+                    await migrate(conn)
+                    await conn.execute(f"PRAGMA user_version = {number}")
                     await conn.commit()
-
-            for number, (name, migrate) in enumerate(MIGRATIONS, start=1):
-                if number <= version:
-                    continue
-                await migrate(conn)
-                await conn.execute(f"PRAGMA user_version = {number}")
-                await conn.commit()
-                logger.info("applied migration %d (%s)", number, name)
+                    logger.info("applied migration %d (%s)", number, name)
 
     @asynccontextmanager
     async def connect(self) -> AsyncIterator[aiosqlite.Connection]:

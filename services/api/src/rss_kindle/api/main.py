@@ -32,6 +32,8 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         # (see the scheduler guard below); otherwise it runs twice.
         db.path.parent.mkdir(parents=True, exist_ok=True)
         settings.epub_dir.mkdir(parents=True, exist_ok=True)
+        # db.init() serializes concurrent callers internally, so the second
+        # lifespan waits for the schema instead of racing the migration ladder.
         await db.init()
 
         scheduler_task: asyncio.Task[None] | None = None

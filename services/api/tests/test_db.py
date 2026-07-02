@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import aiosqlite
@@ -49,6 +50,14 @@ async def test_init_is_idempotent(tmp_path: Path) -> None:
     db = Database(tmp_path / "test.db")
     await db.init()
     await db.init()
+    assert await _user_version(db) == len(MIGRATIONS)
+
+
+async def test_concurrent_init_on_fresh_db(tmp_path: Path) -> None:
+    """In production two server lifespans call init() on the same instance
+    concurrently (see api/serve.py); the ladder must not double-apply."""
+    db = Database(tmp_path / "test.db")
+    await asyncio.gather(db.init(), db.init(), db.init())
     assert await _user_version(db) == len(MIGRATIONS)
 
 
