@@ -314,19 +314,6 @@ a {
   text-shadow: 0 0 14px rgba(255, 77, 157, 0.4);
 }
 
-.clock {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 24px;
-  line-height: 1;
-  color: var(--ink);
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
-  padding-left: 22px;
-  margin-left: 6px;
-  border-left: 1px solid var(--rule);
-}
-
 /* ─── Feed Sidebar ────────────────────────────────────────── */
 
 .feed-sidebar {
@@ -418,6 +405,12 @@ a {
   letter-spacing: 0.08em;
 }
 
+/* Grid items default to min-width:auto; without this a long feed name widens
+   the 1fr column and pushes the tool buttons past the sidebar edge. */
+.feed-row > * {
+  min-width: 0;
+}
+
 .feed-row-title {
   font-family: var(--font-display);
   font-weight: 500;
@@ -427,6 +420,7 @@ a {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .feed-row-sub {
@@ -1693,9 +1687,23 @@ a {
   transition: opacity 120ms ease;
 }
 
+/* In feed rows the tools overlay the right edge on hover instead of living in
+   the grid; reserving their width permanently squeezes the title column and
+   long feed names then push the buttons past the sidebar edge. */
+.feed-row .feed-row-tools {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 0 2px 6px;
+  background: var(--paper-2);
+  pointer-events: none;
+}
+
 .feed-row:hover .feed-row-tools,
 .feed-row:focus-within .feed-row-tools {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .feed-tool {
@@ -2528,10 +2536,6 @@ a {
 
   .readout-value {
     font-size: 22px;
-  }
-
-  .clock {
-    display: none;
   }
 
   .masthead-sub {

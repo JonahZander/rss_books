@@ -72,6 +72,7 @@ export function FeedSidebar({
   const [renamingGroupId, setRenamingGroupId] = useState<number | null>(null);
   const [groupRenameValue, setGroupRenameValue] = useState("");
   const [newGroupName, setNewGroupName] = useState("");
+  const [addingGroup, setAddingGroup] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapsed);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -159,6 +160,7 @@ export function FeedSidebar({
     try {
       await api.createGroup(name);
       setNewGroupName("");
+      setAddingGroup(false);
       await onChanged();
       toast(`Group “${name}” committed`);
     } catch (e) {
@@ -479,18 +481,35 @@ export function FeedSidebar({
         </button>
       </form>
 
-      <form onSubmit={createGroup} className="group-form">
-        <input
-          placeholder="New group name"
-          value={newGroupName}
-          onChange={(e) => setNewGroupName(e.target.value)}
-          aria-label="New group name"
-        />
-        <button type="submit" className="btn btn-ghost">
+      {addingGroup ? (
+        <form onSubmit={createGroup} className="group-form">
+          <input
+            placeholder="New group name"
+            value={newGroupName}
+            autoFocus
+            onChange={(e) => setNewGroupName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setNewGroupName("");
+                setAddingGroup(false);
+              }
+            }}
+            onBlur={() => {
+              if (!newGroupName.trim()) setAddingGroup(false);
+            }}
+            aria-label="New group name"
+          />
+          <button type="submit" className="btn btn-ghost">
+            <span>Create</span>
+            <span className="btn-arrow">→</span>
+          </button>
+        </form>
+      ) : (
+        <button type="button" className="btn btn-ghost" onClick={() => setAddingGroup(true)}>
           <span>Add group</span>
           <span className="btn-arrow">＋</span>
         </button>
-      </form>
+      )}
 
       <div className="opml-row">
         <input

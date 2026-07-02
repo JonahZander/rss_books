@@ -43,20 +43,6 @@ function Readout({ label, value, amber }: { label: string; value: string; amber?
 
 export function Masthead({ readouts }: Props) {
   const pathname = usePathname();
-  const [clock, setClock] = useState<string>("--:--:--");
-
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      const hh = String(d.getHours()).padStart(2, "0");
-      const mm = String(d.getMinutes()).padStart(2, "0");
-      const ss = String(d.getSeconds()).padStart(2, "0");
-      setClock(`${hh}:${mm}:${ss}`);
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, []);
 
   return (
     <header className="masthead">
@@ -88,11 +74,8 @@ export function Masthead({ readouts }: Props) {
 
       <div className="masthead-readout">
         {/* The article and queue counts live in the content header and queue
-            rail respectively; the masthead carries only Feeds + clock. */}
+            rail respectively; the masthead carries only Feeds. */}
         {readouts && <Readout label="Feeds" value={String(readouts.feedCount)} />}
-        <span className="clock" aria-label="local time">
-          {clock}
-        </span>
       </div>
     </header>
   );
