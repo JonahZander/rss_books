@@ -11,6 +11,7 @@ const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satur
 export default function Settings() {
   const toast = useToast();
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [saved, setSaved] = useState<AppSettings | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -19,11 +20,17 @@ export default function Settings() {
   const [opdsHttpsBase, setOpdsHttpsBase] = useState("");
 
   useEffect(() => {
-    api.getSettings().then(setSettings, (e) => {
-      const message = e instanceof Error ? e.message : "could not load settings";
-      setLoadError(message);
-      toast(message, "error");
-    });
+    api.getSettings().then(
+      (s) => {
+        setSettings(s);
+        setSaved(s);
+      },
+      (e) => {
+        const message = e instanceof Error ? e.message : "could not load settings";
+        setLoadError(message);
+        toast(message, "error");
+      },
+    );
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpdsBase(window.location.origin);
     // The container also serves HTTPS on :8443 for readers that only speak TLS
@@ -50,13 +57,17 @@ export default function Settings() {
     );
   }
 
+  const dirty = saved !== null && JSON.stringify(settings) !== JSON.stringify(saved);
+
   const set = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
     setSettings((prev) => (prev ? { ...prev, [key]: value } : prev));
 
   const save = async () => {
     setSaving(true);
     try {
-      setSettings(await api.putSettings(settings));
+      const next = await api.putSettings(settings);
+      setSettings(next);
+      setSaved(next);
       toast("Settings saved");
     } catch (e) {
       toast(e instanceof Error ? e.message : "save failed", "error");
@@ -69,6 +80,7 @@ export default function Settings() {
     setTesting(true);
     try {
       await api.putSettings(settings);
+      setSaved(settings);
       const r = await api.testEmail();
       toast(`Test email sent to ${r.sent_to.join(", ")}`);
     } catch (e) {
@@ -102,10 +114,6 @@ export default function Settings() {
             <span className="eyebrow">05 - Configuration</span>
             <h2 className="content-title">Settings</h2>
           </div>
-          <button type="button" className="btn" onClick={() => void save()} disabled={saving}>
-            <span>{saving ? "Saving…" : "Save settings"}</span>
-            <span className="btn-arrow">→</span>
-          </button>
         </div>
 
         <div className="settings-grid">
@@ -652,6 +660,25 @@ export default function Settings() {
             )}
           </section>
         </div>
+
+        {dirty && (
+          <div className="settings-savebar" role="status">
+            <span className="settings-savebar-hint">Unsaved changes</span>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setSettings(saved)}
+              disabled={saving}
+            >
+              <span>Discard</span>
+              <span className="btn-arrow">×</span>
+            </button>
+            <button type="button" className="btn" onClick={() => void save()} disabled={saving}>
+              <span>{saving ? "Saving…" : "Save settings"}</span>
+              <span className="btn-arrow">→</span>
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );

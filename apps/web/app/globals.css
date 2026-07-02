@@ -2577,6 +2577,30 @@ a {
   align-items: center;
 }
 
+.settings-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-top: 18px;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: 0 -4px 12px rgb(16 24 40 / 0.08);
+}
+
+.settings-savebar-hint {
+  margin-right: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
 /* ─── Mobile tabs + responsive layout ─────────────────────── */
 
 .mobile-tabs {
