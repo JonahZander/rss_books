@@ -2213,6 +2213,27 @@ a {
   border: 1px solid var(--ink);
 }
 
+.edition-chips {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.edition-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  color: var(--ink-3);
+}
+
+.edition-delete {
+  margin-left: auto;
+  align-self: center;
+}
+
 .chip-ready {
   background: var(--ink);
   color: var(--paper);

@@ -104,7 +104,6 @@ export default function Editions() {
                     <span className="edition-sub">
                       {fmtDate(d.created_at)} · {d.article_count}{" "}
                       {d.article_count === 1 ? "article" : "articles"} · {fmtSize(d.size_bytes)}
-                      {d.profile ? ` · ${d.profile}` : ""}
                     </span>
                     {d.status === "failed" && d.error && (
                       <span className="edition-error">⚠ {d.error}</span>
@@ -119,7 +118,17 @@ export default function Editions() {
                       </span>
                     )}
                   </div>
-                  <span className={`status-chip chip-${d.status}`}>{STATUS_LABEL[d.status]}</span>
+                  <span className="edition-chips">
+                    {d.profile && <span className="edition-chip">{d.profile}</span>}
+                    <span className="edition-chip">
+                      {d.group_name ? `Group · ${d.group_name}` : "Combined"}
+                    </span>
+                    {d.status !== "ready" && (
+                      <span className={`status-chip chip-${d.status}`}>
+                        {STATUS_LABEL[d.status]}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="edition-actions">
                   <button
@@ -132,7 +141,7 @@ export default function Editions() {
                     <span className="btn-arrow">{previewId === d.id ? "↑" : "↓"}</span>
                   </button>
                   {d.status === "ready" && (
-                    <a className="btn btn-ghost btn-sm" href={api.downloadDigestUrl(d.id)} download>
+                    <a className="btn btn-sm" href={api.downloadDigestUrl(d.id)} download>
                       <span>Download</span>
                       <span className="btn-arrow">↓</span>
                     </a>
@@ -150,11 +159,12 @@ export default function Editions() {
                   )}
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm danger"
+                    className="feed-tool danger edition-delete"
+                    aria-label={`Delete edition ${d.title}`}
+                    title="Delete edition"
                     onClick={() => setDeleteTarget(d)}
                   >
-                    <span>Delete</span>
-                    <span className="btn-arrow">×</span>
+                    ×
                   </button>
                 </div>
                 {previewId === d.id && (
