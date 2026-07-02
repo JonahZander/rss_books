@@ -12,6 +12,8 @@ type Props = {
   groupsExist: boolean;
   /** Render-profile names from settings; empty = feature not in use. */
   profiles: string[];
+  /** Resolved default profile name from settings; null = no profiles exist. */
+  defaultProfile: string | null;
   onRemove: (article: Article) => void;
   onClear: () => void;
   onAddLink: (url: string, title?: string) => Promise<void>;
@@ -50,6 +52,7 @@ export function DigestQueue({
   emailConfigured,
   groupsExist,
   profiles,
+  defaultProfile,
   onRemove,
   onClear,
   onAddLink,
@@ -68,8 +71,13 @@ export function DigestQueue({
   });
 
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>(loadStoredProfiles);
-  // A profile renamed/removed in settings silently drops out of the selection.
-  const activeProfiles = selectedProfiles.filter((p) => profiles.includes(p));
+  // Stored selection filtered to profiles that still exist; never empty while
+  // profiles are configured — an empty result falls back to the default.
+  const stored = selectedProfiles.filter((p) => profiles.includes(p));
+  const activeProfiles =
+    stored.length > 0 ? stored : defaultProfile !== null ? [defaultProfile] : [];
+
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const chooseSplit = (next: Split) => {
     setSplit(next);
@@ -80,6 +88,7 @@ export function DigestQueue({
     const next = activeProfiles.includes(name)
       ? activeProfiles.filter((p) => p !== name)
       : [...activeProfiles, name];
+    if (next.length === 0) return; // an edition always targets some profile
     setSelectedProfiles(next);
     window.localStorage.setItem(PROFILES_KEY, JSON.stringify(next));
   };
@@ -219,45 +228,6 @@ export function DigestQueue({
         </div>
       </form>
 
-      {groupsExist && (
-        <div className="segmented" role="radiogroup" aria-label="Edition mode">
-          {(
-            [
-              ["combined", "Combined"],
-              ["per_group", "One per group"],
-            ] as [Split, string][]
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={split === value}
-              className={`segmented-option ${split === value ? "active" : ""}`}
-              onClick={() => chooseSplit(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {profiles.length > 0 && (
-        <div className="segmented" role="group" aria-label="Device profiles">
-          {profiles.map((name) => (
-            <button
-              key={name}
-              type="button"
-              role="checkbox"
-              aria-checked={activeProfiles.includes(name)}
-              className={`segmented-option ${activeProfiles.includes(name) ? "active" : ""}`}
-              onClick={() => toggleProfile(name)}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="queue-actions">
         <button
           type="button"
@@ -265,7 +235,15 @@ export function DigestQueue({
           onClick={() => void compile()}
           disabled={count === 0 || compiling}
         >
-          <span>{compiling ? "Compiling…" : "Compile edition"}</span>
+          <span>
+            {compiling
+              ? "Compiling…"
+              : activeProfiles.length > 1
+                ? `Compile · ${activeProfiles.length} profiles`
+                : activeProfiles.length === 1
+                  ? `Compile · ${activeProfiles[0]}`
+                  : "Compile edition"}
+          </span>
           <span className="btn-arrow">→</span>
         </button>
 
@@ -276,6 +254,85 @@ export function DigestQueue({
           </button>
         )}
       </div>
+
+      {(profiles.length > 0 || groupsExist) && (
+        <div className="compile-options">
+          <button
+            type="button"
+            className="compile-options-toggle"
+            aria-expanded={optionsOpen}
+            onClick={() => setOptionsOpen((v) => !v)}
+          >
+            <span>{optionsOpen ? "▾" : "▸"} Compilation options</span>
+            <span className="compile-options-summary">
+              {[
+                activeProfiles.length > 1 ? `${activeProfiles.length} profiles` : null,
+                groupsExist && split === "per_group" ? "one per group" : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </button>
+
+          {optionsOpen && (
+            <div className="compile-options-body">
+              {profiles.length > 0 && (
+                <div>
+                  <span className="feed-form-label">Press for</span>
+                  <div className="segmented" role="group" aria-label="Device profiles">
+                    {profiles.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={activeProfiles.includes(name)}
+                        className={`segmented-option ${
+                          activeProfiles.includes(name) ? "active" : ""
+                        }`}
+                        onClick={() => toggleProfile(name)}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="settings-hint">
+                    One edition per ticked profile. {defaultProfile ?? ""} is your default.
+                  </p>
+                </div>
+              )}
+
+              {groupsExist && (
+                <div>
+                  <span className="feed-form-label">Edition mode</span>
+                  <div className="segmented" role="radiogroup" aria-label="Edition mode">
+                    {(
+                      [
+                        ["combined", "Combined"],
+                        ["per_group", "One per group"],
+                      ] as [Split, string][]
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={split === value}
+                        className={`segmented-option ${split === value ? "active" : ""}`}
+                        onClick={() => chooseSplit(value)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="settings-hint">
+                    Combined = one book, contents sectioned by group. One per group = a separate
+                    book per feed group.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {digests.map((d) => (
         <div

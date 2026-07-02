@@ -9,6 +9,7 @@ import { Masthead } from "../components/Masthead";
 import { useToast } from "../components/Toasts";
 import {
   api,
+  defaultProfileName,
   emailConfigured,
   type AppSettings,
   type Article,
@@ -284,6 +285,7 @@ export default function Home() {
           emailConfigured={settings ? emailConfigured(settings) : false}
           groupsExist={groups.length > 0}
           profiles={settings?.profiles.map((p) => p.name) ?? []}
+          defaultProfile={settings ? defaultProfileName(settings) : null}
           onRemove={(a) => void toggleQueue(a)}
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);
