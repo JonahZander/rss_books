@@ -18,6 +18,11 @@ export function plainSummary(raw: string | null): string {
 /** Two-digit zero-padded counter, e.g. 7 → "07". */
 export const pad2 = (n: number): string => String(n).padStart(2, "0");
 
+/** Unread badges: keep 3 digits so counts never overflow the sidebar row. */
+export function capCount(n: number): string {
+  return n > 999 ? "999+" : String(n);
+}
+
 /** Local 24h time with seconds, or "never". */
 export function hhmmss(iso: string | null): string {
   if (!iso) return "never";

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { Feed, Group } from "../lib/api";
 import { api } from "../lib/api";
-import { pad2 } from "../lib/format";
+import { capCount, pad2 } from "../lib/format";
 import { hostnameOf } from "../lib/url";
 import { useToast } from "./Toasts";
 
@@ -73,6 +73,7 @@ export function FeedSidebar({
   const [groupRenameValue, setGroupRenameValue] = useState("");
   const [newGroupName, setNewGroupName] = useState("");
   const [addingGroup, setAddingGroup] = useState(false);
+  const [addingFeed, setAddingFeed] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapsed);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -99,6 +100,7 @@ export function FeedSidebar({
       await onAdd(url, title);
       setUrl("");
       setTitle("");
+      setAddingFeed(false);
     } finally {
       setBusy(false);
     }
@@ -260,7 +262,7 @@ export function FeedSidebar({
         </span>
       )}
       <span className="feed-row-end">
-        {f.unread_count > 0 && <span className="unread-badge">{f.unread_count}</span>}
+        {f.unread_count > 0 && <span className="unread-badge">{capCount(f.unread_count)}</span>}
         <span className="feed-row-tools">
           <button
             type="button"
@@ -357,7 +359,7 @@ export function FeedSidebar({
             </button>
           )}
           <span className="feed-row-end">
-            {unread > 0 && <span className="unread-badge">{unread}</span>}
+            {unread > 0 && <span className="unread-badge">{capCount(unread)}</span>}
             {group && (
               <span className="feed-row-tools">
                 <button
@@ -449,37 +451,51 @@ export function FeedSidebar({
         <span className="btn-arrow">↻</span>
       </button>
 
-      <form onSubmit={submit} className="feed-form corner-marks">
-        <span className="eyebrow eyebrow-ink">01 - Commit new feed</span>
-        <div>
-          <label className="feed-form-label" htmlFor="feed-url">
-            URL
-          </label>
-          <input
-            id="feed-url"
-            placeholder="https://example.com/feed.xml"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label className="feed-form-label" htmlFor="feed-title">
-            Title
-          </label>
-          <input
-            id="feed-title"
-            placeholder="Short label"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" className="btn" disabled={busy}>
-          <span>{busy ? "Committing…" : "Commit feed"}</span>
-          <span className="btn-arrow">→</span>
+      {addingFeed ? (
+        <form onSubmit={submit} className="feed-form corner-marks">
+          <span className="eyebrow eyebrow-ink">01 - Commit new feed</span>
+          <div>
+            <label className="feed-form-label" htmlFor="feed-url">
+              URL
+            </label>
+            <input
+              id="feed-url"
+              placeholder="https://example.com/feed.xml"
+              value={url}
+              autoFocus
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setAddingFeed(false);
+              }}
+              required
+            />
+          </div>
+          <div>
+            <label className="feed-form-label" htmlFor="feed-title">
+              Title
+            </label>
+            <input
+              id="feed-title"
+              placeholder="Short label"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setAddingFeed(false);
+              }}
+              required
+            />
+          </div>
+          <button type="submit" className="btn" disabled={busy}>
+            <span>{busy ? "Committing…" : "Commit feed"}</span>
+            <span className="btn-arrow">→</span>
+          </button>
+        </form>
+      ) : (
+        <button type="button" className="btn btn-ghost" onClick={() => setAddingFeed(true)}>
+          <span>Add feed</span>
+          <span className="btn-arrow">＋</span>
         </button>
-      </form>
+      )}
 
       {addingGroup ? (
         <form onSubmit={createGroup} className="group-form">
