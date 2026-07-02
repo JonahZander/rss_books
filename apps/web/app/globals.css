@@ -2221,11 +2221,7 @@ a {
   padding: 3px 8px;
   border: 1px solid var(--rule);
   color: var(--ink-3);
-}
-
-.edition-delete {
-  margin-left: auto;
-  align-self: center;
+  cursor: help;
 }
 
 .chip-ready {
@@ -2251,10 +2247,29 @@ a {
   margin: 12px 0 0 78px;
 }
 
-.recompile-picker {
+.edition-tools {
+  margin-left: auto;
+  align-self: center;
   display: inline-flex;
-  gap: 6px;
-  align-items: center;
+  gap: 4px;
+}
+
+.recompile-panel {
+  margin: 12px 0 0 78px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  display: grid;
+  gap: 12px;
+  max-width: 480px;
+}
+
+.recompile-panel .segmented {
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+
+.recompile-panel-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .btn-sm {

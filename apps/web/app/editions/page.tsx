@@ -23,7 +23,10 @@ export default function Editions() {
   const [sendingId, setSendingId] = useState<number | null>(null);
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [recompileFor, setRecompileFor] = useState<number | null>(null);
+  const [recompileProfiles, setRecompileProfiles] = useState<string[]>([]);
+  const [recompileSplit, setRecompileSplit] = useState<"combined" | "per_group">("combined");
   const [recompiling, setRecompiling] = useState(false);
+  const [groupsExist, setGroupsExist] = useState(false);
 
   const refresh = useCallback(async () => {
     setDigests(await api.listDigests());
@@ -33,6 +36,7 @@ export default function Editions() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
     api.getSettings().then(setSettings, () => {});
+    api.listGroups().then((groups) => setGroupsExist(groups.length > 0), () => {});
   }, [refresh]);
 
   const busy = digests.some((d) => d.status === "pending" || d.status === "generating");
@@ -59,7 +63,23 @@ export default function Editions() {
     }
   };
 
-  const recompile = async (digest: Digest, profile: string | null) => {
+  const openRecompile = (digest: Digest) => {
+    // Preselect the profile the edition was pressed with, else the default.
+    const initial = digest.profile ?? (settings ? defaultProfileName(settings) : null);
+    setRecompileProfiles(initial ? [initial] : []);
+    setRecompileSplit("combined");
+    setRecompileFor(recompileFor === digest.id ? null : digest.id);
+  };
+
+  const toggleRecompileProfile = (name: string) => {
+    setRecompileProfiles((prev) =>
+      prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name],
+    );
+  };
+
+  const recompile = async (digest: Digest) => {
+    const profiles = recompileProfiles;
+    const split = recompileSplit;
     setRecompileFor(null);
     setRecompiling(true);
     try {
@@ -70,8 +90,8 @@ export default function Editions() {
       }
       await api.createDigest({
         articleIds: members.map((m) => m.article_id),
-        split: "combined",
-        profiles: profile ? [profile] : undefined,
+        split,
+        profiles: profiles.length > 0 ? profiles : undefined,
       });
       toast(`Pressing a new edition from ${digest.title}…`);
       await refresh();
@@ -144,8 +164,22 @@ export default function Editions() {
                     )}
                   </div>
                   <span className="edition-chips">
-                    {d.profile && <span className="edition-chip">{d.profile}</span>}
-                    <span className="edition-chip">
+                    {d.profile && (
+                      <span
+                        className="edition-chip"
+                        title={`Rendered with the “${d.profile}” device profile`}
+                      >
+                        {d.profile}
+                      </span>
+                    )}
+                    <span
+                      className="edition-chip"
+                      title={
+                        d.group_name
+                          ? `Contains only articles from the “${d.group_name}” feed group`
+                          : "One book with everything that was queued; contents sectioned by feed group"
+                      }
+                    >
                       {d.group_name ? `Group · ${d.group_name}` : "Combined"}
                     </span>
                     {d.status !== "ready" && (
@@ -171,69 +205,120 @@ export default function Editions() {
                       <span className="btn-arrow">↓</span>
                     </a>
                   )}
-                  {d.status === "ready" && canEmail && (
+                  <span className="edition-tools">
+                    {d.status === "ready" && canEmail && (
+                      <button
+                        type="button"
+                        className="feed-tool"
+                        title="Send to e-reader"
+                        aria-label={`Send ${d.title} to e-reader`}
+                        disabled={sendingId === d.id}
+                        onClick={() => void send(d)}
+                      >
+                        ✉
+                      </button>
+                    )}
+                    {d.status === "ready" && (
+                      <button
+                        type="button"
+                        className="feed-tool"
+                        title="Press again for another device"
+                        aria-label={`Recompile ${d.title}`}
+                        aria-expanded={recompileFor === d.id}
+                        disabled={recompiling}
+                        onClick={() => openRecompile(d)}
+                      >
+                        ↻
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="btn btn-ghost btn-sm"
-                      disabled={sendingId === d.id}
-                      onClick={() => void send(d)}
+                      className="feed-tool danger"
+                      aria-label={`Delete edition ${d.title}`}
+                      title="Delete edition"
+                      onClick={() => setDeleteTarget(d)}
                     >
-                      <span>{sendingId === d.id ? "Sending…" : "Send"}</span>
-                      <span className="btn-arrow">✉</span>
+                      ×
                     </button>
-                  )}
-                  {d.status === "ready" &&
-                    (recompileFor === d.id ? (
-                      <span className="recompile-picker">
-                        {(settings?.profiles ?? []).map((p) => (
-                          <button
-                            key={p.name}
-                            type="button"
-                            className="btn btn-outline btn-sm"
-                            disabled={recompiling}
-                            onClick={() => void recompile(d, p.name)}
-                          >
-                            <span>{p.name}</span>
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          className="feed-tool"
-                          aria-label="Cancel recompile"
-                          onClick={() => setRecompileFor(null)}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ) : (
+                  </span>
+                </div>
+                {recompileFor === d.id && (
+                  <div className="recompile-panel">
+                    {(settings?.profiles.length ?? 0) > 0 && (
+                      <div>
+                        <span className="feed-form-label">Press again for</span>
+                        <div className="segmented" role="group" aria-label="Device profiles">
+                          {(settings?.profiles ?? []).map((p) => (
+                            <button
+                              key={p.name}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={recompileProfiles.includes(p.name)}
+                              className={`segmented-option ${
+                                recompileProfiles.includes(p.name) ? "active" : ""
+                              }`}
+                              onClick={() => toggleRecompileProfile(p.name)}
+                            >
+                              {p.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {groupsExist && (
+                      <div>
+                        <span className="feed-form-label">Edition mode</span>
+                        <div className="segmented" role="radiogroup" aria-label="Edition mode">
+                          {(
+                            [
+                              ["combined", "Combined"],
+                              ["per_group", "One per group"],
+                            ] as ["combined" | "per_group", string][]
+                          ).map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              role="radio"
+                              aria-checked={recompileSplit === value}
+                              className={`segmented-option ${
+                                recompileSplit === value ? "active" : ""
+                              }`}
+                              onClick={() => setRecompileSplit(value)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="recompile-panel-actions">
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        disabled={
+                          recompiling ||
+                          ((settings?.profiles.length ?? 0) > 0 && recompileProfiles.length === 0)
+                        }
+                        onClick={() => void recompile(d)}
+                      >
+                        <span>
+                          {recompileProfiles.length > 1
+                            ? `Press ${recompileProfiles.length} editions`
+                            : "Press edition"}
+                        </span>
+                        <span className="btn-arrow">→</span>
+                      </button>
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
-                        disabled={recompiling}
-                        onClick={() => {
-                          const fallback = settings ? defaultProfileName(settings) : null;
-                          // One profile (or none) configured: nothing to choose.
-                          if (!settings || settings.profiles.length <= 1) {
-                            void recompile(d, fallback);
-                          } else {
-                            setRecompileFor(d.id);
-                          }
-                        }}
+                        onClick={() => setRecompileFor(null)}
                       >
-                        <span>Recompile</span>
-                        <span className="btn-arrow">↻</span>
+                        <span>Cancel</span>
+                        <span className="btn-arrow">×</span>
                       </button>
-                    ))}
-                  <button
-                    type="button"
-                    className="feed-tool danger edition-delete"
-                    aria-label={`Delete edition ${d.title}`}
-                    title="Delete edition"
-                    onClick={() => setDeleteTarget(d)}
-                  >
-                    ×
-                  </button>
-                </div>
+                    </div>
+                  </div>
+                )}
                 {previewId === d.id && (
                   <EditionPreview
                     digestId={d.id}
