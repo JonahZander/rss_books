@@ -83,10 +83,50 @@ class ArticleDetail(Article):
     full_content: str | None = None
 
 
+# How <table> markup ships in an edition: "native" keeps HTML tables (best on
+# capable readers), "image" pre-renders each sizeable table to a PNG (for
+# readers with no CSS table support, e.g. the Xteink X4), "image_rotated"
+# additionally turns the PNG 90° so wide tables read down a narrow screen.
+TableMode = Literal["native", "image", "image_rotated"]
+
+# Width:height cap for each pre-rendered table image, roughly the device
+# screen's shape. "auto" never splits; otherwise a table taller than the cap is
+# split by rows into several images, each repeating the header row.
+TableAspect = Literal["auto", "4:3", "1:1", "3:4", "3:5", "9:16"]
+
+
+class RenderProfile(BaseModel):
+    """A named bundle of per-device EPUB rendering options. One compile can
+    press one edition per selected profile, so each device gets a book it can
+    actually display."""
+
+    name: str
+    link_qr: Literal["off", "articles", "all"] = "articles"
+    table_mode: TableMode = "native"
+    table_aspect: TableAspect = "auto"
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, v: str) -> str:
+        return _strip_required(v)
+
+
+def default_profiles() -> list[RenderProfile]:
+    return [
+        RenderProfile(name="Kindle", link_qr="articles", table_mode="native"),
+        RenderProfile(
+            name="Xteink X4", link_qr="articles", table_mode="image_rotated", table_aspect="3:5"
+        ),
+    ]
+
+
 class DigestCreate(BaseModel):
     article_ids: list[int] | None = None
     title: str | None = None
     split: Literal["combined", "per_group"] = "combined"
+    # Render profile names: one edition per profile (crossed with split mode).
+    # None/empty = single edition with the legacy global settings.
+    profiles: list[str] | None = None
 
 
 class QueueUpdate(BaseModel):
@@ -145,6 +185,13 @@ class AppSettings(BaseModel):
     deadline_weekday: int = Field(default=4, ge=0, le=6)  # 0 = Monday
     deadline_time: str = Field(default="06:30", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     deadline_split: Literal["combined", "per_group"] = "combined"
+    # Profile names the press deadline compiles for; [] = one edition with the
+    # legacy global settings (pre-profile behavior).
+    deadline_profiles: list[str] = []
+    # Device rendering profiles. Editing/removing a profile never rewrites
+    # history: digests snapshot the profile name at press time and generation
+    # falls back to legacy settings if the name no longer resolves.
+    profiles: list[RenderProfile] = Field(default_factory=default_profiles)
 
 
 class Delivery(BaseModel):
@@ -166,6 +213,8 @@ class Digest(BaseModel):
     title: str
     status: DigestStatus
     group_name: str | None = None
+    # Render-profile name snapshotted at press time (NULL = legacy settings).
+    profile: str | None = None
     epub_path: str | None = None
     error: str | None = None
     size_bytes: int | None = None

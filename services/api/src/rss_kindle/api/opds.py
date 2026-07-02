@@ -3,6 +3,7 @@ from __future__ import annotations
 import secrets
 from base64 import b64decode
 from datetime import UTC, datetime
+from urllib.parse import quote
 from xml.etree import ElementTree as ET
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -84,29 +85,57 @@ async def opds_root(request: Request) -> Response:
     _el(entry, "content", "Hand-pressed editions, newest first.", type="text")
     _el(entry, "link", rel="subsection", href=f"{base}/opds/digests", type=ACQ_TYPE)
 
+    # One folder per render profile, so each device browses only the editions
+    # pressed for it.
+    settings = await get_app_settings(request.app.state.db)
+    for p in settings.profiles:
+        entry = _el(feed, "entry")
+        _el(entry, "title", f"Editions — {p.name}")
+        _el(entry, "id", f"urn:rss-kindle-selector:opds:profile:{p.name}")
+        _el(entry, "updated", _now_iso())
+        _el(entry, "content", f"Editions pressed for {p.name}.", type="text")
+        _el(
+            entry,
+            "link",
+            rel="subsection",
+            href=f"{base}/opds/profiles/{quote(p.name, safe='')}",
+            type=ACQ_TYPE,
+        )
+
     return _xml_response(feed, NAV_TYPE)
 
 
-@router.get("/opds/digests")
-async def opds_digests(request: Request) -> Response:
-    await _check_auth(request)
+async def _acquisition_feed(
+    request: Request,
+    *,
+    feed_id: str,
+    title: str,
+    self_path: str,
+    profile: str | None,
+) -> Response:
     base = str(request.base_url).rstrip("/")
     db = request.app.state.db
 
+    where = "status = 'ready'"
+    params: tuple[str, ...] = ()
+    if profile is not None:
+        where += " AND profile = ?"
+        params = (profile,)
     async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT id, title, size_bytes, created_at, "
             "(SELECT COUNT(*) FROM digest_articles da WHERE da.digest_id = digests.id) "
-            "AS article_count "
-            "FROM digests WHERE status = 'ready' ORDER BY created_at DESC, id DESC"
+            f"AS article_count FROM digests WHERE {where} "
+            "ORDER BY created_at DESC, id DESC",
+            params,
         )
         rows = await cur.fetchall()
 
     feed = _el(None, "feed")
-    _el(feed, "id", "urn:rss-kindle-selector:opds:digests")
-    _el(feed, "title", "Editions")
+    _el(feed, "id", feed_id)
+    _el(feed, "title", title)
     _el(feed, "updated", _row_iso(rows[0]["created_at"]) if rows else _now_iso())
-    _el(feed, "link", rel="self", href=f"{base}/opds/digests", type=ACQ_TYPE)
+    _el(feed, "link", rel="self", href=f"{base}{self_path}", type=ACQ_TYPE)
     _el(feed, "link", rel="start", href=f"{base}/opds", type=NAV_TYPE)
 
     for row in rows:
@@ -129,3 +158,32 @@ async def opds_digests(request: Request) -> Response:
         )
 
     return _xml_response(feed, ACQ_TYPE)
+
+
+@router.get("/opds/digests")
+async def opds_digests(request: Request) -> Response:
+    await _check_auth(request)
+    return await _acquisition_feed(
+        request,
+        feed_id="urn:rss-kindle-selector:opds:digests",
+        title="Editions",
+        self_path="/opds/digests",
+        profile=None,
+    )
+
+
+@router.get("/opds/profiles/{name}")
+async def opds_profile(name: str, request: Request) -> Response:
+    """Editions pressed with a given render profile — one OPDS folder per
+    device, so a reader subscribes only to books built for it."""
+    await _check_auth(request)
+    settings = await get_app_settings(request.app.state.db)
+    if not any(p.name == name for p in settings.profiles):
+        raise HTTPException(status_code=404, detail="unknown render profile")
+    return await _acquisition_feed(
+        request,
+        feed_id=f"urn:rss-kindle-selector:opds:profile:{name}",
+        title=f"Editions — {name}",
+        self_path=f"/opds/profiles/{quote(name, safe='')}",
+        profile=name,
+    )

@@ -161,6 +161,13 @@ async def _m9_digest_article_fetch_status(conn: aiosqlite.Connection) -> None:
     await conn.execute("ALTER TABLE digest_articles ADD COLUMN fetch_status TEXT")
 
 
+async def _m10_digest_render_profile(conn: aiosqlite.Connection) -> None:
+    # Render-profile name snapshotted at press time (mirrors group_name): NULL =
+    # compiled with the legacy global settings. Profile renames/deletions never
+    # rewrite what an existing edition was built with.
+    await conn.execute("ALTER TABLE digests ADD COLUMN profile TEXT")
+
+
 MIGRATIONS: list[tuple[str, Migration]] = [
     ("baseline", _m1_baseline),
     ("digest failure state", _m2_digest_failure),
@@ -171,6 +178,7 @@ MIGRATIONS: list[tuple[str, Migration]] = [
     ("feed groups", _m7_feed_groups),
     ("hot-path indexes", _m8_hot_path_indexes),
     ("digest article fetch status", _m9_digest_article_fetch_status),
+    ("digest render profile", _m10_digest_render_profile),
 ]
 
 

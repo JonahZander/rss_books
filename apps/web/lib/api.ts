@@ -48,11 +48,21 @@ export type Delivery = {
   created_at: string;
 };
 
+export type RenderProfile = {
+  name: string;
+  link_qr: "off" | "articles" | "all";
+  table_mode: "native" | "image" | "image_rotated";
+  /** Screen-shape cap (W:H) for table images; taller tables split by rows. */
+  table_aspect: "auto" | "4:3" | "1:1" | "3:4" | "3:5" | "9:16";
+};
+
 export type Digest = {
   id: number;
   title: string;
   status: "pending" | "generating" | "ready" | "failed";
   group_name: string | null;
+  /** Render-profile name snapshotted at press time; null = legacy settings. */
+  profile: string | null;
   epub_path: string | null;
   error: string | null;
   size_bytes: number | null;
@@ -99,6 +109,8 @@ export type AppSettings = {
   deadline_weekday: number;
   deadline_time: string;
   deadline_split: "combined" | "per_group";
+  deadline_profiles: string[];
+  profiles: RenderProfile[];
 };
 
 export type ArticleQuery = {
@@ -231,9 +243,15 @@ export const api = {
 
   // digests
   listDigests: () => fetch(`${BASE}/api/digests`).then((r) => j<Digest[]>(r)),
-  /** Creates one edition (combined) or one per feed group (per_group). */
+  /** Creates one edition (combined) or one per feed group (per_group),
+   * crossed with one variant per selected render profile. */
   createDigest: (
-    opts: { articleIds?: number[]; title?: string; split?: "combined" | "per_group" } = {},
+    opts: {
+      articleIds?: number[];
+      title?: string;
+      split?: "combined" | "per_group";
+      profiles?: string[];
+    } = {},
   ) =>
     fetch(
       `${BASE}/api/digests`,
@@ -241,6 +259,7 @@ export const api = {
         article_ids: opts.articleIds ?? null,
         title: opts.title ?? null,
         split: opts.split ?? "combined",
+        profiles: opts.profiles && opts.profiles.length > 0 ? opts.profiles : null,
       }),
     ).then((r) => j<Digest[]>(r)),
   getDigest: (id: number) => fetch(`${BASE}/api/digests/${id}`).then((r) => j<Digest>(r)),

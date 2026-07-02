@@ -118,6 +118,7 @@ export default function Editions() {
                     <span className="edition-sub">
                       {fmtDate(d.created_at)} · {d.article_count}{" "}
                       {d.article_count === 1 ? "article" : "articles"} · {fmtSize(d.size_bytes)}
+                      {d.profile ? ` · ${d.profile}` : ""}
                     </span>
                     {d.status === "failed" && d.error && (
                       <span className="edition-error">⚠ {d.error}</span>

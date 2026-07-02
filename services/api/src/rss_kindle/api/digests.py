@@ -25,7 +25,8 @@ from rss_kindle.services.settings_store import get_app_settings
 router = APIRouter(prefix="/api/digests", tags=["digests"])
 
 DIGEST_COLUMNS = (
-    "id, title, group_name, epub_path, status, error, size_bytes, delivered_at, created_at, "
+    "id, title, group_name, profile, epub_path, status, error, size_bytes, delivered_at, "
+    "created_at, "
     "(SELECT COUNT(*) FROM digest_articles da WHERE da.digest_id = digests.id) AS article_count"
 )
 DELIVERY_COLUMNS = "id, digest_id, channel, target, status, error, created_at"
@@ -123,13 +124,23 @@ async def create_digest(
     background: BackgroundTasks,
 ) -> list[Digest]:
     """Create edition(s) from the selection or queue — one digest in combined
-    mode, one per feed group in per_group mode (creation order preserved)."""
+    mode, one per feed group in per_group mode (creation order preserved),
+    crossed with one variant per selected render profile."""
     db: Database = request.app.state.db
     epub_dir: Path = request.app.state.settings.epub_dir
 
+    if payload.profiles:
+        app_settings = await get_app_settings(db)
+        known = {p.name for p in app_settings.profiles}
+        unknown = [name for name in payload.profiles if name not in known]
+        if unknown:
+            raise HTTPException(
+                status_code=400, detail=f"unknown render profile(s): {', '.join(unknown)}"
+            )
+
     try:
         digest_ids = await create_digest_records(
-            db, payload.article_ids, payload.title, payload.split
+            db, payload.article_ids, payload.title, payload.split, payload.profiles
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

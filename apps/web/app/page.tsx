@@ -281,6 +281,7 @@ export default function Home() {
           queue={queue}
           emailConfigured={settings ? emailConfigured(settings) : false}
           groupsExist={groups.length > 0}
+          profiles={settings?.profiles.map((p) => p.name) ?? []}
           onRemove={(a) => void toggleQueue(a)}
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);

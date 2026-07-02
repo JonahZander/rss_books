@@ -9,6 +9,8 @@ type Props = {
   queue: Article[];
   emailConfigured: boolean;
   groupsExist: boolean;
+  /** Render-profile names from settings; empty = feature not in use. */
+  profiles: string[];
   onRemove: (article: Article) => void;
   onClear: () => void;
   onAddLink: (url: string, title?: string) => Promise<void>;
@@ -18,7 +20,18 @@ type Props = {
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 const SPLIT_KEY = "compile-split";
+const PROFILES_KEY = "compile-profiles";
 type Split = "combined" | "per_group";
+
+function loadStoredProfiles(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(PROFILES_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((p): p is string => typeof p === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 function statusLabel(d: Digest): string {
   switch (d.status) {
@@ -37,6 +50,7 @@ export function DigestQueue({
   queue,
   emailConfigured,
   groupsExist,
+  profiles,
   onRemove,
   onClear,
   onAddLink,
@@ -54,9 +68,21 @@ export function DigestQueue({
     return window.localStorage.getItem(SPLIT_KEY) === "per_group" ? "per_group" : "combined";
   });
 
+  const [selectedProfiles, setSelectedProfiles] = useState<string[]>(loadStoredProfiles);
+  // A profile renamed/removed in settings silently drops out of the selection.
+  const activeProfiles = selectedProfiles.filter((p) => profiles.includes(p));
+
   const chooseSplit = (next: Split) => {
     setSplit(next);
     window.localStorage.setItem(SPLIT_KEY, next);
+  };
+
+  const toggleProfile = (name: string) => {
+    const next = activeProfiles.includes(name)
+      ? activeProfiles.filter((p) => p !== name)
+      : [...activeProfiles, name];
+    setSelectedProfiles(next);
+    window.localStorage.setItem(PROFILES_KEY, JSON.stringify(next));
   };
 
   const compile = async () => {
@@ -64,7 +90,10 @@ export function DigestQueue({
     setCompiling(true);
     setError(null);
     try {
-      let current = await api.createDigest({ split: groupsExist ? split : "combined" });
+      let current = await api.createDigest({
+        split: groupsExist ? split : "combined",
+        profiles: activeProfiles,
+      });
       setDigests(current);
       while (current.some((d) => d.status === "pending" || d.status === "generating")) {
         await new Promise((r) => setTimeout(r, 1000));
@@ -208,6 +237,23 @@ export function DigestQueue({
               onClick={() => chooseSplit(value)}
             >
               {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {profiles.length > 0 && (
+        <div className="segmented" role="group" aria-label="Device profiles">
+          {profiles.map((name) => (
+            <button
+              key={name}
+              type="button"
+              role="checkbox"
+              aria-checked={activeProfiles.includes(name)}
+              className={`segmented-option ${activeProfiles.includes(name) ? "active" : ""}`}
+              onClick={() => toggleProfile(name)}
+            >
+              {name}
             </button>
           ))}
         </div>

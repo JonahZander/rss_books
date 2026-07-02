@@ -12,9 +12,10 @@ from rss_kindle.services.article_fetcher import fetch_many
 from rss_kindle.services.cover import render_cover
 from rss_kindle.services.emailer import send_digest_and_record
 from rss_kindle.services.epub_builder import DigestArticle, build_digest_epub
-from rss_kindle.services.image_pipeline import prepare_images
+from rss_kindle.services.image_pipeline import DigestImage, prepare_images
 from rss_kindle.services.sanitizer import sanitize
 from rss_kindle.services.settings_store import get_app_settings
+from rss_kindle.services.table_renderer import tables_to_images
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,11 @@ async def create_digest_records(
     article_ids: list[int] | None,
     title: str | None,
     split: str = "combined",
+    profiles: list[str] | None = None,
 ) -> list[int]:
-    """Create one digest (combined) or one per feed group (per_group).
+    """Create one digest (combined) or one per feed group (per_group), crossed
+    with one variant per render profile when `profiles` is given — the same
+    articles pressed once per device.
 
     With no explicit article ids, the server-side queue is snapshotted in
     order and then cleared — once, regardless of how many editions result.
@@ -48,6 +52,21 @@ async def create_digest_records(
             raise ValueError("nothing to compile: no articles selected and the queue is empty")
 
         base = title or date.today().isoformat()
+        if title is None:
+            # A second press on the same day gets "… No. 2" so editions never
+            # collide by name. Explicit titles are the user's own business.
+            # Matches the bare base and any group/profile-suffixed variant.
+            cur = await conn.execute(
+                "SELECT title FROM digests WHERE title LIKE ?", (f"{base}%",)
+            )
+            pattern = re.compile(rf"^{re.escape(base)}(?: No\. (\d+))?(?:$| — | · )")
+            highest = 0
+            for row in await cur.fetchall():
+                m = pattern.match(row["title"])
+                if m:
+                    highest = max(highest, int(m.group(1) or 1))
+            if highest:
+                base = f"{base} No. {highest + 1}"
         editions: list[tuple[str, str | None, list[int]]] = []
         if split == "per_group":
             marks = placeholders(len(ids))
@@ -77,22 +96,32 @@ async def create_digest_records(
         else:
             editions.append((base, None, ids))
 
+        # One variant per profile; the suffix is applied only when several
+        # profiles are pressed at once, so single-profile titles stay clean.
+        variant_profiles: list[str | None] = list(profiles) if profiles else [None]
+        suffix_profiles = len(variant_profiles) > 1
+
         digest_ids: list[int] = []
         for edition_title, edition_group, member_ids in editions:
-            cur = await conn.execute(
-                "INSERT INTO digests (title, status, group_name) VALUES (?, 'pending', ?)",
-                (edition_title, edition_group),
-            )
-            digest_id = cur.lastrowid
-            if digest_id is None:
-                raise RuntimeError("digest insert returned no row id")
-            for position, article_id in enumerate(member_ids):
-                await conn.execute(
-                    "INSERT INTO digest_articles (digest_id, article_id, position) "
-                    "VALUES (?, ?, ?)",
-                    (digest_id, article_id, position),
+            for profile in variant_profiles:
+                variant_title = (
+                    f"{edition_title} · {profile}" if profile and suffix_profiles else edition_title
                 )
-            digest_ids.append(digest_id)
+                cur = await conn.execute(
+                    "INSERT INTO digests (title, status, group_name, profile) "
+                    "VALUES (?, 'pending', ?, ?)",
+                    (variant_title, edition_group, profile),
+                )
+                digest_id = cur.lastrowid
+                if digest_id is None:
+                    raise RuntimeError("digest insert returned no row id")
+                for position, article_id in enumerate(member_ids):
+                    await conn.execute(
+                        "INSERT INTO digest_articles (digest_id, article_id, position) "
+                        "VALUES (?, ?, ?)",
+                        (digest_id, article_id, position),
+                    )
+                digest_ids.append(digest_id)
 
         # compiling an edition always counts as having read its articles
         marks = placeholders(len(ids))
@@ -165,7 +194,7 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
             await conn.commit()
 
             cur = await conn.execute(
-                "SELECT title, group_name FROM digests WHERE id = ?", (digest_id,)
+                "SELECT title, group_name, profile FROM digests WHERE id = ?", (digest_id,)
             )
             d = await cur.fetchone()
             if d is None:
@@ -226,10 +255,34 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
                 )
             )
 
+        # Resolve the snapshotted render profile; a renamed/deleted profile
+        # falls back to the legacy global settings rather than failing.
+        profile = next(
+            (p for p in app_settings.profiles if p.name == d["profile"]),
+            None,
+        )
+        link_qr = profile.link_qr if profile else app_settings.link_qr
+        table_mode = profile.table_mode if profile else "native"
+
         async with make_http_client() as client:
             rewritten, images = await prepare_images([(a.html, a.url) for a in articles], client)
         for art, new_html in zip(articles, rewritten, strict=True):
             art.html = new_html
+
+        # Table pre-rendering runs after the image pipeline so the injected
+        # tables/… img references are never mistaken for remote URLs to fetch.
+        if table_mode in ("image", "image_rotated"):
+            rotate = table_mode == "image_rotated"
+            table_images: dict[str, DigestImage] = {}
+            for art in articles:
+                art.html, new_images = tables_to_images(
+                    art.html,
+                    rotate=rotate,
+                    aspect=profile.table_aspect if profile else "auto",
+                    start_index=len(table_images) + 1,
+                )
+                table_images.update(new_images)
+            images.update(table_images)
 
         sources = list(dict.fromkeys(a.source for a in articles))
         cover_png = render_cover(
@@ -247,7 +300,7 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
             images=images,
             cover_png=cover_png,
             identifier=f"urn:rss-kindle-selector:digest:{digest_id}",
-            link_qr=app_settings.link_qr,
+            link_qr=link_qr,
         )
 
         size_bytes = output.stat().st_size

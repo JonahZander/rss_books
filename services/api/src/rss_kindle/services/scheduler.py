@@ -127,8 +127,12 @@ class Scheduler:
             return
         await set_value(self.db, "_last_deadline_run", occurrence.isoformat())
         try:
+            # Deleted profiles are dropped silently: the deadline should still
+            # press with whatever remains rather than fail the morning edition.
+            known = {p.name for p in settings.profiles}
+            profiles = [name for name in settings.deadline_profiles if name in known]
             digest_ids = await create_digest_records(
-                self.db, None, now.date().isoformat(), settings.deadline_split
+                self.db, None, now.date().isoformat(), settings.deadline_split, profiles or None
             )
         except ValueError:
             logger.info("press deadline: queue empty, skipping edition")

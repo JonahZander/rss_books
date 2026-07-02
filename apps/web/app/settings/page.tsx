@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ScanlineToggle } from "../../components/ScanlineToggle";
 import { useToast } from "../../components/Toasts";
-import { api, type AppSettings } from "../../lib/api";
+import { api, type AppSettings, type RenderProfile } from "../../lib/api";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -67,6 +67,12 @@ export default function Settings() {
       setTesting(false);
     }
   };
+
+  const setProfile = (index: number, patch: Partial<RenderProfile>) =>
+    set(
+      "profiles",
+      settings.profiles.map((p, i) => (i === index ? { ...p, ...patch } : p)),
+    );
 
   const addSendTo = () => {
     const value = sendToDraft.trim();
@@ -389,6 +395,131 @@ export default function Settings() {
                 </label>
               </div>
             )}
+            {settings.deadline_enabled && settings.profiles.length > 0 && (
+              <div>
+                <span className="feed-form-label">Device profiles to press</span>
+                {settings.profiles.map((p) => (
+                  <label key={p.name} className="filter-toggle">
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={settings.deadline_profiles.includes(p.name)}
+                      onChange={(e) =>
+                        set(
+                          "deadline_profiles",
+                          e.target.checked
+                            ? [...settings.deadline_profiles, p.name]
+                            : settings.deadline_profiles.filter((n) => n !== p.name),
+                        )
+                      }
+                    />
+                    <span>{p.name}</span>
+                  </label>
+                ))}
+                <p className="settings-hint">
+                  None selected = one edition with the global settings.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section className="settings-card corner-marks" aria-label="Device profiles">
+            <p className="eyebrow eyebrow-ink">Device profiles</p>
+            <p className="settings-hint">
+              A profile bundles per-device rendering choices. Pick profiles when compiling to
+              press one edition per device — each gets its own OPDS folder
+              (<code>/opds/profiles/…</code>).
+            </p>
+            {settings.profiles.map((p, i) => (
+              <div key={i} className="field-grid">
+                <label>
+                  <span className="feed-form-label">Name</span>
+                  <input value={p.name} onChange={(e) => setProfile(i, { name: e.target.value })} />
+                </label>
+                <label>
+                  <span className="feed-form-label">Link QR codes</span>
+                  <select
+                    value={p.link_qr}
+                    onChange={(e) =>
+                      setProfile(i, { link_qr: e.target.value as RenderProfile["link_qr"] })
+                    }
+                  >
+                    <option value="off">Off — keep links as text</option>
+                    <option value="articles">Article source links only</option>
+                    <option value="all">All links in the article</option>
+                  </select>
+                </label>
+                <label>
+                  <span className="feed-form-label">Tables</span>
+                  <select
+                    value={p.table_mode}
+                    onChange={(e) =>
+                      setProfile(i, { table_mode: e.target.value as RenderProfile["table_mode"] })
+                    }
+                  >
+                    <option value="native">Native HTML tables</option>
+                    <option value="image">Render as image</option>
+                    <option value="image_rotated">Render as image, rotated 90°</option>
+                  </select>
+                </label>
+                {p.table_mode !== "native" && (
+                  <label>
+                    <span className="feed-form-label">Table aspect cap (W:H)</span>
+                    <select
+                      value={p.table_aspect}
+                      onChange={(e) =>
+                        setProfile(i, {
+                          table_aspect: e.target.value as RenderProfile["table_aspect"],
+                        })
+                      }
+                    >
+                      <option value="auto">Auto — never split</option>
+                      <option value="4:3">4:3 (landscape)</option>
+                      <option value="1:1">1:1 (square)</option>
+                      <option value="3:4">3:4 (portrait)</option>
+                      <option value="3:5">3:5 (tall portrait, Xteink X4)</option>
+                      <option value="9:16">9:16 (phone-tall)</option>
+                    </select>
+                  </label>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() =>
+                    set(
+                      "profiles",
+                      settings.profiles.filter((_, j) => j !== i),
+                    )
+                  }
+                >
+                  <span>Remove profile</span>
+                  <span className="btn-arrow">×</span>
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() =>
+                set("profiles", [
+                  ...settings.profiles,
+                  {
+                    name: "New device",
+                    link_qr: "articles",
+                    table_mode: "native",
+                    table_aspect: "auto",
+                  },
+                ])
+              }
+            >
+              <span>Add profile</span>
+              <span className="btn-arrow">＋</span>
+            </button>
+            <p className="settings-hint">
+              Pre-rendering tables as images helps readers with no table support (e.g. Xteink
+              X4); the rotated variant lays wide tables down the narrow screen. Existing editions
+              keep the profile they were pressed with.
+            </p>
           </section>
 
           <section className="settings-card corner-marks" aria-label="Library">

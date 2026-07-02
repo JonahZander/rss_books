@@ -136,6 +136,7 @@ img.link-qr {
   margin: 0.5em 0;
   image-rendering: pixelated;
 }
+img.table-image { display: block; margin: 0.8em 0; }
 figure { margin: 1em 0; }
 figcaption { font-size: 0.8em; color: #333; }
 table { border-collapse: collapse; font-size: 0.85em; margin: 0.8em 0; }
