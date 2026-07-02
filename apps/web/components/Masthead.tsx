@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { LogoMark } from "./LogoMark";
+
 type Readouts = {
   feedCount: number;
   articleCount: number;
@@ -60,6 +62,7 @@ export function Masthead({ readouts }: Props) {
     <header className="masthead">
       <div>
         <h1 className="masthead-title">
+          <LogoMark className="masthead-mark" />
           RSS <span className="brand-accent">Books</span>
         </h1>
         <div className="masthead-sub">

@@ -235,6 +235,14 @@ a {
   text-transform: uppercase;
 }
 
+.masthead-mark {
+  width: 1em;
+  height: 1em;
+  margin-right: 0.18em;
+  vertical-align: -0.14em;
+  color: var(--ink);
+}
+
 .masthead-title .brand-accent {
   font-weight: 900;
   background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
