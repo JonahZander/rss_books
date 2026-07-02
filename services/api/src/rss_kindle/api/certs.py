@@ -23,7 +23,7 @@ def ensure_self_signed(
     across restarts (it lives in the /data volume).
 
     The cert is only here so TLS-only clients (e.g. the Crosspoint e-reader) can
-    connect at all — it is self-signed, so a verifying client must skip
+    connect at all. It is self-signed, so a verifying client must skip
     verification or trust it out of band. `san_ips` lets callers embed LAN IPs as
     SubjectAltName entries for clients that do check the hostname.
     """
@@ -48,10 +48,10 @@ def ensure_self_signed(
         try:
             alt_names.append(x509.IPAddress(ipaddress.ip_address(raw)))
         except ValueError:
-            # Not an IP literal — treat it as a DNS name instead.
+            # Not an IP literal, so treat it as a DNS name instead.
             alt_names.append(x509.DNSName(raw))
 
-    # Fixed, wide validity window backdated to 2020 — avoids clock-skew
+    # Fixed, wide validity window backdated to 2020, which avoids clock-skew
     # rejections on devices with a wrong RTC, and we don't need precision.
     not_before = dt.datetime(2020, 1, 1, tzinfo=dt.UTC)
     not_after = dt.datetime(2035, 1, 1, tzinfo=dt.UTC)

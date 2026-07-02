@@ -90,7 +90,7 @@ async def opds_root(request: Request) -> Response:
     settings = await get_app_settings(request.app.state.db)
     for p in settings.profiles:
         entry = _el(feed, "entry")
-        _el(entry, "title", f"Editions — {p.name}")
+        _el(entry, "title", f"Editions - {p.name}")
         _el(entry, "id", f"urn:rss-books:opds:profile:{p.name}")
         _el(entry, "updated", _now_iso())
         _el(entry, "content", f"Editions pressed for {p.name}.", type="text")
@@ -174,7 +174,7 @@ async def opds_digests(request: Request) -> Response:
 
 @router.get("/opds/profiles/{name}")
 async def opds_profile(name: str, request: Request) -> Response:
-    """Editions pressed with a given render profile — one OPDS folder per
+    """Editions pressed with a given render profile: one OPDS folder per
     device, so a reader subscribes only to books built for it."""
     await _check_auth(request)
     settings = await get_app_settings(request.app.state.db)
@@ -183,7 +183,7 @@ async def opds_profile(name: str, request: Request) -> Response:
     return await _acquisition_feed(
         request,
         feed_id=f"urn:rss-books:opds:profile:{name}",
-        title=f"Editions — {name}",
+        title=f"Editions - {name}",
         self_path=f"/opds/profiles/{quote(name, safe='')}",
         profile=name,
     )

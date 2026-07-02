@@ -44,7 +44,7 @@ async def get_or_create_saved_links_feed(conn: aiosqlite.Connection) -> int:
 async def add_saved_link(conn: aiosqlite.Connection, url: str, title: str | None) -> int:
     """Insert (or reuse) an article for a bare link in the Saved-links feed and
     return its id. The guid is the URL, so re-adding the same link is idempotent.
-    full_content stays NULL — the body is fetched at compile time like any other
+    full_content stays NULL; the body is fetched at compile time like any other
     enqueued article that was never previewed."""
     feed_id = await get_or_create_saved_links_feed(conn)
     cur = await conn.execute("SELECT id FROM articles WHERE guid = ?", (url,))

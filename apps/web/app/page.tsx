@@ -68,8 +68,10 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshFeeds();
     void refreshQueue();
-    api.getSettings().then(setSettings, () => {});
-  }, [refreshFeeds, refreshQueue]);
+    api.getSettings().then(setSettings, (e) => {
+      toast(e instanceof Error ? e.message : "could not load settings", "error");
+    });
+  }, [refreshFeeds, refreshQueue, toast]);
 
   // Debounce only the search box; feed/group/unread switches should feel instant.
   const prevSearch = useRef(search);
@@ -110,7 +112,7 @@ export default function Home() {
     setDeleteGroupTarget(null);
     try {
       await api.deleteGroup(group.id);
-      toast(`Group “${group.name}” dissolved — feeds kept`);
+      toast(`Group “${group.name}” dissolved, feeds kept`);
       if (selectedGroupId === group.id) setSelectedGroupId(null);
       await Promise.all([refreshFeeds(), refreshArticles()]);
     } catch (e) {
@@ -301,7 +303,7 @@ export default function Home() {
       <ConfirmDialog
         open={deleteGroupTarget !== null}
         title={`Dissolve “${deleteGroupTarget?.name ?? ""}”?`}
-        body="Feeds in this group keep their subscriptions and articles — they just become ungrouped."
+        body="Feeds in this group keep their subscriptions and articles; they just become ungrouped."
         confirmLabel="Dissolve group"
         onConfirm={() => void deleteGroup()}
         onCancel={() => setDeleteGroupTarget(null)}

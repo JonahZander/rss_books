@@ -32,16 +32,24 @@ DIGEST_COLUMNS = (
 DELIVERY_COLUMNS = "id, digest_id, channel, target, status, error, created_at"
 
 
-@router.get("", response_model=list[Digest])
-async def list_digests(request: Request) -> list[Digest]:
-    db = request.app.state.db
+async def _load_digests_with_deliveries(
+    db: Database, digest_id: int | None = None
+) -> list[Digest]:
+    """Digests (all, or one by id) with their deliveries attached, newest first."""
+    digest_where = "" if digest_id is None else "WHERE id = ? "
+    delivery_where = "" if digest_id is None else "WHERE digest_id = ? "
+    params: tuple[int, ...] = () if digest_id is None else (digest_id,)
     async with db.connect() as conn:
         cur = await conn.execute(
-            f"SELECT {DIGEST_COLUMNS} FROM digests ORDER BY created_at DESC, id DESC"
+            f"SELECT {DIGEST_COLUMNS} FROM digests {digest_where}"
+            "ORDER BY created_at DESC, id DESC",
+            params,
         )
         rows = await cur.fetchall()
         cur = await conn.execute(
-            f"SELECT {DELIVERY_COLUMNS} FROM deliveries ORDER BY created_at DESC, id DESC"
+            f"SELECT {DELIVERY_COLUMNS} FROM deliveries {delivery_where}"
+            "ORDER BY created_at DESC, id DESC",
+            params,
         )
         delivery_rows = await cur.fetchall()
 
@@ -54,31 +62,25 @@ async def list_digests(request: Request) -> list[Digest]:
     ]
 
 
+@router.get("", response_model=list[Digest])
+async def list_digests(request: Request) -> list[Digest]:
+    db = request.app.state.db
+    return await _load_digests_with_deliveries(db)
+
+
 @router.get("/{digest_id}", response_model=Digest)
 async def get_digest(digest_id: int, request: Request) -> Digest:
     db = request.app.state.db
-    async with db.connect() as conn:
-        cur = await conn.execute(
-            f"SELECT {DIGEST_COLUMNS} FROM digests WHERE id = ?",
-            (digest_id,),
-        )
-        row = await cur.fetchone()
-        cur = await conn.execute(
-            f"SELECT {DELIVERY_COLUMNS} FROM deliveries WHERE digest_id = ? "
-            "ORDER BY created_at DESC, id DESC",
-            (digest_id,),
-        )
-        delivery_rows = await cur.fetchall()
-    if row is None:
+    digests = await _load_digests_with_deliveries(db, digest_id)
+    if not digests:
         raise HTTPException(status_code=404, detail="digest not found")
-    deliveries = [Delivery.model_validate(dict(d)) for d in delivery_rows]
-    return Digest.model_validate({**dict(row), "deliveries": deliveries})
+    return digests[0]
 
 
 @router.get("/{digest_id}/articles", response_model=list[DigestArticleEntry])
 async def list_digest_articles(digest_id: int, request: Request) -> list[DigestArticleEntry]:
     """The ordered members of an edition, with each one's compile-time fetch
-    outcome — powers the Editions preview, the "N of M fetched" summary, and the
+    outcome. It powers the Editions preview, the "N of M fetched" summary, and the
     per-article remove buttons."""
     db = request.app.state.db
     async with db.connect() as conn:
@@ -123,7 +125,7 @@ async def create_digest(
     request: Request,
     background: BackgroundTasks,
 ) -> list[Digest]:
-    """Create edition(s) from the selection or queue — one digest in combined
+    """Create edition(s) from the selection or queue: one digest in combined
     mode, one per feed group in per_group mode (creation order preserved),
     crossed with one variant per selected render profile."""
     db: Database = request.app.state.db
@@ -212,7 +214,7 @@ async def _remove_articles_and_rebuild(
         else:
             await conn.execute(
                 "UPDATE digests SET status = 'failed', "
-                "error = 'edition is empty — every article was removed' WHERE id = ?",
+                "error = 'edition is empty, every article was removed' WHERE id = ?",
                 (digest_id,),
             )
         await conn.commit()
@@ -244,7 +246,7 @@ async def remove_digest_articles(
     request: Request,
     background: BackgroundTasks,
 ) -> Digest:
-    """Batch-drop several members at once — one transaction, one rebuild. Powers
+    """Batch-drop several members at once: one transaction, one rebuild. Powers
     the Editions review panel's staged 'Apply removals' so culling N articles
     costs one EPUB build instead of N."""
     if not payload.article_ids:
@@ -259,8 +261,8 @@ async def remove_digest_articles(
 
 @router.get("/{digest_id}/preview", response_class=HTMLResponse)
 async def preview_digest(digest_id: int, request: Request) -> HTMLResponse:
-    """A standalone HTML rendition of the edition — title page, sectioned
-    contents and the same chapter bodies the EPUB ships — for the in-app preview
+    """A standalone HTML rendition of the edition (title page, sectioned
+    contents and the same chapter bodies the EPUB ships) for the in-app preview
     drawer. Built from stored content, so it works before/independently of the
     EPUB build and even for 'failed' editions that still have members."""
     db: Database = request.app.state.db

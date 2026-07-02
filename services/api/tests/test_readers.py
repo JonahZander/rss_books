@@ -21,7 +21,7 @@ def _transport(handler: object) -> httpx.MockTransport:
 
 def test_build_reader_selects_provider_by_name() -> None:
     assert build_reader(AppSettings(reader_fallback="none")) is None
-    # tavily needs a key — selected but unconfigured stays disabled
+    # tavily needs a key; selected but unconfigured stays disabled
     assert build_reader(AppSettings(reader_fallback="tavily")) is None
     tavily = build_reader(AppSettings(reader_fallback="tavily", tavily_api_key="tvly-x"))
     assert isinstance(tavily, TavilyReader)

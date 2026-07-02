@@ -52,7 +52,7 @@ def sanitize(html: str) -> str:
 
 
 def sanitize_or_none(html: str) -> str | None:
-    """Sanitize, then collapse an empty result to None — the shape extraction
+    """Sanitize, then collapse an empty result to None, the shape extraction
     paths want when "nothing usable was left" must be distinguishable from "".
     """
     return sanitize(html).strip() or None

@@ -12,19 +12,19 @@ Better article fetching, and a clearer triage desk.
 
 - **Reader fallback** for bot-walled sites: when the direct fetch is refused or
   comes back empty, the article fetcher hands the URL to an external extraction
-  service. Pluggable by design — **Tavily** (API key) and **Jina Reader** (free,
+  service. Pluggable by design: **Tavily** (API key) and **Jina Reader** (free,
   keyless) ship in-box; a new provider is one class plus one registry entry.
   Configure it under Settings → *Article fetching*, or via the `READER_FALLBACK`
   / `TAVILY_API_KEY` env vars. The provider-registry pattern is adapted from
   [hermes-agent](https://github.com/NousResearch/hermes-agent) (MIT, © 2025 Nous
   Research).
-- **Article lifecycle states** on the triage desk — *new → seen → queued → in
-  edition* — replacing the binary read flag, so a quick preview no longer reads
+- **Article lifecycle states** on the triage desk (*new → seen → queued → in
+  edition*), replacing the binary read flag, so a quick preview no longer reads
   as "done" (`Article.state`, computed server-side).
 - **Edition preview** on the Editions page: expand any edition to read its
   articles grouped by section (full bodies on demand), see an *"N of M links
   fetched"* summary with a collapsed list of the links that couldn't be
-  retrieved, and **remove** an article or a whole section — the EPUB rebuilds
+  retrieved, and **remove** an article or a whole section; the EPUB rebuilds
   automatically (`GET`/`DELETE /api/digests/{id}/articles`).
 
 ### Changed
@@ -35,8 +35,8 @@ Better article fetching, and a clearer triage desk.
 - **Compile now fetches missing content itself.** Previously only *Preview*
   fetched full text, so articles enqueued without previewing shipped as summaries.
   Generation now retrieves any missing bodies with the same impersonation +
-  reader fallback (and caches them back onto the article), throttled to be polite
-  — same-host requests are spaced ~2 s with jitter while distinct hosts run in
+  reader fallback (and caches them back onto the article), throttled to be
+  polite: same-host requests are spaced ~2 s with jitter while distinct hosts run in
   parallel (`services/article_fetcher.py`; per-member outcome in
   `digest_articles.fetch_status`, migration 9).
 - Feeds that ship full content (`<content:encoded>` / Atom `<content>`) are
@@ -44,10 +44,9 @@ Better article fetching, and a clearer triage desk.
 - Masthead: nav links now read as interactive (hover/active affordance, rule
   separator), distinct from the static tagline.
 
-## [1.1.0] — 2026-06-12
+## [1.1.0] - 2026-06-12
 
-Feed groups & split editions — the
-[feed-groups spec](docs/superpowers/specs/2026-06-12-feed-groups-design.md).
+Feed groups & split editions.
 
 ### Added
 
@@ -56,14 +55,14 @@ Feed groups & split editions — the
   badges, group filtering, inline rename/dissolve (feeds survive), a
   move-to-group picker on every feed row, and a "New group" form
 - **Split compiles**: choose *Combined* or *One per group* at compile time
-  (remembered locally) — per-group mode presses one edition per group,
-  titled `<date> — <Group>`, with the Ungrouped bucket last; the press
+  (remembered locally); per-group mode presses one edition per group,
+  titled `<date> - <Group>`, with the Ungrouped bucket last; the press
   deadline gets the same choice (`deadline_split` in Settings)
 - **Group-sectioned TOC**: combined editions section their table of contents
   by group (groups in queue order, Ungrouped last, feed names in bylines);
   per-group editions keep per-feed sections; no groups ⇒ the 1.0 shape
 - **OPML folders**: import maps top-level folders to groups (deep nesting
-  flattens; existing feeds adopt a folder only while ungrouped — re-import
+  flattens; existing feeds adopt a folder only while ungrouped, so re-import
   is the upgrade path); export nests feeds under their group
 - **JSON feed lists**: import/export `{"group name": ["feed url", …]}` with
   `"ungrouped"` reserved (`POST /api/feeds/import-json`,
@@ -76,8 +75,8 @@ Feed groups & split editions — the
 - Fetching the full text of articles on bot-walled sites (e.g. openai.com)
   returned an unhandled **500**; it is now a **502** carrying the upstream
   status, and the article keeps its summary + original link. All outbound
-  fetches (feeds, articles, images) share one browser-shaped User-Agent —
-  with `rss-kindle-selector` kept in the string — so UA-only bot filters
+  fetches (feeds, articles, images) share one browser-shaped User-Agent
+  (with `rss-kindle-selector` kept in the string), so UA-only bot filters
   no longer refuse us
 - EPUB filenames are sanitized; titles containing `/` or `:` (possible via
   custom titles, easier via group suffixes) can no longer break the build
@@ -87,21 +86,19 @@ Feed groups & split editions — the
 - `POST /api/digests` returns a **list** of digests (length 1 in combined
   mode); the bundled web client is updated in step
 
-## [1.0.0] — 2026-06-12
+## [1.0.0] - 2026-06-12
 
-The 1.0 release: the full
-[v2 spec](docs/superpowers/specs/2026-06-11-rss-kindle-selector-v2-design.md),
-milestones M1–M6.
+The 1.0 release: milestones M1–M6.
 
-### Added — packaging (M6)
+### Added: packaging (M6)
 
 - Single-container deploy: multi-stage `Dockerfile` + `docker-compose.yml`
   with a named `/data` volume; `docker compose up` is the entire story
-- Next.js static export served same-origin by the API with an SPA fallback —
+- Next.js static export served same-origin by the API with an SPA fallback;
   the CORS allowlist and web/API port coupling are gone (dev uses rewrites)
 - `/health` reports `{status, version, db}`
 
-### Added — curation UX (M5, v0.6)
+### Added: curation UX (M5, v0.6)
 
 - Read state: expanding marks read (toggleable), compiling always marks read,
   unread-only filter (default on), unread counts and dimmed read rows
@@ -117,7 +114,7 @@ milestones M1–M6.
   tabbed panels; focus-visible outlines and ≥24px hit targets
 - `docs/design-language.md`
 
-### Added — always fresh (M4, v0.5)
+### Added: always fresh (M4, v0.5)
 
 - In-process asyncio scheduler: due-feed polling with conditional GET
   (ETag/Last-Modified), exponential backoff capped at 24h, feed health
@@ -126,19 +123,19 @@ milestones M1–M6.
 - Daily retention cleanup (default 90 days; queued/pressed articles exempt)
 - `PATCH /api/feeds/{id}` (rename, poll interval)
 
-### Added — delivery (M3, v0.4)
+### Added: delivery (M3, v0.4)
 
 - Server-side digest queue (survives reloads, ordered, API-visible)
 - Send-to-Kindle email via SMTP (aiosmtplib): per-edition send,
   email-on-ready, 45MB guard, delivery log; works for PocketBook too
-- OPDS 1.2 catalog (`/opds`) with optional Basic auth — KOReader,
+- OPDS 1.2 catalog (`/opds`) with optional Basic auth for KOReader,
   Xteink/CrossPoint, Kobo, Boox, Calibre
 - Settings store (DB-backed, env-var overrides for SMTP credentials)
 
-### Added — the beautiful EPUB (M2, v0.3)
+### Added: the beautiful EPUB (M2, v0.3)
 
 - Content pipeline stores sanitized HTML (trafilatura 2.x + nh3 allowlist;
-  TEI vocabulary normalized) — tables, code blocks, lists, links and images
+  TEI vocabulary normalized), so tables, code blocks, lists, links and images
   survive extraction
 - EPUB: Pillow-rendered cover, title page, TOC sectioned by feed, per-article
   byline + reading time + original link, colophon, e-ink stylesheet,
@@ -147,7 +144,7 @@ milestones M1–M6.
   10MB per-article budget, alt text preserved
 - Summary fallback with a visible marker when extraction fails
 
-### Added — a repo a stranger can trust (M1, v0.2)
+### Added: a repo a stranger can trust (M1, v0.2)
 
 - `PRAGMA user_version` migrations (legacy 0.1 databases adopted in place)
 - Digest builds that fail land in `failed` with the error stored and shown
@@ -161,8 +158,7 @@ milestones M1–M6.
   are invalidated by migration; articles re-fetch on demand)
 - `assert`-based control flow replaced with explicit errors
 
-## [0.1.0] — 2026-04-16
+## [0.1.0] - 2026-04-16
 
 Initial personal build: feed CRUD, on-demand refresh, trafilatura extraction,
-hand-picked digests, background EPUB build, download. See the
-[v1 spec](docs/superpowers/specs/2026-04-16-rss-kindle-selector-design.md).
+hand-picked digests, background EPUB build, download.

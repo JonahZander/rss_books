@@ -82,7 +82,7 @@ def test_aspect_cap_splits_tall_table_and_repeats_header() -> None:
         # each chunk respects the cap (header + rows never exceed width)
         assert img.height <= img.width
     # every chunk carries the header: chunks must be taller than a header-less
-    # split of the same rows would need — cheap proxy: total height of all
+    # split of the same rows would need; cheap proxy: total height of all
     # chunks exceeds the unsplit table's height by at least one header row.
     (whole,) = render_table_pngs(table, rotate=False, aspect="auto")
     whole_h = Image.open(io.BytesIO(whole)).height

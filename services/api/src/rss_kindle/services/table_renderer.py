@@ -2,8 +2,8 @@
 
 Budget e-ink readers (the Xteink X4 among them) collapse ``<table>`` markup
 into a useless vertical stack of cell texts. For those devices an edition can
-ship each sizeable table as a PNG instead — drawn with Pillow in the same
-spirit as cover.py (no browser or weasyprint dependency) — optionally rotated
+ship each sizeable table as a PNG instead, drawn with Pillow in the same
+spirit as cover.py (no browser or weasyprint dependency), optionally rotated
 90° so a wide table reads down a narrow portrait screen.
 
 Trivial tables (two columns of short text) reflow fine as text everywhere and
@@ -37,7 +37,7 @@ WHITE = 255
 INK = 0
 GRID = 120
 
-# A table this small reads fine as reflowed text on any device — converting it
+# A table this small reads fine as reflowed text on any device; converting it
 # to a fixed image would only hurt.
 _SIMPLE_MAX_COLS = 2
 _SIMPLE_MAX_CELL_CHARS = 60
@@ -107,7 +107,7 @@ def _chunk_rows(
     rows: list[list[_Cell]], heights: list[int], max_height: int | None
 ) -> list[list[int]]:
     """Partition row indices so each chunk (plus the repeated header) stays
-    under max_height — the printed-book way of continuing a long table. A row
+    under max_height, the printed-book way of continuing a long table. A row
     that alone exceeds the budget still ships whole, oversized."""
     header_idx = [i for i, r in enumerate(rows) if all(c.header for c in r) and i == 0]
     body_idx = [i for i in range(len(rows)) if i not in header_idx]
@@ -136,7 +136,7 @@ def render_table_pngs(
 ) -> list[bytes]:
     """Draw a table as one or more 8-bit greyscale PNG grids. With an aspect
     cap, tables taller than width × H/W are split by rows, each part repeating
-    the header. Returns [] when the table has no rows or rendering fails —
+    the header. Returns [] when the table has no rows or rendering fails -
     callers keep the native markup then."""
     rows = _extract_rows(table)
     if not rows:

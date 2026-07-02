@@ -7,8 +7,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # One UA for everything we fetch from the public web (feeds, articles,
-# images). Browser-shaped so naive bot filters pass us — plenty of sites 403
-# bare tool UAs — with our name kept at the end so site owners can still
+# images). Browser-shaped so naive bot filters pass us (plenty of sites 403
+# bare tool UAs), with our name kept at the end so site owners can still
 # identify the traffic. Determined bot walls (TLS fingerprinting, JS
 # challenges) will 403 regardless; those map to a 502 and the feed-summary
 # fallback rather than an error page.

@@ -189,7 +189,7 @@ async def test_press_deadline_fires_once_then_skips(tmp_path: Path) -> None:
         row = await cur.fetchone()
     assert row is not None and row["n"] == 1
 
-    # next day fires again — but the queue is empty, so it skips silently
+    # next day fires again, but the queue is empty, so it skips silently
     next_day = Scheduler(db, tmp_path / "epubs", now_fn=lambda: NOW + timedelta(days=1))
     await next_day._press_deadline(settings)
     async with db.connect() as conn:
@@ -232,7 +232,7 @@ async def test_press_deadline_split_per_group(tmp_path: Path) -> None:
         row = await cur.fetchone()
     assert [d["group_name"] for d in digests] == ["AI", "Gaming"]
     assert all(d["status"] == "ready" for d in digests)
-    assert all(" — " in d["title"] for d in digests)
+    assert all(" - " in d["title"] for d in digests)
     assert row is not None and row["n"] == 0
 
 

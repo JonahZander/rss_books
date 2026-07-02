@@ -1,7 +1,7 @@
 # Design language
 
 The web UI is a **print shop, not a dashboard**: the metaphor is a newspaper
-composing room — registration marks, hairline rules, mono eyebrows, one accent
+composing room: registration marks, hairline rules, mono eyebrows, one accent
 ink. Contributions should read like they came off the same press.
 
 ## Tokens
@@ -27,11 +27,11 @@ should show through panels.
 
 | Face | Variable | Role |
 |---|---|---|
-| **Archivo** (500/700/900) | `--font-display` | Masthead, headings, article titles — 900 uppercase for mastheads |
+| **Archivo** (500/700/900) | `--font-display` | Masthead, headings, article titles; 900 uppercase for mastheads |
 | **IBM Plex Sans** (300/400/500) | `--font-body` | Body copy, summaries |
-| **JetBrains Mono** (400/500) | `--font-mono` | Eyebrows, counters, buttons, metadata — always uppercase + letterspaced for labels |
+| **JetBrains Mono** (400/500) | `--font-mono` | Eyebrows, counters, buttons, metadata; always uppercase + letterspaced for labels |
 
-Eyebrow pattern: `NN — Section name` in mono, 10–11px, `0.14em` tracking,
+Eyebrow pattern: `NN - Section name` in mono, 10–11px, `0.14em` tracking,
 uppercase. Numbers are tabular (`tnum`) everywhere.
 
 ## Rules of composition
@@ -45,12 +45,12 @@ uppercase. Numbers are tabular (`tnum`) everywhere.
   surfaces (masthead, forms, dialogs).
 - **Left-edge indicators.** Hover/active/queued states show as a 2px left
   bar (`::before`), ink for active, amber for queued.
-- **Numbers everywhere.** Indexes (`01/12`), counters, refs (`#0004`) —
+- **Numbers everywhere.** Indexes (`01/12`), counters, refs (`#0004`), all
   padded, mono, tabular.
 
 ## Motion
 
-Easing is always `cubic-bezier(0.2, 0.7, 0.2, 1)` — quick out, no bounce.
+Easing is always `cubic-bezier(0.2, 0.7, 0.2, 1)`: quick out, no bounce.
 Durations 120–500ms. Established moves:
 
 - rows stagger in (`rowIn`, 26ms/index, capped at 12)
@@ -61,7 +61,7 @@ Durations 120–500ms. Established moves:
 - active nav underline draws in from the left
 
 Everything must stay usable under `prefers-reduced-motion: reduce` (a global
-override disables animation — keep state changes visible without it).
+override disables animation, so keep state changes visible without it).
 
 ## Accessibility
 

@@ -6,21 +6,7 @@ import { EditionPreview } from "../../components/EditionPreview";
 import { Masthead } from "../../components/Masthead";
 import { useToast } from "../../components/Toasts";
 import { api, emailConfigured, type AppSettings, type Digest } from "../../lib/api";
-
-function fmtSize(bytes: number | null): string {
-  if (!bytes) return "—";
-  return bytes >= 2 ** 20 ? `${(bytes / 2 ** 20).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
-}
-
-function fmtDate(iso: string): string {
-  const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : `${iso}Z`);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(
-    d.getDate(),
-  ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(
-    2,
-    "0",
-  )}`;
-}
+import { fmtDate, fmtSize } from "../../lib/format";
 
 const STATUS_LABEL: Record<Digest["status"], string> = {
   pending: "Pending",
@@ -92,7 +78,7 @@ export default function Editions() {
       <main className="page-main" aria-label="Editions">
         <div className="content-head">
           <div>
-            <span className="eyebrow">04 — Pressed editions</span>
+            <span className="eyebrow">04 - Pressed editions</span>
             <h2 className="content-title">Editions</h2>
           </div>
           <div className="content-meta">
@@ -128,7 +114,7 @@ export default function Editions() {
                         {d.deliveries[0].status === "sent" ? "✓ emailed" : "✗ email failed"} ·{" "}
                         {fmtDate(d.deliveries[0].created_at)}
                         {d.deliveries[0].status === "failed" && d.deliveries[0].error
-                          ? ` — ${d.deliveries[0].error}`
+                          ? ` - ${d.deliveries[0].error}`
                           : ""}
                       </span>
                     )}

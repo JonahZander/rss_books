@@ -7,7 +7,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { Drawer } from "./Drawer";
 import { hostnameOf } from "../lib/url";
 
-/** group_name when present, else the feed title — the section an article sits in. */
+/** group_name when present, else the feed title: the section an article sits in. */
 function sectionOf(entry: DigestArticleEntry): string {
   return entry.group_name ?? entry.source;
 }
@@ -52,7 +52,7 @@ function ReadDrawer({
     };
   }, [entry.article_id]);
 
-  const status = entry.fetch_status ? FETCH_STATUS_LABEL[entry.fetch_status] : "—";
+  const status = entry.fetch_status ? FETCH_STATUS_LABEL[entry.fetch_status] : "-";
 
   return (
     <ArticleReaderDrawer
@@ -68,7 +68,7 @@ function ReadDrawer({
       fallback={
         entry.fetch_status === "full"
           ? "(no stored content)"
-          : "This edition uses the feed summary — the full text could not be fetched."
+          : "This edition uses the feed summary; the full text could not be fetched."
       }
     />
   );
@@ -126,7 +126,7 @@ export function EditionPreview({
     setApplying(true);
     try {
       await api.removeDigestArticles(digestId, ids);
-      notify(`Removed ${ids.length} ${ids.length === 1 ? "article" : "articles"} — rebuilding edition`);
+      notify(`Removed ${ids.length} ${ids.length === 1 ? "article" : "articles"}, rebuilding edition`);
       setMarked(new Set());
       await load();
       onChanged();
@@ -137,7 +137,7 @@ export function EditionPreview({
     }
   };
 
-  // Sections in first-appearance (position) order — mirrors the EPUB TOC.
+  // Sections in first-appearance (position) order; mirrors the EPUB TOC.
   const sections = useMemo(() => {
     const out: { name: string; items: DigestArticleEntry[] }[] = [];
     for (const e of entries ?? []) {
@@ -175,7 +175,7 @@ export function EditionPreview({
                     <a href={e.url} target="_blank" rel="noreferrer">
                       {hostnameOf(e.url)} ↗
                     </a>{" "}
-                    — {e.title}{" "}
+                    - {e.title}{" "}
                     <span className="muted">
                       ({e.fetch_status === "empty" ? "no content" : "summary only"})
                     </span>
@@ -197,10 +197,10 @@ export function EditionPreview({
 
       <p className="edition-preview-legend">
         <span className="legend-item">
-          <span className="status-square filled" /> Full — whole article
+          <span className="status-square filled" /> Full: whole article
         </span>
         <span className="legend-item">
-          <span className="status-square" /> Summary / Empty — feed excerpt or nothing fetched
+          <span className="status-square" /> Summary / Empty: feed excerpt or nothing fetched
         </span>
       </p>
 
@@ -234,7 +234,7 @@ export function EditionPreview({
                       <span
                         className={`status-square ${e.fetch_status === "full" ? "filled" : ""}`}
                       />
-                      {e.fetch_status ? FETCH_STATUS_LABEL[e.fetch_status] : "—"}
+                      {e.fetch_status ? FETCH_STATUS_LABEL[e.fetch_status] : "-"}
                     </span>
                     <div className="edition-preview-article-actions">
                       <button
@@ -266,7 +266,7 @@ export function EditionPreview({
         <div className="edition-preview-apply" role="region" aria-label="Pending removals">
           <span className="stamp">
             {marked.size} marked for removal
-            {removingAll && " — this empties the edition"}
+            {removingAll && " (this empties the edition)"}
           </span>
           <div className="edition-preview-apply-actions">
             <button
@@ -319,7 +319,7 @@ export function EditionPreview({
         title={`Remove ${marked.size} ${marked.size === 1 ? "article" : "articles"} from this edition?`}
         body={
           removingAll
-            ? "This removes every article — the edition will be left empty until you compile a new one. Articles stay in your library."
+            ? "This removes every article; the edition will be left empty until you compile a new one. Articles stay in your library."
             : "The edition's EPUB will rebuild without them. Articles stay in your library."
         }
         confirmLabel="Remove & rebuild"

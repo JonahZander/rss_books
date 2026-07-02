@@ -64,7 +64,7 @@ def last_scheduled_occurrence(settings: AppSettings, now: datetime) -> datetime:
 class Scheduler:
     """In-process loop: due-feed polling with backoff, the press deadline,
     and daily retention. Pure logic lives in tick() so tests can drive it
-    with an injected clock and HTTP client — no sleeping."""
+    with an injected clock and HTTP client, no sleeping."""
 
     def __init__(
         self,

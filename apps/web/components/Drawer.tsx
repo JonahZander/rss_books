@@ -23,7 +23,7 @@ export function Drawer({
   const panelRef = useRef<HTMLDivElement>(null);
   // Portal to <body>: the drawer is rendered inside an animated (transformed)
   // panel, which would otherwise make position:fixed relative to that panel
-  // instead of the viewport — clipping the drawer into a tiny box.
+  // instead of the viewport, clipping the drawer into a tiny box.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

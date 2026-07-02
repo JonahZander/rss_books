@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { Article, ArticleDetail, Feed } from "../lib/api";
 import { api } from "../lib/api";
+import { hhmmss, plainSummary, ymd } from "../lib/format";
 import { hostnameOf } from "../lib/url";
 import { ArticleReaderDrawer } from "./ArticleReaderDrawer";
 import { ArticleRow } from "./ArticleRow";
 
 type Props = {
   articles: Article[];
-  /** false until the first article fetch resolves — suppresses the empty-state flash */
+  /** false until the first article fetch resolves; suppresses the empty-state flash */
   loaded: boolean;
   queuedIds: Set<number>;
   unreadOnly: boolean;
@@ -29,39 +30,10 @@ type Props = {
   onNext: () => void;
 };
 
-function hhmmss(iso: string | null): string {
-  if (!iso) return "never";
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-}
-
-function ymd(): string {
-  const d = new Date();
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function plainSummary(raw: string | null): string {
-  if (!raw) return "";
-  const withoutTags = raw.replace(/<[^>]*>/g, " ");
-  const decoded = withoutTags
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
-  return decoded.replace(/\s+/g, " ").trim();
-}
-
 /** The triage reader: the same slide-over as the edition review, opened over
  * the current article list with prev/next across it. Loads full content on
  * open (fetching it on demand when it isn't cached) and marks the article seen
- * when configured — the behaviour the old inline expander had. */
+ * when configured, the behaviour the old inline expander had. */
 function TriageReader({
   articles,
   index,
@@ -79,7 +51,7 @@ function TriageReader({
 }) {
   const article = articles[index];
   // Per-session content cache, keyed by article id. Re-opening an article we've
-  // already pulled this session returns straight from here — no second fetch.
+  // already pulled this session returns straight from here with no second fetch.
   const cache = useRef<Map<number, ArticleDetail>>(new Map());
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,7 +61,7 @@ function TriageReader({
 
     const cached = cache.current.get(article.id);
     if (cached) {
-      // Already fetched this session — show it immediately, skip the network.
+      // Already fetched this session: show it immediately, skip the network.
       setDetail(cached);
       setLoading(false);
       return;
@@ -163,7 +135,7 @@ export function ArticleList({
   const total = articles.length;
   const numberOffset = page * pageSize;
   // null = closed. A stale index (list shrank under an open reader) simply
-  // renders nothing — guarded at the render site below.
+  // renders nothing; guarded at the render site below.
   const [readIndex, setReadIndex] = useState<number | null>(null);
 
   // Jump back to the top of the scroll column whenever the page turns.
@@ -171,19 +143,19 @@ export function ArticleList({
     document.querySelector(".content")?.scrollTo({ top: 0 });
   }, [page]);
 
-  // The empty pane means different things — don't blame the user's setup when
+  // The empty pane means different things, so don't blame the user's setup when
   // they've just searched or read everything.
   const empty = search.trim()
     ? { head: "No matches", body: `Nothing matches “${search.trim()}”. Clear the search to see all.` }
     : unreadOnly
-      ? { head: "All caught up", body: "Nothing unread here — switch off “Unread only” to see read articles." }
+      ? { head: "All caught up", body: "Nothing unread here. Switch off “Unread only” to see read articles." }
       : { head: "No dispatches yet", body: "Add a feed and refresh to populate the stream." };
 
   return (
     <div>
       <div className="content-head">
         <div>
-          <span className="eyebrow">02 — Dispatch · {ymd()}</span>
+          <span className="eyebrow">02 - Dispatch · {ymd()}</span>
           <h2 className="content-title">{title}</h2>
         </div>
         <div className="content-meta">

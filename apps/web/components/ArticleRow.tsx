@@ -1,6 +1,7 @@
 "use client";
 
 import type { Article } from "../lib/api";
+import { fmtTimestamp, plainSummary } from "../lib/format";
 import { hostnameOf } from "../lib/url";
 
 type Props = {
@@ -11,31 +12,6 @@ type Props = {
   onToggleQueue: () => void;
   onOpen: () => void;
 };
-
-
-function fmtTimestamp(iso: string): string {
-  const d = new Date(iso);
-  const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-  const time = d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  return `${date} · ${time}`;
-}
-
-function plainSummary(raw: string | null): string {
-  if (!raw) return "";
-  const withoutTags = raw.replace(/<[^>]*>/g, " ");
-  const decoded = withoutTags
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
-  return decoded.replace(/\s+/g, " ").trim();
-}
 
 function pad(n: number, width: number): string {
   return String(n).padStart(width, "0");

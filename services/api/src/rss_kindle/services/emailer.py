@@ -72,7 +72,7 @@ async def send_digest_email(
     size = epub_path.stat().st_size
     if size > MAX_ATTACHMENT_BYTES:
         raise EmailError(
-            f"EPUB is {size / 2**20:.1f} MB — over the {MAX_ATTACHMENT_BYTES // 2**20} MB "
+            f"EPUB is {size / 2**20:.1f} MB, over the {MAX_ATTACHMENT_BYTES // 2**20} MB "
             "email limit (Amazon caps personal documents at 50 MB)"
         )
     msg = EmailMessage()

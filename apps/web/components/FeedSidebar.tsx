@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { Feed, Group } from "../lib/api";
 import { api } from "../lib/api";
+import { pad2 } from "../lib/format";
 import { hostnameOf } from "../lib/url";
 import { useToast } from "./Toasts";
 
@@ -22,7 +23,6 @@ type Props = {
   onChanged: () => Promise<void>;
 };
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
 const COLLAPSE_KEY = "sidebar-collapsed";
 
 function relPoll(iso: string | null): string {
@@ -397,7 +397,7 @@ export function FeedSidebar({
   return (
     <aside className="feed-sidebar" aria-label="Feeds">
       <div className="section-head">
-        <span className="eyebrow eyebrow-ink">00 — Index / Feeds</span>
+        <span className="eyebrow eyebrow-ink">00 - Index / Feeds</span>
         <span className="counter">{pad2(feeds.length)}</span>
       </div>
 
@@ -448,7 +448,7 @@ export function FeedSidebar({
       </button>
 
       <form onSubmit={submit} className="feed-form corner-marks">
-        <span className="eyebrow eyebrow-ink">01 — Commit new feed</span>
+        <span className="eyebrow eyebrow-ink">01 - Commit new feed</span>
         <div>
           <label className="feed-form-label" htmlFor="feed-url">
             URL

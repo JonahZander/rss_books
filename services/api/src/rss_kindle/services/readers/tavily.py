@@ -2,7 +2,7 @@
 
 POSTs the URL to Tavily's `/extract` endpoint and renders the returned markdown
 to HTML. `extract_depth="advanced"` keeps more structure (tables/code) at the
-cost of more credits — worth it for the EPUB. Needs an API key.
+cost of more credits, worth it for the EPUB. Needs an API key.
 """
 
 from __future__ import annotations

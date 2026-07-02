@@ -163,7 +163,7 @@ def test_qr_articles_codes_only_the_source_link(tmp_path: Path) -> None:
     )
     with zipfile.ZipFile(out) as z:
         qr_files = [n for n in z.namelist() if n.startswith("EPUB/qr/")]
-        # exactly one QR — the chapter source link, not the two body links
+        # exactly one QR: the chapter source link, not the two body links
         assert len(qr_files) == 1
         chap = z.read("EPUB/chap_001.xhtml").decode("utf-8")
         assert chap.count("link-qr") == 1

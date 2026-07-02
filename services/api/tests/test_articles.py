@@ -67,7 +67,7 @@ def test_fetch_article_full_content(tmp_path):
 
 def test_fetch_blocked_site_returns_502_not_500(tmp_path):
     """Bot-walled sites (e.g. openai.com → 403) must surface as a clear 502,
-    not an unhandled exception — even through curl_cffi's exception types."""
+    not an unhandled exception, even through curl_cffi's exception types."""
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:
         _seed_feed_with_articles(client)
@@ -112,11 +112,11 @@ def _seed_feed_with_full_content(client: TestClient) -> int:
 
 def test_feed_content_encoded_populates_full_content_without_fetch(tmp_path):
     """An entry whose <content:encoded> is fuller than its summary is stored as
-    full_content at poll time — has_full_content is true with NO page fetch,
+    full_content at poll time: has_full_content is true with NO page fetch,
     and the stored HTML is sanitized (script/onclick scrubbed)."""
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:
-        # if any page fetch is attempted, fail loudly — polling must not fetch
+        # if any page fetch is attempted, fail loudly; polling must not fetch
         with patch(
             "rss_kindle.api.articles.fetch_url_bytes",
             side_effect=AssertionError("must not fetch the page when feed embeds content"),

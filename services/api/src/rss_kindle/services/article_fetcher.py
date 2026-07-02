@@ -1,4 +1,4 @@
-"""Shared article retrieval — the one mechanism Preview and Compile both use.
+"""Shared article retrieval, the one mechanism Preview and Compile both use.
 
 `fetch_article_content` is the full ladder: a browser-impersonating direct fetch
 (curl_cffi, defeats JA3/JA4 TLS fingerprinting), trafilatura extraction, and a

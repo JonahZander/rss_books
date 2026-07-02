@@ -217,7 +217,7 @@ class Database:
         conn.row_factory = aiosqlite.Row
         await conn.execute("PRAGMA foreign_keys = ON")
         # WAL lets readers run during a write and serializes writers behind a
-        # bounded wait instead of failing immediately — without it the scheduler
+        # bounded wait instead of failing immediately; without it the scheduler
         # polling several feeds concurrently (each its own connection) hits
         # "database is locked". WAL is persistent; busy_timeout is per-connection.
         await conn.execute("PRAGMA journal_mode = WAL")

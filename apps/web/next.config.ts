@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 // Production is a static export served same-origin by the FastAPI process
 // (set STATIC_EXPORT=1 at build time). In `next dev` the rewrites below
-// proxy API traffic to the backend, so the app is same-origin there too —
+// proxy API traffic to the backend, so the app is same-origin there too -
 // no CORS anywhere.
 const nextConfig: NextConfig = {
   reactStrictMode: true,

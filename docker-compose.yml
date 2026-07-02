@@ -2,8 +2,8 @@ services:
   rss-books:
     build: .
     ports:
-      - "8765:8765"   # plain HTTP — same-origin web UI
-      - "8443:8443"   # HTTPS — for OPDS clients that only speak TLS (e.g. Crosspoint)
+      - "8765:8765"   # plain HTTP: same-origin web UI
+      - "8443:8443"   # HTTPS: for OPDS clients that only speak TLS (e.g. Crosspoint)
     volumes:
       # named volume: your database and editions survive image rebuilds
       - rss_kindle_data:/data

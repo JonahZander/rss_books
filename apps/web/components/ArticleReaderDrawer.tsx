@@ -6,7 +6,7 @@ import { Drawer } from "./Drawer";
 
 /** The shared article-reading drawer used by both the triage desk and the
  * edition review: a slide-over with the article body, a source link, and
- * prev/next navigation across the surrounding list. Purely presentational —
+ * prev/next navigation across the surrounding list. Purely presentational -
  * the parent owns fetching `detail` and the loading flag. */
 export function ArticleReaderDrawer({
   eyebrow,

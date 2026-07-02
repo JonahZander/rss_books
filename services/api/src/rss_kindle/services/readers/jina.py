@@ -1,7 +1,7 @@
 """Jina Reader (https://jina.ai/reader).
 
 GETs `https://r.jina.ai/<url>` and renders the returned markdown to HTML. Free
-and keyless on the public tier (rate-limited), so selecting it is enough — no
+and keyless on the public tier (rate-limited), so selecting it is enough, with no
 API key to configure.
 """
 

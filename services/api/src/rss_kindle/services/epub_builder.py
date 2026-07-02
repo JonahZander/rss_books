@@ -47,7 +47,7 @@ def _qr_img_tag(src: str, url: str) -> str:
 @dataclass
 class _EpubQrEmbedder:
     """Collects one PNG per distinct URL, referenced from chapter HTML by a
-    stable filename — so the same link reused across chapters embeds once."""
+    stable filename, so the same link reused across chapters embeds once."""
 
     images: dict[str, bytes] = field(default_factory=dict)
     _filenames: dict[str, str] = field(default_factory=dict)
@@ -86,7 +86,7 @@ def _inject_body_qrs(html_text: str, render_qr: QrRenderer) -> str:
     )
 
 
-# Tuned for 6-7" greyscale e-ink: generic serif stack (no embedded fonts —
+# Tuned for 6-7" greyscale e-ink: generic serif stack (no embedded fonts -
 # the reader's typeface wins and files stay small), wrapped monospace, and
 # hard page breaks between articles.
 STYLESHEET = """\
@@ -129,7 +129,7 @@ code { font-family: "Courier New", monospace; font-size: 0.85em; }
 pre code { font-size: 1em; }
 img { max-width: 100%; }
 img.link-qr {
-  /* Shown at the PNG's native size — no width/height, so the reader never
+  /* Shown at the PNG's native size, no width/height, so the reader never
      resamples it (fractional scaling destroys QR scannability). Block so the
      ~200-340px code sits on its own line instead of wrecking text lines. */
   display: block;
@@ -177,7 +177,7 @@ def _section_of(article: DigestArticle, grouped: bool) -> str:
 
 def _ordered_sections(articles: list[DigestArticle]) -> tuple[bool, list[str]]:
     """(grouped?, section names in first-appearance order). When grouping by
-    feed-group, the catch-all 'Ungrouped' section always sorts last — matching
+    feed-group, the catch-all 'Ungrouped' section always sorts last, matching
     the EPUB TOC."""
     grouped = any(a.group for a in articles)
     names = list(dict.fromkeys(_section_of(a, grouped) for a in articles))
@@ -187,7 +187,7 @@ def _ordered_sections(articles: list[DigestArticle]) -> tuple[bool, list[str]]:
 
 
 def _title_page_html(title: str, articles: list[DigestArticle]) -> str:
-    """Inner markup of the edition title page — shared by the EPUB and the
+    """Inner markup of the edition title page, shared by the EPUB and the
     in-app HTML preview so they can't drift."""
     esc = html_lib.escape
     sources = _sources(articles)
@@ -262,7 +262,7 @@ def build_digest_epub(
     qr_all = link_qr == "all"
     book = epub.EpubBook()
     book.set_identifier(identifier or f"urn:rss-books:digest:{title}")
-    book.set_title(f"{title} — Pressed Edition")
+    book.set_title(f"{title} - Pressed Edition")
     book.set_language("en")
 
     css = epub.EpubItem(
@@ -321,7 +321,7 @@ def build_digest_epub(
         '<section class="colophon">'
         '<p class="eyebrow">COLOPHON</p>'
         "<p>This edition was pressed by "
-        '<a href="https://github.com/JonahZander/rss_kindle_selector">RSS Books</a>, '
+        '<a href="https://github.com/JonahZander/rss_books">RSS Books</a>, '
         "the self-hosted book press for your e-reader. Every article was picked by hand.</p>"
         f"<ul>{feed_items}</ul>"
         "</section>"
@@ -330,7 +330,7 @@ def build_digest_epub(
     book.add_item(colophon)
 
     # Sectioned TOC in first-appearance (queue) order: by feed normally, by
-    # group when articles carry one — with the Ungrouped section always last.
+    # group when articles carry one, with the Ungrouped section always last.
     _, section_names = _ordered_sections(articles)
     book.toc = [
         (epub.Section(name), [c for s, c in chapters if s == name]) for name in section_names
@@ -371,7 +371,7 @@ def render_preview_html(
 ) -> str:
     """A standalone HTML rendition of an edition for the in-app preview drawer:
     the same title page, sectioned contents, byline, source link and chapter
-    bodies the EPUB ships — so what you see here is what lands on the device.
+    bodies the EPUB ships, so what you see here is what lands on the device.
     QR codes inline as data: URIs so the preview matches the EPUB."""
     esc = html_lib.escape
     total = len(articles)
@@ -399,7 +399,7 @@ def render_preview_html(
     return (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'/>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'/>"
-        f"<title>{esc(title)} — Preview</title>"
+        f"<title>{esc(title)} - Preview</title>"
         f"<style>{STYLESHEET}{_PREVIEW_CHROME}</style></head><body>"
         f"{_title_page_html(title, articles)}"
         f"{''.join(toc_parts)}"

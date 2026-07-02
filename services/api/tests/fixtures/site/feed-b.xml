@@ -3,7 +3,7 @@
   <channel>
     <title>The Arcade Ledger</title>
     <link>http://localhost:8901/</link>
-    <description>Second fixture feed — distinct guids so it can coexist with feed.xml</description>
+    <description>Second fixture feed - distinct guids so it can coexist with feed.xml</description>
     <item>
       <title>Patch Notes as Literature</title>
       <link>http://localhost:8901/article2.html</link>

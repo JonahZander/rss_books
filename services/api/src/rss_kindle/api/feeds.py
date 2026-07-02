@@ -120,7 +120,7 @@ async def _import_feed_rows(
     db: Database, entries: list[tuple[str, str, str | None, str | None]]
 ) -> dict[str, int]:
     """Insert (url, title, site_url, group_name) rows. Existing feeds are
-    skipped — but adopt the file's group when they are currently ungrouped,
+    skipped, but they adopt the file's group when they are currently ungrouped,
     so re-importing a subscription file is the upgrade path to grouping."""
     added = 0
     skipped = 0
@@ -316,7 +316,7 @@ async def update_feed(feed_id: int, payload: FeedUpdate, request: Request) -> Fe
             if fields:
                 sets = ", ".join(f"{name} = ?" for name in fields)
                 cur = await conn.execute(
-                    f"UPDATE feeds SET {sets} WHERE id = ?",  # noqa: S608 — keys from the model
+                    f"UPDATE feeds SET {sets} WHERE id = ?",  # noqa: S608 (keys from the model)
                     (*fields.values(), feed_id),
                 )
                 if cur.rowcount == 0:
@@ -342,6 +342,20 @@ async def delete_feed(feed_id: int, request: Request) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+async def _poll_and_record(db: Database, feed_id: int, url: str) -> tuple[int, Exception | None]:
+    """Fetch + ingest one feed and record its poll health; returns the number of
+    inserted articles and the exception (if any) so callers decide how to surface it."""
+    try:
+        content = await fetch_feed_bytes(url)
+        inserted = await poll_feed_content(db, feed_id, content)
+    except Exception as exc:
+        await _record_poll_outcome(db, feed_id, str(exc))
+        logger.warning("refresh failed for feed %d (%s): %s", feed_id, url, exc)
+        return 0, exc
+    await _record_poll_outcome(db, feed_id, None)
+    return inserted, None
+
+
 @router.post("/{feed_id}/refresh")
 async def refresh_feed(feed_id: int, request: Request) -> dict[str, int]:
     db = request.app.state.db
@@ -350,14 +364,9 @@ async def refresh_feed(feed_id: int, request: Request) -> dict[str, int]:
         row = await cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="feed not found")
-    try:
-        content = await fetch_feed_bytes(row["url"])
-        inserted = await poll_feed_content(db, feed_id, content)
-    except Exception as exc:
-        await _record_poll_outcome(db, feed_id, str(exc))
-        logger.warning("manual refresh failed for feed %d (%s): %s", feed_id, row["url"], exc)
+    inserted, exc = await _poll_and_record(db, feed_id, row["url"])
+    if exc is not None:
         raise HTTPException(status_code=502, detail=f"feed fetch failed: {exc}") from exc
-    await _record_poll_outcome(db, feed_id, None)
     return {"inserted": inserted}
 
 
@@ -370,13 +379,9 @@ async def refresh_all_feeds(request: Request) -> dict[str, int]:
     total = 0
     errors = 0
     for row in rows:
-        try:
-            content = await fetch_feed_bytes(row["url"])
-            total += await poll_feed_content(db, row["id"], content)
-            await _record_poll_outcome(db, row["id"], None)
-        except Exception as exc:
+        inserted, exc = await _poll_and_record(db, row["id"], row["url"])
+        total += inserted
+        if exc is not None:
             errors += 1
-            await _record_poll_outcome(db, row["id"], str(exc))
-            logger.warning("refresh failed for feed %d (%s): %s", row["id"], row["url"], exc)
     logger.info("refreshed %d feeds: %d new articles, %d errors", len(rows), total, errors)
     return {"inserted": total, "errors": errors}

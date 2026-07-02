@@ -126,7 +126,7 @@ async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail
         status = e.response.status_code if e.response is not None else "error"
         fetch_error = HTTPException(
             status_code=502,
-            detail=f"the site returned HTTP {status} — try the original link instead",
+            detail=f"the site returned HTTP {status}, try the original link instead",
         )
     except RequestException as e:
         fetch_error = HTTPException(status_code=502, detail=f"fetch failed: {e}")
@@ -162,10 +162,9 @@ async def _set_read(request: Request, article_id: int, read: bool) -> Article:
     db = request.app.state.db
     async with db.connect() as conn:
         cur = await conn.execute(
-            "UPDATE articles SET read_at = "
-            + ("CURRENT_TIMESTAMP" if read else "NULL")
-            + " WHERE id = ?",
-            (article_id,),
+            "UPDATE articles SET read_at = CASE WHEN ? THEN CURRENT_TIMESTAMP END "
+            "WHERE id = ?",
+            (1 if read else 0, article_id),
         )
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="article not found")

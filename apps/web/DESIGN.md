@@ -1,9 +1,9 @@
-# DESIGN.md — RSS-to-Kindle Selector
+# DESIGN.md - RSS-to-Kindle Selector
 
 > **Purpose:** This is the design-system anchor for Google Stitch. Every generated
 > screen MUST conform to the values below. When in doubt, prefer *fewer, sharper,
 > darker* over *more, softer, lighter*. This is a technical, sci-fi instrument
-> panel — not a friendly consumer app.
+> panel, not a friendly consumer app.
 
 ---
 
@@ -12,11 +12,11 @@
 A sleek, dark, terminal-grade reading console. Think a mission-control HUD for
 your reading queue: angular, quiet, precise, with thin **pink and blue**
 retrofuturistic accent lines that glow against near-black. Restraint is the rule
-— color is information, not decoration. The chrome stays monochrome and
+- color is information, not decoration. The chrome stays monochrome and
 structural; the pink/blue only appears to signal state, focus, or action.
 
 Inspired by the Nous Research / Hermes agent aesthetic (dark, technical,
-monospace-flavored, terminal/sci-fi) but it must NOT be a clone — Hermes leans
+monospace-flavored, terminal/sci-fi) but it must NOT be a clone: Hermes leans
 amber/teal on black; **we are pink + blue**, and we are more angular and more
 minimal.
 
@@ -31,7 +31,7 @@ minimal.
 
 ## 2. Color Palette
 
-### Base (the void) — use 90% of the time
+### Base (the void): use 90% of the time
 | Token | Hex | Use |
 |---|---|---|
 | `--bg-void` | `#08090C` | App background, deepest layer |
@@ -48,7 +48,7 @@ minimal.
 | `--text-secondary` | `#9AA3B2` | Labels, secondary copy |
 | `--text-muted` | `#5A6373` | Metadata, timestamps, placeholder |
 
-### Accents — pink + blue (signal only)
+### Accents: pink + blue (signal only)
 | Token | Hex | Use |
 |---|---|---|
 | `--accent-blue` | `#3D8BFF` | Primary actions, focus rings, active nav, links |
@@ -75,16 +75,16 @@ the active panel, the digest-queue header, the primary button border.
 
 Two-font system. Pull both from Google Fonts.
 
-- **Sans (UI + prose):** `Space Grotesk` — headings, article titles, body. Weights 400 / 500 / 700.
+- **Sans (UI + prose):** `Space Grotesk` for headings, article titles, and body. Weights 400 / 500 / 700.
   - Fallback stack: `"Space Grotesk", "Inter", system-ui, sans-serif`
-- **Mono (data + chrome):** `JetBrains Mono` — labels, metadata, counts, timestamps, feed URLs, nav items, table column headers, buttons.
+- **Mono (data + chrome):** `JetBrains Mono` for labels, metadata, counts, timestamps, feed URLs, nav items, table column headers, buttons.
   - Fallback stack: `"JetBrains Mono", "IBM Plex Mono", monospace`
 
 **Rules:**
 - All chrome labels, nav, and metadata: mono, `UPPERCASE`, `letter-spacing: 0.08em`, size 11–12px, color `--text-muted`.
 - Article titles: Space Grotesk 500, 16–18px, `--text-primary`.
 - Body/excerpt: Space Grotesk 400, 14px, `--text-secondary`, line-height 1.6.
-- Numerals (counts, unread badges): JetBrains Mono — tabular feel reinforces the instrument vibe.
+- Numerals (counts, unread badges): JetBrains Mono; the tabular feel reinforces the instrument vibe.
 
 **Type scale (px):** 11 · 12 · 14 · 16 · 18 · 22 · 28 · 36.
 
@@ -93,7 +93,7 @@ Two-font system. Pull both from Google Fonts.
 ## 4. Spacing & Grid
 
 - **Base unit: 4px.** Scale: `4, 8, 12, 16, 24, 32, 48, 64`.
-- **Layout:** Fixed left sidebar (feeds/nav), main content column, optional right rail (digest queue). Panels sit edge-to-edge separated by 1px `--line` hairlines — **gap: 0 between adjacent structural panels**, with internal padding of 16–24px.
+- **Layout:** Fixed left sidebar (feeds/nav), main content column, optional right rail (digest queue). Panels sit edge-to-edge separated by 1px `--line` hairlines, with **gap: 0 between adjacent structural panels** and internal padding of 16–24px.
 - A faint background grid is encouraged on empty/hero areas: 1px `--line` lines on a ~32px grid at very low opacity (~`#12151C`), evoking graph paper / a HUD.
 - Content max-width for reading lists: 760–900px; never full-bleed prose.
 
@@ -102,7 +102,7 @@ Two-font system. Pull both from Google Fonts.
 ## 5. Borders, Corners & "Angular" Treatment
 
 - **Corner radius: `0px`** for cards, buttons, inputs, tables, panels. Sharp by default.
-- Optional signature flourish: **notched/clipped corners** on key cards (cut a 45° corner via `clip-path: polygon(...)`, ~10–12px notch) — use on the primary CTA card and the "current edition" card only. Don't notch everything.
+- Optional signature flourish: **notched/clipped corners** on key cards (cut a 45° corner via `clip-path: polygon(...)`, ~10–12px notch); use on the primary CTA card and the "current edition" card only. Don't notch everything.
 - Borders are **1px solid `--line`**. Active/focused elements get a 1px `--accent-blue` border. Selected items get 1px `--accent-pink` (or a left 2px pink bar).
 - No rounded pills, no soft chips. Tags/badges are sharp rectangles with a 1px border.
 
@@ -114,7 +114,7 @@ There are no soft material shadows. "Elevation" is expressed with **glow** and *
 
 - **Glow (focus/active only):** `box-shadow: 0 0 0 1px <accent>, 0 0 12px -2px <accent>` where `<accent>` is `--accent-blue` for focus and `--accent-pink` for selection/important. Keep glow tight and low-opacity; it should feel like a backlit edge, not a halo.
 - **Popovers/modals:** `--bg-raised` surface, 1px `--line-strong` border, plus a faint outer ring `0 0 0 1px #000`. A backdrop of `rgba(5,6,10,0.7)`.
-- **Scanline overlay (optional, subtle):** a full-viewport `repeating-linear-gradient(rgba(255,255,255,0) 0 2px, rgba(255,255,255,0.015) 2px 3px)` for texture. Keep it nearly invisible — it's a whisper, not a CRT.
+- **Scanline overlay (optional, subtle):** a full-viewport `repeating-linear-gradient(rgba(255,255,255,0) 0 2px, rgba(255,255,255,0.015) 2px 3px)` for texture. Keep it nearly invisible; it's a whisper, not a CRT.
 - **Text glow:** reserve for the active nav item and primary headings only: `text-shadow: 0 0 8px rgba(61,139,255,0.4)`.
 
 ---

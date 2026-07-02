@@ -1,7 +1,7 @@
 [project]
 name = "rss-books-api"
 version = "1.1.0"
-description = "FastAPI backend for the RSS Kindle Selector."
+description = "FastAPI backend for RSS Books."
 requires-python = ">=3.12,<3.15"
 dependencies = [
     "fastapi>=0.116.0,<1.0.0",

@@ -142,7 +142,7 @@ class QueueLink(BaseModel):
 
 
 class DigestArticlesRemove(BaseModel):
-    """Batch removal of edition members — drops all in one transaction and
+    """Batch removal of edition members. Drops all in one transaction and
     rebuilds the EPUB once, rather than once per article."""
 
     article_ids: list[int]

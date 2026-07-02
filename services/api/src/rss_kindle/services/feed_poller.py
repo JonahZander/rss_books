@@ -16,7 +16,7 @@ from rss_kindle.services.sanitizer import sanitize
 def placeholder_title(url: str) -> str:
     """Default title for imports that carry no titles (JSON feed lists):
     the hostname. The first successful poll replaces it with the feed's own
-    <title> — unless the user renamed the feed first."""
+    <title>, unless the user renamed the feed first."""
     host = (urlparse(url).hostname or "").removeprefix("www.")
     return host or url
 
@@ -101,8 +101,8 @@ async def poll_feed_content(db: Database, feed_id: int, content: bytes) -> int:
             # <content>); when it's meaningfully fuller than the summary we
             # sanitize and store it now so the article is readable without an
             # on-demand page fetch (which modern WAFs often 403). The length
-            # guard rejects teaser-only content:encoded. We only sanitize —
-            # never run trafilatura — since feed content is already article
+            # guard rejects teaser-only content:encoded. We only sanitize,
+            # never running trafilatura, since feed content is already article
             # HTML, and the nh3 allowlist is the contract for all stored HTML.
             full_content: str | None = None
             if (
@@ -116,8 +116,7 @@ async def poll_feed_content(db: Database, feed_id: int, content: bytes) -> int:
                     "INSERT INTO articles "
                     "(feed_id, guid, title, url, summary, full_content, published_at, fetched_at) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, "
-                    + ("CURRENT_TIMESTAMP" if full_content else "NULL")
-                    + ")",
+                    "CASE WHEN ? IS NOT NULL THEN CURRENT_TIMESTAMP END)",
                     (
                         feed_id,
                         entry.guid,
@@ -126,6 +125,7 @@ async def poll_feed_content(db: Database, feed_id: int, content: bytes) -> int:
                         entry.summary,
                         full_content,
                         entry.published_at.isoformat() if entry.published_at else None,
+                        full_content,
                     ),
                 )
                 inserted += 1

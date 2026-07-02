@@ -11,6 +11,7 @@ const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satur
 export default function Settings() {
   const toast = useToast();
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [sendToDraft, setSendToDraft] = useState("");
@@ -19,7 +20,9 @@ export default function Settings() {
 
   useEffect(() => {
     api.getSettings().then(setSettings, (e) => {
-      toast(e instanceof Error ? e.message : "could not load settings", "error");
+      const message = e instanceof Error ? e.message : "could not load settings";
+      setLoadError(message);
+      toast(message, "error");
     });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpdsBase(window.location.origin);
@@ -34,7 +37,14 @@ export default function Settings() {
       <div className="app">
         <Masthead />
         <main className="page-main">
-          <p className="article-body-loading">Loading settings</p>
+          {loadError ? (
+            <p className="empty-state">
+              Settings unavailable
+              <small>{loadError}</small>
+            </p>
+          ) : (
+            <p className="article-body-loading">Loading settings</p>
+          )}
         </main>
       </div>
     );
@@ -89,7 +99,7 @@ export default function Settings() {
       <main className="page-main settings-main" aria-label="Settings">
         <div className="content-head">
           <div>
-            <span className="eyebrow">05 — Configuration</span>
+            <span className="eyebrow">05 - Configuration</span>
             <h2 className="content-title">Settings</h2>
           </div>
           <button type="button" className="btn" onClick={() => void save()} disabled={saving}>
@@ -110,11 +120,11 @@ export default function Settings() {
           <section className="settings-card corner-marks" aria-label="Email delivery">
             <p className="eyebrow eyebrow-ink">Delivery · Send-to-Kindle email</p>
             <p className="settings-hint">
-              Works for Kindle and PocketBook gateways — or any plain inbox.
+              Works for Kindle and PocketBook gateways, or any plain inbox.
             </p>
             <ol className="wizard">
               <li>
-                Find your reader&apos;s address: Kindle owners — it&apos;s under{" "}
+                Find your reader&apos;s address: Kindle owners: it&apos;s under{" "}
                 <a
                   href="https://www.amazon.com/hz/mycd/digital-console/alldevices"
                   target="_blank"
@@ -298,7 +308,7 @@ export default function Settings() {
               </div>
             )}
             <p className="settings-hint">
-              Note: some reader firmwares don&apos;t support authenticated OPDS — leave this off on
+              Note: some reader firmwares don&apos;t support authenticated OPDS, so leave this off on
               a trusted LAN.
             </p>
           </section>
@@ -332,7 +342,7 @@ export default function Settings() {
           <section className="settings-card corner-marks" aria-label="Press deadline">
             <p className="eyebrow eyebrow-ink">Press deadline</p>
             <p className="settings-hint">
-              At the deadline, everything in the queue is pressed into an edition automatically —
+              At the deadline, everything in the queue is pressed into an edition automatically -
               the Friday-paper ritual. The queue must be non-empty; you still pick every article.
             </p>
             <label className="filter-toggle">
@@ -427,7 +437,7 @@ export default function Settings() {
             <p className="eyebrow eyebrow-ink">Device profiles</p>
             <p className="settings-hint">
               A profile bundles per-device rendering choices. Pick profiles when compiling to
-              press one edition per device — each gets its own OPDS folder
+              press one edition per device, each gets its own OPDS folder
               (<code>/opds/profiles/…</code>).
             </p>
             {settings.profiles.map((p, i) => (
@@ -444,7 +454,7 @@ export default function Settings() {
                       setProfile(i, { link_qr: e.target.value as RenderProfile["link_qr"] })
                     }
                   >
-                    <option value="off">Off — keep links as text</option>
+                    <option value="off">Off (keep links as text)</option>
                     <option value="articles">Article source links only</option>
                     <option value="all">All links in the article</option>
                   </select>
@@ -473,7 +483,7 @@ export default function Settings() {
                         })
                       }
                     >
-                      <option value="auto">Auto — never split</option>
+                      <option value="auto">Auto (never split)</option>
                       <option value="4:3">4:3 (landscape)</option>
                       <option value="1:1">1:1 (square)</option>
                       <option value="3:4">3:4 (portrait)</option>
@@ -562,7 +572,7 @@ export default function Settings() {
                 value={settings.link_qr}
                 onChange={(e) => set("link_qr", e.target.value as AppSettings["link_qr"])}
               >
-                <option value="off">Off — keep links as text</option>
+                <option value="off">Off (keep links as text)</option>
                 <option value="articles">Article source links only</option>
                 <option value="all">All links in the article</option>
               </select>
@@ -578,7 +588,7 @@ export default function Settings() {
           <section className="settings-card corner-marks" aria-label="Reader fallback">
             <p className="eyebrow eyebrow-ink">Article fetching · Reader fallback</p>
             <p className="settings-hint">
-              Many sites block server-side fetches — Cloudflare and friends fingerprint the
+              Many sites block server-side fetches; Cloudflare and friends fingerprint the
               connection itself, not just the user-agent. When the built-in fetch is blocked,
               hand the link to an external reader service to pull the full text. Only used when
               the direct fetch fails.
@@ -591,9 +601,9 @@ export default function Settings() {
                   set("reader_fallback", e.target.value as AppSettings["reader_fallback"])
                 }
               >
-                <option value="none">None — feed summary only</option>
-                <option value="jina">Jina Reader — free, no key</option>
-                <option value="tavily">Tavily — API key, richer extraction</option>
+                <option value="none">None (feed summary only)</option>
+                <option value="jina">Jina Reader (free, no key)</option>
+                <option value="tavily">Tavily (API key, richer extraction)</option>
               </select>
             </label>
             {settings.reader_fallback === "tavily" && (

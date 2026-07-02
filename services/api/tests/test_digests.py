@@ -129,9 +129,9 @@ def test_per_group_compile_partitions_queue(tmp_path, monkeypatch):
         created = r.json()
         today = date.today().isoformat()
         assert [d["title"] for d in created] == [
-            f"{today} — AI",
-            f"{today} — Gaming",
-            f"{today} — Ungrouped",
+            f"{today} - AI",
+            f"{today} - Gaming",
+            f"{today} - Ungrouped",
         ]
         assert [d["group_name"] for d in created] == ["AI", "Gaming", "Ungrouped"]
         assert [d["article_count"] for d in created] == [2, 1, 1]
@@ -156,7 +156,7 @@ def test_per_group_single_bucket_still_suffixed(tmp_path, monkeypatch):
         r = client.post("/api/digests", json={"article_ids": a_ids, "split": "per_group"})
         created = r.json()
         assert len(created) == 1
-        assert created[0]["title"].endswith(" — AI")
+        assert created[0]["title"].endswith(" - AI")
         assert created[0]["group_name"] == "AI"
 
 
@@ -199,7 +199,7 @@ def test_compile_fetches_missing_content_and_caches_it(tmp_path, monkeypatch):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:
         ids = _seed(client)
-        # seeded articles are summary-only (no full_content) — exactly the
+        # seeded articles are summary-only (no full_content), exactly the
         # enqueue-without-preview case that used to ship empty.
         arts = client.get("/api/articles").json()
         assert all(not a["has_full_content"] for a in arts)

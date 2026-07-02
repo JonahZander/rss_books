@@ -1,9 +1,9 @@
 # Contributing
 
-Thanks for considering a contribution. This is a small, opinionated project —
-read the [1.0 release spec](docs/superpowers/specs/2026-06-11-rss-kindle-selector-v2-design.md)
-first; it defines what's in scope (and the explicit non-goals: no multi-user,
-no AI summaries, no hosted service).
+Thanks for considering a contribution. This is a small, opinionated project;
+the scope is deliberate (explicit non-goals: no multi-user, no AI summaries,
+no hosted service); see [docs/landscape-and-options.md](docs/landscape-and-options.md)
+for the reasoning.
 
 ## Dev setup
 
@@ -17,7 +17,7 @@ npm run dev:web      # Next.js on :3737
 
 ## Checks
 
-Run these before pushing — CI runs exactly the same set:
+Run these before pushing; CI runs exactly the same set:
 
 ```bash
 npm run typecheck:web && npm run lint:web && npm run build:web
@@ -38,16 +38,16 @@ uv run --directory services/api --extra dev pytest tests/test_digests.py -q
 - **API shapes are mirrored by hand** in `apps/web/lib/api.ts`. If you change a
   Pydantic model in `services/api/src/rss_kindle/models.py`, update the
   TypeScript types in the same PR.
-- **Tests:** pytest with `asyncio_mode = "auto"` — plain `async def test_...`,
+- **Tests:** pytest with `asyncio_mode = "auto"`, so plain `async def test_...` is enough,
   no decorators. HTTP is mocked (`unittest.mock.patch` / httpx MockTransport);
   tests never hit the network.
 - **Style:** ruff (rules `E,F,W,I,UP,B`, line length 100) and strict-ish mypy
   on the API; eslint + `tsc --noEmit` on the web app. Frontend follows
-  [docs/design-language.md](docs/design-language.md) — paper/ink/amber tokens,
+  [docs/design-language.md](docs/design-language.md): paper/ink/amber tokens,
   sharp corners, mono eyebrows.
 - **Commits:** conventional style (`feat:`, `fix:`, `chore:`, `docs:`...).
 
 ## Filing issues
 
-Bug reports with a feed URL that reproduces the problem are gold — extraction
+Bug reports with a feed URL that reproduces the problem are gold, because extraction
 and EPUB rendering issues are usually feed-specific.

@@ -132,7 +132,7 @@ async function errorDetail(res: Response): Promise<string> {
       return typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
     }
   } catch {
-    // no JSON body — fall back to the status code
+    // no JSON body, fall back to the status code
   }
   return `${res.status}`;
 }
@@ -269,7 +269,7 @@ export const api = {
     fetch(`${BASE}/api/digests/${digestId}/articles/${articleId}`, { method: "DELETE" }).then(
       (r) => j<Digest>(r),
     ),
-  /** Batch-drop several members at once — one rebuild instead of N. */
+  /** Batch-drop several members at once: one rebuild instead of N. */
   removeDigestArticles: (digestId: number, articleIds: number[]) =>
     fetch(
       `${BASE}/api/digests/${digestId}/articles/remove`,

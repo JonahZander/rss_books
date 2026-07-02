@@ -3,6 +3,7 @@
 import { type FormEvent, useState } from "react";
 import type { Article, Digest } from "../lib/api";
 import { api } from "../lib/api";
+import { pad2 } from "../lib/format";
 import { useToast } from "./Toasts";
 
 type Props = {
@@ -16,8 +17,6 @@ type Props = {
   onAddLink: (url: string, title?: string) => Promise<void>;
   onCompiled: () => Promise<void>;
 };
-
-const pad2 = (n: number) => String(n).padStart(2, "0");
 
 const SPLIT_KEY = "compile-split";
 const PROFILES_KEY = "compile-profiles";
@@ -166,7 +165,7 @@ export function DigestQueue({
   return (
     <section className="digest-queue" aria-label="Digest queue">
       <div className="section-head">
-        <span className="eyebrow eyebrow-ink">03 — Dispatch / Digest</span>
+        <span className="eyebrow eyebrow-ink">03 - Dispatch / Digest</span>
       </div>
 
       <div className="queue-readout">

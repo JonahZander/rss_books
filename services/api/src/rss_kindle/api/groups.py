@@ -54,7 +54,7 @@ async def update_group(group_id: int, payload: GroupUpdate, request: Request) ->
             if fields:
                 sets = ", ".join(f"{name} = ?" for name in fields)
                 cur = await conn.execute(
-                    f"UPDATE groups SET {sets} WHERE id = ?",  # noqa: S608 — keys from the model
+                    f"UPDATE groups SET {sets} WHERE id = ?",  # noqa: S608 (keys from the model)
                     (*fields.values(), group_id),
                 )
                 if cur.rowcount == 0:

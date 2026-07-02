@@ -5,7 +5,7 @@ import { ToastProvider } from "../components/Toasts";
 import "./globals.css";
 
 // Fonts are self-hosted (variable woff2 in ./fonts) rather than fetched from
-// Google Fonts at build time — keeps the Docker build hermetic and offline.
+// Google Fonts at build time, which keeps the Docker build hermetic and offline.
 // The weight ranges mirror the original next/font/google declarations.
 const archivo = localFont({
   src: "./fonts/archivo.woff2",
