@@ -4,16 +4,22 @@ type Props = {
 };
 
 /**
- * RSS Books mark: an angular open book with broadcast arcs rising from the
- * spine. The arcs carry the signature pink→blue gradient (135deg, matching
- * .brand-accent); the book is inked via currentColor so contexts can restyle it.
+ * RSS Books mark: a dog-eared folio carrying the RSS quarter-wave and dot.
+ * The wave/dot wear the signature pink→blue gradient (135deg, matching
+ * .brand-accent); the folio is inked via currentColor so contexts can
+ * restyle it. Geometry lives on a 64 grid: A4-ish body (36×52), solid fold
+ * flap, signal glyph optically centered in the body. The viewBox hugs the
+ * drawn content (41×57 incl. stroke) so `size` is the visual height —
+ * contexts can match it to a neighboring cap height exactly.
  */
+const RATIO = 41 / 57;
+
 export function LogoMark({ size = 32, className }: Props) {
   return (
     <svg
-      width={size}
+      width={size * RATIO}
       height={size}
-      viewBox="0 0 64 64"
+      viewBox="11.5 3.5 41 57"
       className={className}
       aria-hidden
       focusable="false"
@@ -24,15 +30,21 @@ export function LogoMark({ size = 32, className }: Props) {
           <stop offset="1" stopColor="#3d8bff" />
         </linearGradient>
       </defs>
-      <g fill="currentColor">
-        <polygon points="6,26 30,38 30,58 6,50" />
-        <polygon points="58,26 34,38 34,58 58,50" />
-      </g>
-      <g stroke="url(#logo-signal)" strokeWidth="4" fill="none">
-        <path d="M26.3 25.3 A8 8 0 0 1 37.7 25.3" />
-        <path d="M22.1 21.1 A14 14 0 0 1 41.9 21.1" />
-      </g>
-      <circle cx="32" cy="31" r="3.4" fill="url(#logo-signal)" />
+      <path
+        d="M14 6 H38 L50 18 V58 H14 Z"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinejoin="miter"
+        fill="none"
+      />
+      <polygon points="38,6 38,18 50,18" fill="currentColor" />
+      <path
+        d="M26 31 A14 14 0 0 1 40 45"
+        stroke="url(#logo-signal)"
+        strokeWidth="5"
+        fill="none"
+      />
+      <circle cx="26" cy="45" r="4" fill="url(#logo-signal)" />
     </svg>
   );
 }

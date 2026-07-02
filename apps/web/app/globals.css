@@ -188,10 +188,12 @@ a {
 }
 
 .masthead-mark {
-  width: 1em;
-  height: 1em;
-  margin-right: 0.18em;
-  vertical-align: -0.14em;
+  /* Cap height of Archivo 900 uppercase ≈ 0.72em; the mark's viewBox hugs
+     its content, so this makes folio and wordmark exactly the same height. */
+  height: 0.72em;
+  width: auto;
+  margin-right: 0.26em;
+  vertical-align: baseline;
   color: var(--ink);
 }
 

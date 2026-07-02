@@ -7,10 +7,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
-PAPER = (242, 241, 236)
-INK = (14, 15, 17)
-INK_SOFT = (85, 85, 79)
-AMBER = (201, 122, 30)
+PAPER = (242, 244, 247)
+INK = (16, 24, 40)
+INK_SOFT = (71, 84, 103)
+PINK = (255, 77, 157)
+BLUE = (61, 139, 255)
 
 WIDTH, HEIGHT = 1600, 2560
 MARGIN = 140
@@ -35,6 +36,14 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font: AnyFont, max_width: int) -
     return lines
 
 
+def _gradient_bar(draw: ImageDraw.ImageDraw, x: int, y: int, width: int, height: int) -> None:
+    """The signature pink→blue gradient, rasterized column by column."""
+    for i in range(width):
+        t = i / max(width - 1, 1)
+        color = tuple(round(p + (b - p) * t) for p, b in zip(PINK, BLUE, strict=True))
+        draw.rectangle([x + i, y, x + i + 1, y + height], fill=color)
+
+
 def render_cover(
     *,
     title: str,
@@ -42,8 +51,9 @@ def render_cover(
     article_count: int,
     sources: list[str],
 ) -> bytes | None:
-    """Raster cover in the masthead aesthetic: paper background, ink type,
-    amber accent. Returns PNG bytes, or None if rendering is unavailable."""
+    """Raster cover in the masthead aesthetic: cool paper background, ink type,
+    pink→blue signature gradient accent. Returns PNG bytes, or None if
+    rendering is unavailable."""
     try:
         font_eyebrow = ImageFont.load_default(size=46)
         font_title = ImageFont.load_default(size=200)
@@ -57,11 +67,6 @@ def render_cover(
         img = Image.new("RGB", (WIDTH, HEIGHT), PAPER)
         draw = ImageDraw.Draw(img)
         inner = WIDTH - 2 * MARGIN
-
-        # registration marks
-        for x, y in ((MARGIN // 2, MARGIN // 2), (WIDTH - MARGIN // 2, MARGIN // 2)):
-            draw.line([(x - 18, y), (x + 18, y)], fill=INK, width=4)
-            draw.line([(x, y - 18), (x, y + 18)], fill=INK, width=4)
 
         y = 300
         draw.text((MARGIN, y), "RSS BOOKS", font=font_eyebrow, fill=INK)
@@ -77,13 +82,13 @@ def render_cover(
             y += 230
 
         y += 40
-        draw.rectangle([MARGIN, y, MARGIN + 320, y + 8], fill=AMBER)
+        _gradient_bar(draw, MARGIN, y, 320, 8)
         y += 70
         plural = "article" if article_count == 1 else "articles"
         draw.text((MARGIN, y), f"{date_str}  ·  {article_count} {plural}", font=font_meta, fill=INK)
 
         # source list anchored to the lower rule
-        rule_y = HEIGHT - 460
+        rule_y = HEIGHT - 520
         draw.rectangle([MARGIN, rule_y, WIDTH - MARGIN, rule_y + 6], fill=INK)
         sy = rule_y + 60
         draw.text((MARGIN, sy), "FROM", font=font_source, fill=INK_SOFT)
