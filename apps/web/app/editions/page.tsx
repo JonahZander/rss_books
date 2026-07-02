@@ -5,7 +5,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { EditionPreview } from "../../components/EditionPreview";
 import { Masthead } from "../../components/Masthead";
 import { useToast } from "../../components/Toasts";
-import { api, emailConfigured, type AppSettings, type Digest } from "../../lib/api";
+import { api, defaultProfileName, emailConfigured, type AppSettings, type Digest } from "../../lib/api";
 import { fmtDate, fmtSize } from "../../lib/format";
 
 const STATUS_LABEL: Record<Digest["status"], string> = {
@@ -22,6 +22,8 @@ export default function Editions() {
   const [deleteTarget, setDeleteTarget] = useState<Digest | null>(null);
   const [sendingId, setSendingId] = useState<number | null>(null);
   const [previewId, setPreviewId] = useState<number | null>(null);
+  const [recompileFor, setRecompileFor] = useState<number | null>(null);
+  const [recompiling, setRecompiling] = useState(false);
 
   const refresh = useCallback(async () => {
     setDigests(await api.listDigests());
@@ -54,6 +56,29 @@ export default function Editions() {
     } finally {
       setSendingId(null);
       await refresh();
+    }
+  };
+
+  const recompile = async (digest: Digest, profile: string | null) => {
+    setRecompileFor(null);
+    setRecompiling(true);
+    try {
+      const members = await api.listDigestArticles(digest.id);
+      if (members.length === 0) {
+        toast("Edition has no articles left to press", "error");
+        return;
+      }
+      await api.createDigest({
+        articleIds: members.map((m) => m.article_id),
+        split: "combined",
+        profiles: profile ? [profile] : undefined,
+      });
+      toast(`Pressing a new edition from ${digest.title}…`);
+      await refresh();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "recompile failed", "error");
+    } finally {
+      setRecompiling(false);
     }
   };
 
@@ -157,6 +182,48 @@ export default function Editions() {
                       <span className="btn-arrow">✉</span>
                     </button>
                   )}
+                  {d.status === "ready" &&
+                    (recompileFor === d.id ? (
+                      <span className="recompile-picker">
+                        {(settings?.profiles ?? []).map((p) => (
+                          <button
+                            key={p.name}
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            disabled={recompiling}
+                            onClick={() => void recompile(d, p.name)}
+                          >
+                            <span>{p.name}</span>
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="feed-tool"
+                          aria-label="Cancel recompile"
+                          onClick={() => setRecompileFor(null)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={recompiling}
+                        onClick={() => {
+                          const fallback = settings ? defaultProfileName(settings) : null;
+                          // One profile (or none) configured: nothing to choose.
+                          if (!settings || settings.profiles.length <= 1) {
+                            void recompile(d, fallback);
+                          } else {
+                            setRecompileFor(d.id);
+                          }
+                        }}
+                      >
+                        <span>Recompile</span>
+                        <span className="btn-arrow">↻</span>
+                      </button>
+                    ))}
                   <button
                     type="button"
                     className="feed-tool danger edition-delete"
