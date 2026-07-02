@@ -1,8 +1,9 @@
 # Design language
 
 The web UI is a **print shop, not a dashboard**: the metaphor is a newspaper
-composing room: registration marks, hairline rules, mono eyebrows, one accent
-ink. Contributions should read like they came off the same press.
+composing room: hairline rules, mono labels on data, one accent ink. The
+metaphor lives in structure and type, never in decoration; contributions
+should read like they came off the same press.
 
 ## Tokens
 
@@ -40,8 +41,8 @@ uppercase. Numbers are tabular (`tnum`) everywhere.
   rows with `--hairline`. Borders are structure, not decoration.
 - **One accent.** Amber means "queued / armed / scheduled". Don't introduce
   new accent colors; errors use `--danger` only.
-- **Registration marks.** `+` glyphs and `.corner-marks` corners on key
-  surfaces (masthead, forms, dialogs).
+- **No decorative marks.** No registration `+` glyphs, corner marks, fake
+  model numbers, or grid textures; ornament that organizes nothing is noise.
 - **Left-edge indicators.** Hover/active/queued states show as a 2px left
   bar (`::before`), ink for active, amber for queued.
 - **Numbers on data.** Indexes (`01/12`), counters, refs (`#0004`), all

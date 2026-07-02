@@ -112,26 +112,31 @@ export default function Settings() {
       <main className="page-main settings-main" aria-label="Settings">
         <div className="content-head">
           <div>
-            <span className="eyebrow">Configuration</span>
             <h2 className="content-title">Settings</h2>
           </div>
         </div>
 
-        <div className="settings-grid">
-          <section className="settings-card" aria-label="Appearance">
-            <p className="eyebrow eyebrow-ink">Appearance</p>
-            <p className="settings-hint">
-              The CRT scanline overlay is a purely visual texture, stored in this browser only.
-            </p>
-            <ScanlineToggle />
-          </section>
+        <div className="settings-layout">
+          <nav className="settings-nav" aria-label="Settings sections">
+            <a href="#delivery">Delivery</a>
+            <a href="#compiling">Compiling</a>
+            <a href="#library">Library</a>
+            <a href="#fetching">Fetching</a>
+            <a href="#appearance">Appearance</a>
+          </nav>
 
-          <section className="settings-card" aria-label="Email delivery">
-            <p className="eyebrow eyebrow-ink">Delivery · Send-to-Kindle email</p>
-            <p className="settings-hint">
-              Works for Kindle and PocketBook gateways, or any plain inbox.
-            </p>
-            <ol className="wizard">
+          <div className="settings-sections">
+            <section id="delivery" className="settings-section" aria-label="Delivery">
+              <h3 className="settings-section-title">Delivery</h3>
+
+              <div className="settings-subsection" aria-label="Email delivery">
+                <h4>Send-to-Kindle email</h4>
+                <p className="settings-hint">
+                  Works for Kindle and PocketBook gateways, or any plain inbox.
+                </p>
+                <details className="settings-help">
+                  <summary>How to set this up</summary>
+                  <ol className="wizard">
               <li>
                 Find your reader&apos;s address: Kindle owners: it&apos;s under{" "}
                 <a
@@ -154,10 +159,11 @@ export default function Settings() {
                 </a>
                 , add your <strong>From address</strong> to the approved senders list.
               </li>
-              <li>Send a test email. If it lands on the device, you&apos;re done.</li>
-            </ol>
+                    <li>Send a test email. If it lands on the device, you&apos;re done.</li>
+                  </ol>
+                </details>
 
-            <div className="field-grid">
+                <div className="field-grid">
               <label>
                 <span className="feed-form-label">SMTP host</span>
                 <input
@@ -273,21 +279,21 @@ export default function Settings() {
               <span>{testing ? "Sending…" : "Save & send test email"}</span>
               <span className="btn-arrow">✉</span>
             </button>
-          </section>
+              </div>
 
-          <section className="settings-card" aria-label="OPDS">
-            <p className="eyebrow eyebrow-ink">Delivery · OPDS catalog</p>
-            <p className="settings-hint">
-              For KOReader (incl. jailbroken Kindles), Xteink/CrossPoint, Kobo, Boox and Calibre:
-              add this catalog URL in the reader.
-            </p>
-            <code className="opds-url">{opdsBase}/opds</code>
-            <p className="settings-hint">
-              If your reader only accepts <strong>https://</strong> (e.g. Crosspoint), use the
-              TLS endpoint instead. It serves a self-signed certificate, so enable
-              &ldquo;skip/ignore certificate&rdquo; on the device if it offers it.
-            </p>
-            <code className="opds-url">{opdsHttpsBase}/opds</code>
+              <div className="settings-subsection" aria-label="OPDS">
+                <h4>OPDS catalog</h4>
+                <p className="settings-hint">
+                  For KOReader, Xteink/CrossPoint, Kobo, Boox and Calibre: add this catalog URL in
+                  the reader.
+                </p>
+                <code className="opds-url">{opdsBase}/opds</code>
+                <p className="settings-hint">
+                  Readers that only accept <strong>https://</strong> (e.g. Crosspoint) can use the
+                  TLS endpoint; its certificate is self-signed, so enable &ldquo;skip/ignore
+                  certificate&rdquo; on the device.
+                </p>
+                <code className="opds-url">{opdsHttpsBase}/opds</code>
             <label className="filter-toggle">
               <input
                 type="checkbox"
@@ -316,44 +322,22 @@ export default function Settings() {
                 </label>
               </div>
             )}
-            <p className="settings-hint">
-              Note: some reader firmwares don&apos;t support authenticated OPDS, so leave this off on
-              a trusted LAN.
-            </p>
-          </section>
+                <p className="settings-hint">
+                  Some reader firmwares don&apos;t support authenticated OPDS, so leave auth off on
+                  a trusted LAN.
+                </p>
+              </div>
+            </section>
 
-          <section className="settings-card" aria-label="Polling">
-            <p className="eyebrow eyebrow-ink">Polling</p>
-            <label className="filter-toggle">
-              <input
-                type="checkbox"
-                className="checkbox"
-                checked={settings.poll_enabled}
-                onChange={(e) => set("poll_enabled", e.target.checked)}
-              />
-              <span>Poll feeds automatically in the background</span>
-            </label>
-            <label>
-              <span className="feed-form-label">Default interval (minutes)</span>
-              <input
-                type="number"
-                min={1}
-                value={settings.default_poll_minutes}
-                onChange={(e) => set("default_poll_minutes", Number(e.target.value))}
-              />
-            </label>
-            <p className="settings-hint">
-              Failing feeds back off automatically (interval × 2 per failure, capped at 24 h) and
-              show a ▲ badge in the sidebar.
-            </p>
-          </section>
+            <section id="compiling" className="settings-section" aria-label="Compiling">
+              <h3 className="settings-section-title">Compiling</h3>
 
-          <section className="settings-card" aria-label="Press deadline">
-            <p className="eyebrow eyebrow-ink">Press deadline</p>
-            <p className="settings-hint">
-              At the deadline, everything in the queue is pressed into an edition automatically -
-              the Friday-paper ritual. The queue must be non-empty; you still pick every article.
-            </p>
+              <div className="settings-subsection" aria-label="Press deadline">
+                <h4>Press deadline</h4>
+                <p className="settings-hint">
+                  At the deadline, everything in the queue is pressed into an edition
+                  automatically. The queue must be non-empty; you still pick every article.
+                </p>
             <label className="filter-toggle">
               <input
                 type="checkbox"
@@ -440,15 +424,15 @@ export default function Settings() {
                 </p>
               </div>
             )}
-          </section>
+              </div>
 
-          <section className="settings-card" aria-label="Device profiles">
-            <p className="eyebrow eyebrow-ink">Device profiles</p>
-            <p className="settings-hint">
-              A profile bundles per-device rendering choices. The default profile is what
-              “Compile” presses unless you choose otherwise; each profile also gets its own OPDS
-              folder (<code>/opds/profiles/…</code>).
-            </p>
+              <div className="settings-subsection" aria-label="Device profiles">
+                <h4>Device profiles</h4>
+                <p className="settings-hint">
+                  A profile bundles per-device rendering choices. The default profile is what
+                  &ldquo;Compile&rdquo; presses unless you choose otherwise; each profile also gets
+                  its own OPDS folder (<code>/opds/profiles/…</code>).
+                </p>
             {settings.profiles.map((p, i) => (
               <div key={i} className="field-grid">
                 <label className="filter-toggle profile-default-toggle">
@@ -462,7 +446,7 @@ export default function Settings() {
                     }
                     onChange={() => set("default_profile", p.name)}
                   />
-                  <span>Default — “Compile” presses this profile unless you choose otherwise</span>
+                  <span>Default profile</span>
                 </label>
                 <label>
                   <span className="feed-form-label">Name</span>
@@ -559,15 +543,16 @@ export default function Settings() {
               <span>Add profile</span>
               <span className="btn-arrow">＋</span>
             </button>
-            <p className="settings-hint">
-              Pre-rendering tables as images helps readers with no table support (e.g. Xteink
-              X4); the rotated variant lays wide tables down the narrow screen. Existing editions
-              keep the profile they were pressed with.
-            </p>
-          </section>
+                <p className="settings-hint">
+                  Table pre-rendering helps readers with no table support; existing editions keep
+                  the profile they were pressed with.
+                </p>
+              </div>
+            </section>
 
-          <section className="settings-card" aria-label="Library">
-            <p className="eyebrow eyebrow-ink">Library</p>
+            <section id="library" className="settings-section" aria-label="Library">
+              <h3 className="settings-section-title">Library</h3>
+              <div className="settings-subsection">
             <label className="filter-toggle">
               <input
                 type="checkbox"
@@ -611,22 +596,47 @@ export default function Settings() {
                 <option value="all">All links in the article</option>
               </select>
             </label>
-            <p className="settings-hint">
-              Many e-readers can&apos;t open embedded links. Adding a QR code next to a link lets
-              you scan it with your phone instead. &ldquo;Article source links&rdquo; codes each
-              piece&apos;s &ldquo;Read the original&rdquo; link; &ldquo;All links&rdquo; also codes
-              every hyperlink in the body.
-            </p>
-          </section>
+                <p className="settings-hint">
+                  Many e-readers can&apos;t open embedded links; a QR code next to the link lets
+                  you scan it with your phone instead.
+                </p>
+              </div>
+            </section>
 
-          <section className="settings-card" aria-label="Reader fallback">
-            <p className="eyebrow eyebrow-ink">Article fetching · Reader fallback</p>
-            <p className="settings-hint">
-              Many sites block server-side fetches; Cloudflare and friends fingerprint the
-              connection itself, not just the user-agent. When the built-in fetch is blocked,
-              hand the link to an external reader service to pull the full text. Only used when
-              the direct fetch fails.
-            </p>
+            <section id="fetching" className="settings-section" aria-label="Fetching">
+              <h3 className="settings-section-title">Fetching</h3>
+
+              <div className="settings-subsection" aria-label="Polling">
+                <h4>Feed polling</h4>
+                <label className="filter-toggle">
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={settings.poll_enabled}
+                    onChange={(e) => set("poll_enabled", e.target.checked)}
+                  />
+                  <span>Poll feeds automatically in the background</span>
+                </label>
+                <label>
+                  <span className="feed-form-label">Default interval (minutes)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={settings.default_poll_minutes}
+                    onChange={(e) => set("default_poll_minutes", Number(e.target.value))}
+                  />
+                </label>
+                <p className="settings-hint">
+                  Failing feeds back off automatically and show a ▲ badge in the sidebar.
+                </p>
+              </div>
+
+              <div className="settings-subsection" aria-label="Reader fallback">
+                <h4>Reader fallback</h4>
+                <p className="settings-hint">
+                  Some sites block server-side fetches. When the built-in fetch fails, hand the
+                  link to an external reader service to pull the full text.
+                </p>
             <label>
               <span className="feed-form-label">Fallback service</span>
               <select
@@ -659,7 +669,19 @@ export default function Settings() {
                 fetch the page.
               </p>
             )}
-          </section>
+              </div>
+            </section>
+
+            <section id="appearance" className="settings-section" aria-label="Appearance">
+              <h3 className="settings-section-title">Appearance</h3>
+              <div className="settings-subsection">
+                <p className="settings-hint">
+                  The CRT scanline overlay is a purely visual texture, stored in this browser only.
+                </p>
+                <ScanlineToggle />
+              </div>
+            </section>
+          </div>
         </div>
 
         {dirty && (
