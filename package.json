@@ -1,5 +1,5 @@
 {
-  "name": "rss-kindle-selector",
+  "name": "rss-books",
   "private": true,
   "packageManager": "npm@11.11.0",
   "engines": { "node": "20.19.6" },

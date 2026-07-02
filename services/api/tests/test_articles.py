@@ -94,7 +94,7 @@ def test_user_agent_is_browser_shaped_and_shared():
     from rss_kindle.services import poller
 
     assert USER_AGENT.startswith("Mozilla/5.0")
-    assert "rss-kindle-selector" in USER_AGENT
+    assert "rss-books" in USER_AGENT
     assert poller.USER_AGENT == USER_AGENT
 
 

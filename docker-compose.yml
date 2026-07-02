@@ -1,5 +1,5 @@
 services:
-  rss-kindle-selector:
+  rss-books:
     build: .
     ports:
       - "8765:8765"   # plain HTTP — same-origin web UI

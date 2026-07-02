@@ -62,7 +62,7 @@ async def _check_auth(request: Request) -> None:
     raise HTTPException(
         status_code=401,
         detail="authentication required",
-        headers={"WWW-Authenticate": 'Basic realm="rss-kindle-selector"'},
+        headers={"WWW-Authenticate": 'Basic realm="rss-books"'},
     )
 
 
@@ -72,7 +72,7 @@ async def opds_root(request: Request) -> Response:
     base = str(request.base_url).rstrip("/")
 
     feed = _el(None, "feed")
-    _el(feed, "id", "urn:rss-kindle-selector:opds")
+    _el(feed, "id", "urn:rss-books:opds")
     _el(feed, "title", "RSS Books")
     _el(feed, "updated", _now_iso())
     _el(feed, "link", rel="self", href=f"{base}/opds", type=NAV_TYPE)
@@ -80,7 +80,7 @@ async def opds_root(request: Request) -> Response:
 
     entry = _el(feed, "entry")
     _el(entry, "title", "Editions")
-    _el(entry, "id", "urn:rss-kindle-selector:opds:digests")
+    _el(entry, "id", "urn:rss-books:opds:digests")
     _el(entry, "updated", _now_iso())
     _el(entry, "content", "Hand-pressed editions, newest first.", type="text")
     _el(entry, "link", rel="subsection", href=f"{base}/opds/digests", type=ACQ_TYPE)
@@ -91,7 +91,7 @@ async def opds_root(request: Request) -> Response:
     for p in settings.profiles:
         entry = _el(feed, "entry")
         _el(entry, "title", f"Editions — {p.name}")
-        _el(entry, "id", f"urn:rss-kindle-selector:opds:profile:{p.name}")
+        _el(entry, "id", f"urn:rss-books:opds:profile:{p.name}")
         _el(entry, "updated", _now_iso())
         _el(entry, "content", f"Editions pressed for {p.name}.", type="text")
         _el(
@@ -141,7 +141,7 @@ async def _acquisition_feed(
     for row in rows:
         entry = _el(feed, "entry")
         _el(entry, "title", f"Edition {row['title']}")
-        _el(entry, "id", f"urn:rss-kindle-selector:digest:{row['id']}")
+        _el(entry, "id", f"urn:rss-books:digest:{row['id']}")
         _el(entry, "updated", _row_iso(row["created_at"]))
         author = _el(entry, "author")
         _el(author, "name", "RSS Books")
@@ -165,7 +165,7 @@ async def opds_digests(request: Request) -> Response:
     await _check_auth(request)
     return await _acquisition_feed(
         request,
-        feed_id="urn:rss-kindle-selector:opds:digests",
+        feed_id="urn:rss-books:opds:digests",
         title="Editions",
         self_path="/opds/digests",
         profile=None,
@@ -182,7 +182,7 @@ async def opds_profile(name: str, request: Request) -> Response:
         raise HTTPException(status_code=404, detail="unknown render profile")
     return await _acquisition_feed(
         request,
-        feed_id=f"urn:rss-kindle-selector:opds:profile:{name}",
+        feed_id=f"urn:rss-books:opds:profile:{name}",
         title=f"Editions — {name}",
         self_path=f"/opds/profiles/{quote(name, safe='')}",
         profile=name,

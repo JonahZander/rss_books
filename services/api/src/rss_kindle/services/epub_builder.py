@@ -197,7 +197,7 @@ def _title_page_html(title: str, articles: list[DigestArticle]) -> str:
     source_word = "source" if len(sources) == 1 else "sources"
     return (
         '<section class="titlepage">'
-        '<p class="eyebrow">RSS / KINDLE SELECTOR &#8212; PRESSED EDITION</p>'
+        '<p class="eyebrow">RSS BOOKS &#8212; PRESSED EDITION</p>'
         f"<h1>{esc(title)}</h1>"
         f'<p class="edition-meta">{total} {article_word} &#183; '
         f"{len(sources)} {source_word}</p>"
@@ -261,7 +261,7 @@ def build_digest_epub(
     qr = _EpubQrEmbedder() if link_qr != "off" else None
     qr_all = link_qr == "all"
     book = epub.EpubBook()
-    book.set_identifier(identifier or f"urn:rss-kindle-selector:digest:{title}")
+    book.set_identifier(identifier or f"urn:rss-books:digest:{title}")
     book.set_title(f"{title} — Pressed Edition")
     book.set_language("en")
 

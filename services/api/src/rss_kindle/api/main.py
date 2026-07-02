@@ -62,7 +62,7 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         except Exception as exc:
             db_status = f"error: {exc}"
         try:
-            version = importlib.metadata.version("rss-kindle-api")
+            version = importlib.metadata.version("rss-books-api")
         except importlib.metadata.PackageNotFoundError:
             version = "unknown"
         return {

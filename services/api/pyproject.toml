@@ -1,5 +1,5 @@
 [project]
-name = "rss-kindle-api"
+name = "rss-books-api"
 version = "1.1.0"
 description = "FastAPI backend for the RSS Kindle Selector."
 requires-python = ">=3.12,<3.15"

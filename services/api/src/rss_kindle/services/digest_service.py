@@ -299,7 +299,7 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
             output_path=output,
             images=images,
             cover_png=cover_png,
-            identifier=f"urn:rss-kindle-selector:digest:{digest_id}",
+            identifier=f"urn:rss-books:digest:{digest_id}",
             link_qr=link_qr,
         )
 

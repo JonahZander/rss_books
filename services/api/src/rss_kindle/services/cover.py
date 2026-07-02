@@ -64,7 +64,7 @@ def render_cover(
             draw.line([(x, y - 18), (x, y + 18)], fill=INK, width=4)
 
         y = 300
-        draw.text((MARGIN, y), "RSS / KINDLE SELECTOR", font=font_eyebrow, fill=INK)
+        draw.text((MARGIN, y), "RSS BOOKS", font=font_eyebrow, fill=INK)
         draw.text(
             (MARGIN, y + 70), "A   P R E S S E D   E D I T I O N", font=font_eyebrow, fill=INK_SOFT
         )

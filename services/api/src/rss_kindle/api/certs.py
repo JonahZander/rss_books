@@ -35,7 +35,7 @@ def ensure_self_signed(
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "rss-kindle-selector")])
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "rss-books")])
 
     alt_names: list[x509.GeneralName] = [
         x509.DNSName("localhost"),
