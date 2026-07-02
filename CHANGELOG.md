@@ -43,6 +43,21 @@ Better article fetching, and a clearer triage desk.
   stored at poll time, so full-text feeds need no page fetch at all.
 - Masthead: nav links now read as interactive (hover/active affordance, rule
   separator), distinct from the static tagline.
+- **Default device profile**: Settings lets you mark one device profile as the
+  default, and the triage desk's compile button now names its target
+  (*"Compile · Kindle"*) instead of reading as a generic action. Profile and
+  edition-mode picks live behind a collapsed "Compilation options"
+  disclosure, and compiling can no longer silently fall back to legacy
+  settings from the UI.
+- Editions: any ready edition can be **recompiled** for a chosen device
+  profile; *Download* is promoted to the primary action, *Delete* demoted to
+  an icon-only affordance, profile/mode chips appear per row, and the
+  noisy *READY* chip is gone.
+- Triage: the add-feed and add-link forms collapse behind buttons instead of
+  sitting open by default, unread badges cap at *999+*, and the queue hint
+  copy reads more like plain language.
+- Settings: a sticky save bar with unsaved-changes detection replaces the
+  header save button.
 
 ## [1.1.0] - 2026-06-12
 

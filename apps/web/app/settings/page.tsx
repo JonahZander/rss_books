@@ -79,8 +79,9 @@ export default function Settings() {
   const testEmail = async () => {
     setTesting(true);
     try {
-      await api.putSettings(settings);
-      setSaved(settings);
+      const next = await api.putSettings(settings);
+      setSettings(next);
+      setSaved(next);
       const r = await api.testEmail();
       toast(`Test email sent to ${r.sent_to.join(", ")}`);
     } catch (e) {
