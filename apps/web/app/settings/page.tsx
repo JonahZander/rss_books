@@ -436,15 +436,37 @@ export default function Settings() {
           <section className="settings-card corner-marks" aria-label="Device profiles">
             <p className="eyebrow eyebrow-ink">Device profiles</p>
             <p className="settings-hint">
-              A profile bundles per-device rendering choices. Pick profiles when compiling to
-              press one edition per device, each gets its own OPDS folder
-              (<code>/opds/profiles/…</code>).
+              A profile bundles per-device rendering choices. The default profile is what
+              “Compile” presses unless you choose otherwise; each profile also gets its own OPDS
+              folder (<code>/opds/profiles/…</code>).
             </p>
             {settings.profiles.map((p, i) => (
               <div key={i} className="field-grid">
+                <label className="filter-toggle profile-default-toggle">
+                  <input
+                    type="radio"
+                    name="default-profile"
+                    className="checkbox"
+                    checked={
+                      settings.default_profile === p.name ||
+                      (settings.default_profile === "" && i === 0)
+                    }
+                    onChange={() => set("default_profile", p.name)}
+                  />
+                  <span>Default — “Compile” presses this profile unless you choose otherwise</span>
+                </label>
                 <label>
                   <span className="feed-form-label">Name</span>
-                  <input value={p.name} onChange={(e) => setProfile(i, { name: e.target.value })} />
+                  <input
+                    value={p.name}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      if (settings.default_profile === p.name) {
+                        set("default_profile", next);
+                      }
+                      setProfile(i, { name: next });
+                    }}
+                  />
                 </label>
                 <label>
                   <span className="feed-form-label">Link QR codes</span>
@@ -495,12 +517,15 @@ export default function Settings() {
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() =>
+                  onClick={() => {
+                    if (settings.default_profile === p.name) {
+                      set("default_profile", "");
+                    }
                     set(
                       "profiles",
                       settings.profiles.filter((_, j) => j !== i),
-                    )
-                  }
+                    );
+                  }}
                 >
                   <span>Remove profile</span>
                   <span className="btn-arrow">×</span>
