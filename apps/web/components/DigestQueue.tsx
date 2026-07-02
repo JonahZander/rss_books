@@ -61,6 +61,7 @@ export function DigestQueue({
   const toast = useToast();
   const [linkUrl, setLinkUrl] = useState("");
   const [addingLink, setAddingLink] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
   const [digests, setDigests] = useState<Digest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [compiling, setCompiling] = useState(false);
@@ -144,6 +145,7 @@ export function DigestQueue({
     try {
       await onAddLink(url);
       setLinkUrl("");
+      setLinkOpen(false);
       toast("Link added to queue");
     } catch (err) {
       toast(err instanceof Error ? err.message : "could not add link", "error");
@@ -182,7 +184,7 @@ export function DigestQueue({
         <div className="queue-count-sub">
           <span className="queue-count-label">Queued</span>
           <span className="queue-count-hint">
-            {count === 1 ? "article" : "articles"} · survives reload
+            {count === 1 ? "article" : "articles"} · saved on the server
           </span>
         </div>
       </div>
@@ -208,25 +210,36 @@ export function DigestQueue({
         </ol>
       )}
 
-      <form onSubmit={(e) => void addLink(e)} className="queue-link-form">
-        <label className="feed-form-label" htmlFor="queue-link">
-          Add a link
-        </label>
-        <div className="queue-link-row">
-          <input
-            id="queue-link"
-            type="url"
-            inputMode="url"
-            placeholder="https://example.com/article"
-            value={linkUrl}
-            onChange={(e) => setLinkUrl(e.target.value)}
-          />
-          <button type="submit" className="btn btn-ghost" disabled={addingLink || !linkUrl.trim()}>
-            <span>{addingLink ? "Adding…" : "Queue link"}</span>
-            <span className="btn-arrow">＋</span>
-          </button>
-        </div>
-      </form>
+      {linkOpen ? (
+        <form onSubmit={(e) => void addLink(e)} className="queue-link-form">
+          <label className="feed-form-label" htmlFor="queue-link">
+            Add a link
+          </label>
+          <div className="queue-link-row">
+            <input
+              id="queue-link"
+              type="url"
+              inputMode="url"
+              autoFocus
+              placeholder="https://example.com/article"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && !linkUrl.trim()) setLinkOpen(false);
+              }}
+            />
+            <button type="submit" className="btn btn-ghost" disabled={addingLink || !linkUrl.trim()}>
+              <span>{addingLink ? "Adding…" : "Queue link"}</span>
+              <span className="btn-arrow">＋</span>
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button type="button" className="btn btn-ghost" onClick={() => setLinkOpen(true)}>
+          <span>Add a link</span>
+          <span className="btn-arrow">＋</span>
+        </button>
+      )}
 
       <div className="queue-actions">
         <button
