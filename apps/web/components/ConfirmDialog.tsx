@@ -44,7 +44,7 @@ export function ConfirmDialog({
   return createPortal(
     <div className="dialog-overlay" onClick={onCancel}>
       <div
-        className="dialog corner-marks"
+        className="dialog"
         role="dialog"
         aria-modal="true"
         aria-label={title}

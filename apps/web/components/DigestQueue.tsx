@@ -37,7 +37,7 @@ function loadStoredProfiles(): string[] {
 function statusLabel(d: Digest): string {
   switch (d.status) {
     case "ready":
-      return "Ready · EPUB committed";
+      return "Ready · EPUB pressed";
     case "failed":
       return "Failed";
     case "generating":

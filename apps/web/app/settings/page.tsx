@@ -118,7 +118,7 @@ export default function Settings() {
         </div>
 
         <div className="settings-grid">
-          <section className="settings-card corner-marks" aria-label="Appearance">
+          <section className="settings-card" aria-label="Appearance">
             <p className="eyebrow eyebrow-ink">Appearance</p>
             <p className="settings-hint">
               The CRT scanline overlay is a purely visual texture, stored in this browser only.
@@ -126,7 +126,7 @@ export default function Settings() {
             <ScanlineToggle />
           </section>
 
-          <section className="settings-card corner-marks" aria-label="Email delivery">
+          <section className="settings-card" aria-label="Email delivery">
             <p className="eyebrow eyebrow-ink">Delivery · Send-to-Kindle email</p>
             <p className="settings-hint">
               Works for Kindle and PocketBook gateways, or any plain inbox.
@@ -275,7 +275,7 @@ export default function Settings() {
             </button>
           </section>
 
-          <section className="settings-card corner-marks" aria-label="OPDS">
+          <section className="settings-card" aria-label="OPDS">
             <p className="eyebrow eyebrow-ink">Delivery · OPDS catalog</p>
             <p className="settings-hint">
               For KOReader (incl. jailbroken Kindles), Xteink/CrossPoint, Kobo, Boox and Calibre:
@@ -322,7 +322,7 @@ export default function Settings() {
             </p>
           </section>
 
-          <section className="settings-card corner-marks" aria-label="Polling">
+          <section className="settings-card" aria-label="Polling">
             <p className="eyebrow eyebrow-ink">Polling</p>
             <label className="filter-toggle">
               <input
@@ -348,7 +348,7 @@ export default function Settings() {
             </p>
           </section>
 
-          <section className="settings-card corner-marks" aria-label="Press deadline">
+          <section className="settings-card" aria-label="Press deadline">
             <p className="eyebrow eyebrow-ink">Press deadline</p>
             <p className="settings-hint">
               At the deadline, everything in the queue is pressed into an edition automatically -
@@ -442,7 +442,7 @@ export default function Settings() {
             )}
           </section>
 
-          <section className="settings-card corner-marks" aria-label="Device profiles">
+          <section className="settings-card" aria-label="Device profiles">
             <p className="eyebrow eyebrow-ink">Device profiles</p>
             <p className="settings-hint">
               A profile bundles per-device rendering choices. The default profile is what
@@ -566,7 +566,7 @@ export default function Settings() {
             </p>
           </section>
 
-          <section className="settings-card corner-marks" aria-label="Library">
+          <section className="settings-card" aria-label="Library">
             <p className="eyebrow eyebrow-ink">Library</p>
             <label className="filter-toggle">
               <input
@@ -619,7 +619,7 @@ export default function Settings() {
             </p>
           </section>
 
-          <section className="settings-card corner-marks" aria-label="Reader fallback">
+          <section className="settings-card" aria-label="Reader fallback">
             <p className="eyebrow eyebrow-ink">Article fetching · Reader fallback</p>
             <p className="settings-hint">
               Many sites block server-side fetches; Cloudflare and friends fingerprint the

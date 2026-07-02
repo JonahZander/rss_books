@@ -86,7 +86,7 @@ export default function Home() {
   const addFeed = async (url: string, title: string) => {
     try {
       await api.addFeed(url, title);
-      toast(`Feed “${title}” committed`);
+      toast(`Feed “${title}” added`);
       await refreshFeeds();
     } catch (e) {
       toast(e instanceof Error ? e.message : "could not add feed", "error");

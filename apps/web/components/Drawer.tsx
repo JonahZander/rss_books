@@ -49,7 +49,7 @@ export function Drawer({
       <aside
         ref={panelRef}
         tabIndex={-1}
-        className="drawer corner-marks"
+        className="drawer"
         role="dialog"
         aria-modal="true"
         aria-label={title}

@@ -52,11 +52,6 @@ export function Masthead({ readouts }: Props) {
           RSS <span className="brand-accent">Books</span>
         </h1>
         <div className="masthead-sub">
-          <span className="masthead-tagline">
-            <span>Model&nbsp;RB&#8209;01</span>
-            <span className="dot" aria-hidden />
-            <span>Self&#8209;hosted book press</span>
-          </span>
           <nav className="masthead-nav" aria-label="Primary">
             {NAV.map((item) => (
               <Link

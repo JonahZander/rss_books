@@ -164,7 +164,7 @@ export function FeedSidebar({
       setNewGroupName("");
       setAddingGroup(false);
       await onChanged();
-      toast(`Group “${name}” committed`);
+      toast(`Group “${name}” created`);
     } catch (e) {
       toast(e instanceof Error ? e.message : "could not add group", "error");
     }
@@ -452,8 +452,8 @@ export function FeedSidebar({
       </button>
 
       {addingFeed ? (
-        <form onSubmit={submit} className="feed-form corner-marks">
-          <span className="eyebrow eyebrow-ink">Commit new feed</span>
+        <form onSubmit={submit} className="feed-form">
+          <span className="eyebrow eyebrow-ink">Add a feed</span>
           <div>
             <label className="feed-form-label" htmlFor="feed-url">
               URL
@@ -486,7 +486,7 @@ export function FeedSidebar({
             />
           </div>
           <button type="submit" className="btn" disabled={busy}>
-            <span>{busy ? "Committing…" : "Commit feed"}</span>
+            <span>{busy ? "Adding…" : "Add feed"}</span>
             <span className="btn-arrow">→</span>
           </button>
         </form>
