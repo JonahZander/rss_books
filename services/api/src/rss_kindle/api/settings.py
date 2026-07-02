@@ -21,6 +21,13 @@ async def read_settings(request: Request) -> AppSettings:
 
 @router.put("", response_model=AppSettings)
 async def write_settings(payload: AppSettings, request: Request) -> AppSettings:
+    if payload.default_profile and payload.default_profile not in {
+        p.name for p in payload.profiles
+    }:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown default profile: {payload.default_profile!r}",
+        )
     db = request.app.state.db
     await save_app_settings(db, payload)
     return await get_app_settings(db)

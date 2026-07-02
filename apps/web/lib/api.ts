@@ -110,6 +110,8 @@ export type AppSettings = {
   deadline_time: string;
   deadline_split: "combined" | "per_group";
   deadline_profiles: string[];
+  /** Compile-UI default render profile; "" or a stale name = first profile. */
+  default_profile: string;
   profiles: RenderProfile[];
 };
 
@@ -295,4 +297,11 @@ export const api = {
 
 export function emailConfigured(s: AppSettings): boolean {
   return Boolean(s.smtp_host && s.smtp_from && s.send_to.length > 0);
+}
+
+/** The profile the compile UI preselects: the named one if it still exists,
+ * else the first profile, else null (no profiles configured). */
+export function defaultProfileName(s: AppSettings): string | null {
+  const named = s.profiles.find((p) => p.name === s.default_profile);
+  return named?.name ?? s.profiles[0]?.name ?? null;
 }

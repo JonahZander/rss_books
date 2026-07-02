@@ -78,3 +78,22 @@ def test_deadline_split_roundtrip(tmp_path):
         s["deadline_split"] = "per_group"
         assert client.put("/api/settings", json=s).status_code == 200
         assert client.get("/api/settings").json()["deadline_split"] == "per_group"
+
+
+def test_default_profile_roundtrip(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        s = client.get("/api/settings").json()
+        assert s["default_profile"] == ""
+        s["default_profile"] = "Kindle"  # exists in default_profiles()
+        r = client.put("/api/settings", json=s)
+        assert r.status_code == 200
+        assert client.get("/api/settings").json()["default_profile"] == "Kindle"
+
+
+def test_unknown_default_profile_rejected(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        s = client.get("/api/settings").json()
+        s["default_profile"] = "No Such Device"
+        assert client.put("/api/settings", json=s).status_code == 400

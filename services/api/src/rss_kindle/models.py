@@ -191,6 +191,10 @@ class AppSettings(BaseModel):
     # Device rendering profiles. Editing/removing a profile never rewrites
     # history: digests snapshot the profile name at press time and generation
     # falls back to legacy settings if the name no longer resolves.
+    # Name of the render profile the compile UI preselects. "" (or a name that
+    # no longer resolves) means "the first profile". The backend never applies
+    # this itself: DigestCreate.profiles=None still means legacy settings.
+    default_profile: str = ""
     profiles: list[RenderProfile] = Field(default_factory=default_profiles)
 
 
