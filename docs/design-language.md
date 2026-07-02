@@ -20,8 +20,7 @@ ink. Contributions should read like they came off the same press.
 | `--amber` | `#c97a1e` | The single accent: queue state, active nav, deadlines |
 | `--danger` | `#a03a2a` | Errors, destructive actions |
 
-The dotted-grid paper texture (`radial-gradient`, 24px) sits on `body` and
-should show through panels.
+The body background is plain paper — no grid/texture overlays.
 
 ## Type
 
@@ -45,8 +44,9 @@ uppercase. Numbers are tabular (`tnum`) everywhere.
   surfaces (masthead, forms, dialogs).
 - **Left-edge indicators.** Hover/active/queued states show as a 2px left
   bar (`::before`), ink for active, amber for queued.
-- **Numbers everywhere.** Indexes (`01/12`), counters, refs (`#0004`), all
-  padded, mono, tabular.
+- **Numbers on data.** Indexes (`01/12`), counters, refs (`#0004`), all
+  padded, mono, tabular — but section eyebrows are plain labels, never
+  numbered ("Configuration", not "05 - Configuration").
 
 ## Motion
 
