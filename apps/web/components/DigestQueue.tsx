@@ -176,7 +176,7 @@ export function DigestQueue({
   return (
     <section className="digest-queue" aria-label="Digest queue">
       <div className="section-head">
-        <span className="eyebrow eyebrow-ink">03 - Dispatch / Digest</span>
+        <span className="eyebrow eyebrow-ink">Dispatch / Digest</span>
       </div>
 
       <div className="queue-readout">

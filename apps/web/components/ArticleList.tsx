@@ -155,7 +155,7 @@ export function ArticleList({
     <div>
       <div className="content-head">
         <div>
-          <span className="eyebrow">02 - Dispatch · {ymd()}</span>
+          <span className="eyebrow">Dispatch · {ymd()}</span>
           <h2 className="content-title">{title}</h2>
         </div>
         <div className="content-meta">

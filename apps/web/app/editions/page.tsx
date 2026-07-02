@@ -103,7 +103,7 @@ export default function Editions() {
       <main className="page-main" aria-label="Editions">
         <div className="content-head">
           <div>
-            <span className="eyebrow">04 - Pressed editions</span>
+            <span className="eyebrow">Pressed editions</span>
             <h2 className="content-title">Editions</h2>
           </div>
           <div className="content-meta">

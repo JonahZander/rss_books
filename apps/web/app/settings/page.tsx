@@ -112,7 +112,7 @@ export default function Settings() {
       <main className="page-main settings-main" aria-label="Settings">
         <div className="content-head">
           <div>
-            <span className="eyebrow">05 - Configuration</span>
+            <span className="eyebrow">Configuration</span>
             <h2 className="content-title">Settings</h2>
           </div>
         </div>

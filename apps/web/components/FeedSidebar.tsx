@@ -401,7 +401,7 @@ export function FeedSidebar({
   return (
     <aside className="feed-sidebar" aria-label="Feeds">
       <div className="section-head">
-        <span className="eyebrow eyebrow-ink">00 - Index / Feeds</span>
+        <span className="eyebrow eyebrow-ink">Index / Feeds</span>
         <span className="counter">{pad2(feeds.length)}</span>
       </div>
 
@@ -453,7 +453,7 @@ export function FeedSidebar({
 
       {addingFeed ? (
         <form onSubmit={submit} className="feed-form corner-marks">
-          <span className="eyebrow eyebrow-ink">01 - Commit new feed</span>
+          <span className="eyebrow eyebrow-ink">Commit new feed</span>
           <div>
             <label className="feed-form-label" htmlFor="feed-url">
               URL
