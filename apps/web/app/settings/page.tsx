@@ -483,30 +483,49 @@ export default function Settings() {
                     }
                   >
                     <option value="native">Native HTML tables</option>
-                    <option value="image">Render as image</option>
-                    <option value="image_rotated">Render as image, rotated 90°</option>
+                    <option value="image">Render as image (auto-rotated to fit)</option>
                   </select>
                 </label>
-                {p.table_mode !== "native" && (
-                  <label>
-                    <span className="feed-form-label">Table aspect cap (W:H)</span>
-                    <select
-                      value={p.table_aspect}
+                <label>
+                  <span className="feed-form-label">Screen size (px, optional)</span>
+                  <span className="settings-inline-inputs">
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="width"
+                      value={p.screen_width ?? ""}
                       onChange={(e) =>
                         setProfile(i, {
-                          table_aspect: e.target.value as RenderProfile["table_aspect"],
+                          screen_width: e.target.value ? Number(e.target.value) : null,
                         })
                       }
-                    >
-                      <option value="auto">Auto (never split)</option>
-                      <option value="4:3">4:3 (landscape)</option>
-                      <option value="1:1">1:1 (square)</option>
-                      <option value="3:4">3:4 (portrait)</option>
-                      <option value="3:5">3:5 (tall portrait, Xteink X4)</option>
-                      <option value="9:16">9:16 (phone-tall)</option>
-                    </select>
-                  </label>
-                )}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="height"
+                      value={p.screen_height ?? ""}
+                      onChange={(e) =>
+                        setProfile(i, {
+                          screen_height: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                    />
+                  </span>
+                </label>
+                <label>
+                  <span className="feed-form-label">Code blocks</span>
+                  <select
+                    value={p.code_mode}
+                    onChange={(e) =>
+                      setProfile(i, { code_mode: e.target.value as RenderProfile["code_mode"] })
+                    }
+                  >
+                    <option value="native">Native &lt;pre&gt; (most readers)</option>
+                    <option value="br">Baked-in line breaks</option>
+                    <option value="image">Render as image (Xteink X4)</option>
+                  </select>
+                </label>
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
@@ -535,7 +554,9 @@ export default function Settings() {
                     name: "New device",
                     link_qr: "articles",
                     table_mode: "native",
-                    table_aspect: "auto",
+                    code_mode: "native",
+                    screen_width: null,
+                    screen_height: null,
                   },
                 ])
               }
@@ -544,8 +565,10 @@ export default function Settings() {
               <span className="btn-arrow">＋</span>
             </button>
                 <p className="settings-hint">
-                  Table pre-rendering helps readers with no table support; existing editions keep
-                  the profile they were pressed with.
+                  Table/code pre-rendering helps readers with no CSS support. With a screen size
+                  set, images are fitted to the device: wide blocks rotate 90°, tall ones split
+                  into screen-shaped parts, photos downscale to 2× screen width. Existing editions
+                  keep the profile they were pressed with.
                 </p>
               </div>
             </section>

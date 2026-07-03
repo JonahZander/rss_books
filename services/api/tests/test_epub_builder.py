@@ -54,12 +54,12 @@ def _build(tmp_path: Path, with_cover: bool = True) -> Path:
             article_count=3,
             sources=["Feed One", "Feed Two"],
         )
-        assert cover is not None and cover[:8] == b"\x89PNG\r\n\x1a\n"
+        assert cover is not None and cover[:2] == b"\xff\xd8"  # JPEG
     return build_digest_epub(
         title="2026-06-11",
         articles=articles,
         images=images,
-        cover_png=cover,
+        cover_image=cover,
         output_path=tmp_path / "d.epub",
     )
 
@@ -73,7 +73,7 @@ def test_epub_structure(tmp_path: Path) -> None:
         assert any(n.endswith("nav.xhtml") for n in names)
         assert "EPUB/style/digest.css" in names
         assert "EPUB/images/img_001.jpg" in names
-        assert "EPUB/cover.png" in names
+        assert "EPUB/cover.jpg" in names
         assert "EPUB/title.xhtml" in names
         assert "EPUB/colophon.xhtml" in names
 
@@ -106,8 +106,25 @@ def test_epub_structure(tmp_path: Path) -> None:
 def test_epub_without_cover_still_builds(tmp_path: Path) -> None:
     out = _build(tmp_path, with_cover=False)
     with zipfile.ZipFile(out) as z:
-        assert "EPUB/cover.png" not in z.namelist()
+        assert "EPUB/cover.jpg" not in z.namelist()
         assert "EPUB/chap_001.xhtml" in z.namelist()
+
+
+def test_cover_is_low_res_jpeg() -> None:
+    # budget e-ink decoders (Xteink X4) silently drop the old 1600x2560 PNG;
+    # ship the same shape at decoder-friendly resolution, JPEG like every
+    # other image in the book
+    import io
+
+    from PIL import Image
+
+    cover = render_cover(
+        title="2026-06-11", date_str="2026-06-11", article_count=3, sources=["A", "B"]
+    )
+    assert cover is not None
+    assert cover[:2] == b"\xff\xd8"
+    img = Image.open(io.BytesIO(cover))
+    assert img.size == (1200, 1920)
 
 
 def test_reading_minutes() -> None:

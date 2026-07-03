@@ -14,6 +14,7 @@ PINK = (255, 77, 157)
 BLUE = (61, 139, 255)
 
 WIDTH, HEIGHT = 1600, 2560
+OUT_WIDTH, OUT_HEIGHT = 1200, 1920
 MARGIN = 140
 
 
@@ -99,8 +100,13 @@ def render_cover(
         if len(sources) > 5:
             draw.text((MARGIN, sy), f"+ {len(sources) - 5} MORE", font=font_source, fill=INK_SOFT)
 
+        # Drawn at 1600x2560 for crisp type, shipped at 1200x1920 JPEG: budget
+        # e-ink decoders (Xteink X4) silently drop the full-size PNG, and JPEG
+        # matches every other image in the book. Kindle's cover ceiling is
+        # 1600x2560, so the smaller size is safe everywhere.
+        img = img.resize((OUT_WIDTH, OUT_HEIGHT), Image.Resampling.LANCZOS)
         buf = BytesIO()
-        img.save(buf, format="PNG", optimize=True)
+        img.save(buf, format="JPEG", quality=85, optimize=True)
         return buf.getvalue()
     except Exception:
         logger.exception("cover render failed; edition ships without a cover")

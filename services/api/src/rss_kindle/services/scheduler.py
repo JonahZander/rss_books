@@ -14,6 +14,7 @@ from rss_kindle.config import make_http_client
 from rss_kindle.db import Database
 from rss_kindle.models import AppSettings
 from rss_kindle.services.digest_service import create_digest_records, generate_digest
+from rss_kindle.services.image_pipeline import image_cache_dir, prune_image_cache
 from rss_kindle.services.poller import poll_feed
 from rss_kindle.services.saved_links import NOT_SAVED_LINKS
 from rss_kindle.services.settings_store import get_app_settings, get_value, set_value
@@ -163,6 +164,11 @@ class Scheduler:
                 deleted,
                 settings.retention_days,
             )
+        pruned = prune_image_cache(
+            image_cache_dir(self.epub_dir), max_age_days=settings.retention_days
+        )
+        if pruned:
+            logger.info("retention: pruned %d cached images", pruned)
 
     async def run(self, stop: asyncio.Event) -> None:
         # startup jitter so several instances (or quick restarts) don't

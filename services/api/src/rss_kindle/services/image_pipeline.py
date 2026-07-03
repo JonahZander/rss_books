@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 import html as html_lib
 import logging
+import os
 import re
+import stat
+import time
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import Path
 from urllib.parse import urljoin
 
 import httpx
@@ -22,6 +27,34 @@ class DigestImage:
     filename: str
     media_type: str
     data: bytes
+
+
+def image_cache_dir(epub_dir: Path) -> Path:
+    """The on-disk image cache lives beside the EPUBs it feeds; the dot name
+    keeps it out of anything that globs the directory for editions."""
+    return epub_dir / ".image_cache"
+
+
+def _cache_path(cache_dir: Path, url: str) -> Path:
+    return cache_dir / (hashlib.sha256(url.encode()).hexdigest() + ".bin")
+
+
+def prune_image_cache(cache_dir: Path, *, max_age_days: int) -> int:
+    """Delete cached images untouched for more than `max_age_days`; returns
+    the number removed. Cache hits refresh mtime, so in-use images survive."""
+    if not cache_dir.is_dir():
+        return 0
+    cutoff = time.time() - max_age_days * 86400
+    removed = 0
+    for path in cache_dir.iterdir():
+        try:
+            st = path.stat()
+            if stat.S_ISREG(st.st_mode) and st.st_mtime < cutoff:
+                path.unlink()
+                removed += 1
+        except OSError:
+            continue
+    return removed
 
 
 def _recompress(data: bytes, *, max_width: int, jpeg_quality: int) -> tuple[bytes, str, str]:
@@ -51,6 +84,7 @@ async def prepare_images(
     max_width: int = 1200,
     jpeg_quality: int = 75,
     per_article_budget: int = 10 * 2**20,
+    cache_dir: Path | None = None,
 ) -> tuple[list[str], dict[str, DigestImage]]:
     """Download, downscale and pack the images referenced by digest articles.
 
@@ -58,19 +92,55 @@ async def prepare_images(
     sources rewritten to packed `images/img_NNN.*` paths, plus the images
     keyed by resolved source URL. Images that fail to fetch/decode or blow
     the per-article byte budget are dropped (their tags removed).
+
+    With `cache_dir`, original image bytes are cached on disk keyed by URL,
+    so recompiling an edition needs no network. Cache hits refresh the file
+    mtime; `prune_image_cache` evicts by age. Failures are never cached.
     """
     fetched: dict[str, tuple[bytes, str, str] | None] = {}
     packed: dict[str, DigestImage] = {}
     rewritten: list[str] = []
+
+    def read_cache(url: str) -> bytes | None:
+        if cache_dir is None:
+            return None
+        path = _cache_path(cache_dir, url)
+        try:
+            data = path.read_bytes()
+            os.utime(path)
+            return data
+        except OSError:
+            return None
+
+    cache_dir_ready = False
+
+    def write_cache(url: str, data: bytes) -> None:
+        nonlocal cache_dir_ready
+        if cache_dir is None:
+            return
+        try:
+            if not cache_dir_ready:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                cache_dir_ready = True
+            _cache_path(cache_dir, url).write_bytes(data)
+        except OSError as exc:
+            logger.warning("image cache write failed (%s): %s", url, exc)
 
     async def fetch(url: str) -> tuple[bytes, str, str] | None:
         if url in fetched:
             return fetched[url]
         result: tuple[bytes, str, str] | None = None
         try:
-            r = await client.get(url)
-            r.raise_for_status()
-            result = _recompress(r.content, max_width=max_width, jpeg_quality=jpeg_quality)
+            original = read_cache(url)
+            downloaded = original is None
+            if original is None:
+                r = await client.get(url)
+                r.raise_for_status()
+                original = r.content
+            result = _recompress(original, max_width=max_width, jpeg_quality=jpeg_quality)
+            if downloaded:
+                # only after _recompress proved the bytes decodable
+                write_cache(url, original)
         except Exception as exc:
             logger.warning("image dropped (%s): %s", url, exc)
         fetched[url] = result

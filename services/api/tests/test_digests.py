@@ -326,6 +326,46 @@ def test_batch_remove_articles_rebuilds_once(tmp_path, monkeypatch):
         assert r.json()["status"] == "failed"
 
 
+def test_compile_writes_image_cache(tmp_path, monkeypatch):
+    from io import BytesIO
+
+    import httpx
+    from PIL import Image
+
+    epub_dir = tmp_path / "epubs"
+    monkeypatch.setenv("EPUB_DIR", str(epub_dir))
+
+    buf = BytesIO()
+    Image.new("RGB", (40, 20), (10, 20, 30)).save(buf, format="PNG")
+    png = buf.getvalue()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=png, headers={"content-type": "image/png"})
+
+    def fake_client(**overrides):
+        return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        urls = [a["url"] for a in client.get("/api/articles").json()]
+        body = '<p>text</p><img src="https://img.example/pic.png" alt="">'
+        with (
+            patch(
+                "rss_kindle.services.digest_service.fetch_many",
+                new=_patched_fetch({u: body for u in urls}),
+            ),
+            patch("rss_kindle.services.digest_service.make_http_client", new=fake_client),
+        ):
+            digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
+            assert _wait_settled(client, digest_id)["status"] == "ready"
+
+        cache_dir = epub_dir / ".image_cache"
+        cached = list(cache_dir.iterdir())
+        assert len(cached) == 1
+        assert cached[0].read_bytes() == png
+
+
 def test_preview_renders_edition_html(tmp_path, monkeypatch):
     monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
     app = create_app(db_path=tmp_path / "t.db")

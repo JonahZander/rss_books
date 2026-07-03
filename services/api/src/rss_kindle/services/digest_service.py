@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -13,10 +14,15 @@ from rss_kindle.services.article_fetcher import fetch_many
 from rss_kindle.services.cover import render_cover
 from rss_kindle.services.emailer import send_digest_and_record
 from rss_kindle.services.epub_builder import DigestArticle, LinkQr, build_digest_epub
-from rss_kindle.services.image_pipeline import DigestImage, prepare_images
+from rss_kindle.services.image_pipeline import DigestImage, image_cache_dir, prepare_images
 from rss_kindle.services.sanitizer import sanitize
 from rss_kindle.services.settings_store import get_app_settings
-from rss_kindle.services.table_renderer import tables_to_images
+from rss_kindle.services.table_renderer import (
+    SUPERSAMPLE,
+    pre_to_br,
+    pre_to_images,
+    tables_to_images,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -260,30 +266,45 @@ def _resolve_profile(app_settings: AppSettings, name: str | None) -> RenderProfi
 
 
 async def _render_bodies(
-    articles: list[DigestArticle], profile: RenderProfile | None
+    articles: list[DigestArticle], profile: RenderProfile | None, epub_dir: Path
 ) -> dict[str, DigestImage]:
-    """Rewrite article HTML through the image pipeline (and table pre-rendering,
-    when the profile asks for it); returns the images to embed in the EPUB."""
+    """Rewrite article HTML through the image pipeline (and table/code
+    pre-rendering, when the profile asks for it); returns the images to embed
+    in the EPUB. A profile with screen dimensions gets photos recompressed to
+    2x its screen width and table/code images fitted to its screen."""
+    screen = profile.screen if profile else None
+    max_width = SUPERSAMPLE * screen[0] if screen else 1200
     async with make_http_client() as client:
-        rewritten, images = await prepare_images([(a.html, a.url) for a in articles], client)
+        rewritten, images = await prepare_images(
+            [(a.html, a.url) for a in articles],
+            client,
+            max_width=max_width,
+            cache_dir=image_cache_dir(epub_dir),
+        )
     for art, new_html in zip(articles, rewritten, strict=True):
         art.html = new_html
 
+    def rasterize_blocks(
+        renderer: Callable[..., tuple[str, dict[str, DigestImage]]],
+    ) -> None:
+        rendered: dict[str, DigestImage] = {}
+        for art in articles:
+            art.html, new_images = renderer(
+                art.html, screen=screen, start_index=len(rendered) + 1
+            )
+            rendered.update(new_images)
+        images.update(rendered)
+
+    if profile and profile.code_mode == "br":
+        for art in articles:
+            art.html = pre_to_br(art.html)
+    elif profile and profile.code_mode == "image":
+        rasterize_blocks(pre_to_images)
+
     # Table pre-rendering runs after the image pipeline so the injected
     # tables/… img references are never mistaken for remote URLs to fetch.
-    table_mode = profile.table_mode if profile else "native"
-    if table_mode in ("image", "image_rotated"):
-        rotate = table_mode == "image_rotated"
-        table_images: dict[str, DigestImage] = {}
-        for art in articles:
-            art.html, new_images = tables_to_images(
-                art.html,
-                rotate=rotate,
-                aspect=profile.table_aspect if profile else "auto",
-                start_index=len(table_images) + 1,
-            )
-            table_images.update(new_images)
-        images.update(table_images)
+    if profile and profile.table_mode == "image":
+        rasterize_blocks(tables_to_images)
     return images
 
 
@@ -297,7 +318,7 @@ def _build_epub(
 ) -> Path:
     """Render the cover and write the EPUB file; returns its path."""
     sources = list(dict.fromkeys(a.source for a in articles))
-    cover_png = render_cover(
+    cover_image = render_cover(
         title=title,
         date_str=date.today().isoformat(),
         article_count=len(articles),
@@ -309,7 +330,7 @@ def _build_epub(
         articles=articles,
         output_path=output,
         images=images,
-        cover_png=cover_png,
+        cover_image=cover_image,
         identifier=f"urn:rss-books:digest:{digest_id}",
         link_qr=link_qr,
     )
@@ -370,7 +391,7 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
         profile = _resolve_profile(app_settings, d["profile"])
         link_qr = profile.link_qr if profile else app_settings.link_qr
 
-        images = await _render_bodies(articles, profile)
+        images = await _render_bodies(articles, profile, epub_dir)
         output = _build_epub(digest_id, d["title"], articles, images, epub_dir, link_qr)
 
         size_bytes = await _persist_ready(db, digest_id, output, member_outcomes)

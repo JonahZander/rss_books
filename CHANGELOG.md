@@ -18,6 +18,28 @@ Better article fetching, and a clearer triage desk.
   / `TAVILY_API_KEY` env vars. The provider-registry pattern is adapted from
   [hermes-agent](https://github.com/NousResearch/hermes-agent) (MIT, © 2025 Nous
   Research).
+- **On-disk image cache**: compiling an edition now caches the original image
+  bytes under `EPUB_DIR/.image_cache` (keyed by URL), so recompiling or pressing
+  another copy of the same articles needs no network — and images that have
+  since rotted or gone unreachable still make it into the book. Cache hits
+  refresh the file's timestamp; daily retention prunes entries untouched for
+  longer than the article-retention window.
+- **Code-block mode per render profile** (`code_mode`): "image" rasterizes
+  each `<pre>` block to a PNG (drawn at natural width so short blocks stay
+  readable, long lines hard-wrapped), and "br" bakes line structure in as
+  `<br/>` with non-breaking indentation. On-device testing showed the Xteink
+  X4 engine ignores CSS and legacy size tags and clips oversized tokens, so
+  every text-based strategy fails there — its preset defaults to "image";
+  everything else keeps native `<pre>`.
+- **Device screen dimensions per render profile** (`screen_width`/
+  `screen_height`): when set, table and code images are fitted to the device
+  — drawn at 2× screen pixels so the reader's downscale stays crisp, blocks
+  wider than the portrait budget auto-rotate 90° to use the long screen edge,
+  taller blocks split into screen-shaped chunks, and article photos are
+  recompressed to 2× screen width instead of the global 1200px. This replaces
+  the manual "rotated" table mode and the `table_aspect` option (stored
+  profiles migrate automatically: `image_rotated` coerces to `image`,
+  `table_aspect` is ignored).
 - **Article lifecycle states** on the triage desk (*new → seen → queued → in
   edition*), replacing the binary read flag, so a quick preview no longer reads
   as "done" (`Article.state`, computed server-side).
@@ -58,6 +80,27 @@ Better article fetching, and a clearer triage desk.
   copy reads more like plain language.
 - Settings: a sticky save bar with unsaved-changes detection replaces the
   header save button.
+- **Covers ship as 1200×1920 JPEG** (drawn at 1600×2560, downscaled) instead
+  of a 4-megapixel PNG, which budget e-ink decoders (Xteink X4) silently
+  refused to display; still within Kindle's recommended cover size.
+
+- **Rotated blocks turn clockwise**: wide tables and code images that
+  auto-rotate now read top-to-bottom when the device is tilted left, with the
+  beginning of the block first (previously counter-clockwise, which put the
+  start at the wrong end).
+- **Code images use a bundled compact monospace font** (Ubuntu Mono, Ubuntu
+  Font Licence) instead of the proportional UI font, so indentation and
+  ASCII diagrams align.
+
+### Fixed
+
+- Table images: single tokens wider than their column (long model names,
+  URLs) are now hard-broken at character level instead of painting across the
+  neighbouring column.
+- Code blocks inside table cells are no longer ripped out by the code-image
+  pass before the table is rasterized — their text now stays in the cell, so
+  table images stop showing truncated sentences and orphaned commas where
+  inline code used to be.
 
 ## [1.1.0] - 2026-06-12
 

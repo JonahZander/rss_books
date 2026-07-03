@@ -85,14 +85,18 @@ class ArticleDetail(Article):
 
 # How <table> markup ships in an edition: "native" keeps HTML tables (best on
 # capable readers), "image" pre-renders each sizeable table to a PNG (for
-# readers with no CSS table support, e.g. the Xteink X4), "image_rotated"
-# additionally turns the PNG 90° so wide tables read down a narrow screen.
-TableMode = Literal["native", "image", "image_rotated"]
+# readers with no CSS table support, e.g. the Xteink X4). Orientation and
+# splitting are decided automatically from the profile's screen dimensions:
+# tables wider than the portrait budget rotate 90°, taller ones split into
+# screen-shaped chunks.
+TableMode = Literal["native", "image"]
 
-# Width:height cap for each pre-rendered table image, roughly the device
-# screen's shape. "auto" never splits; otherwise a table taller than the cap is
-# split by rows into several images, each repeating the header row.
-TableAspect = Literal["auto", "4:3", "1:1", "3:4", "3:5", "9:16"]
+# How code blocks ship: "native" keeps <pre> (engines with real CSS support);
+# "br" bakes the line structure in as <br/> + non-breaking indent; "image"
+# rasterizes each block to a PNG for engines that ignore CSS, collapse <pre>
+# whitespace AND clip oversized tokens (the Xteink X4 reader needs "image" -
+# device testing showed every text-based strategy fails there).
+CodeMode = Literal["native", "br", "image"]
 
 
 class RenderProfile(BaseModel):
@@ -103,19 +107,41 @@ class RenderProfile(BaseModel):
     name: str
     link_qr: Literal["off", "articles", "all"] = "articles"
     table_mode: TableMode = "native"
-    table_aspect: TableAspect = "auto"
+    code_mode: CodeMode = "native"
+    # Device screen in pixels; when both are set, table/code images are drawn
+    # fitted to the screen (auto-rotation, screen-shaped splitting) and photos
+    # are recompressed to 2x screen width instead of the global 1200px.
+    screen_width: int | None = Field(default=None, gt=0)
+    screen_height: int | None = Field(default=None, gt=0)
 
     @field_validator("name")
     @classmethod
     def _strip_name(cls, v: str) -> str:
         return _strip_required(v)
 
+    @field_validator("table_mode", mode="before")
+    @classmethod
+    def _coerce_legacy_rotated(cls, v: object) -> object:
+        # profiles stored before auto-rotation carry "image_rotated"
+        return "image" if v == "image_rotated" else v
+
+    @property
+    def screen(self) -> tuple[int, int] | None:
+        if self.screen_width and self.screen_height:
+            return (self.screen_width, self.screen_height)
+        return None
+
 
 def default_profiles() -> list[RenderProfile]:
     return [
         RenderProfile(name="Kindle", link_qr="articles", table_mode="native"),
         RenderProfile(
-            name="Xteink X4", link_qr="articles", table_mode="image_rotated", table_aspect="3:5"
+            name="Xteink X4",
+            link_qr="articles",
+            table_mode="image",
+            code_mode="image",
+            screen_width=480,
+            screen_height=800,
         ),
     ]
 

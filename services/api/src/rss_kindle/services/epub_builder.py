@@ -136,7 +136,7 @@ img.link-qr {
   margin: 0.5em 0;
   image-rendering: pixelated;
 }
-img.table-image { display: block; margin: 0.8em 0; }
+img.table-image, img.code-image { display: block; margin: 0.8em 0; }
 figure { margin: 1em 0; }
 figcaption { font-size: 0.8em; color: #333; }
 table { border-collapse: collapse; font-size: 0.85em; margin: 0.8em 0; }
@@ -253,7 +253,7 @@ def build_digest_epub(
     articles: list[DigestArticle],
     output_path: Path,
     images: dict[str, DigestImage] | None = None,
-    cover_png: bytes | None = None,
+    cover_image: bytes | None = None,
     identifier: str | None = None,
     link_qr: LinkQr = "off",
 ) -> Path:
@@ -273,8 +273,8 @@ def build_digest_epub(
     )
     book.add_item(css)
 
-    if cover_png:
-        book.set_cover("cover.png", cover_png)
+    if cover_image:
+        book.set_cover("cover.jpg", cover_image)
 
     sources = _sources(articles)
     total = len(articles)
@@ -341,7 +341,7 @@ def build_digest_epub(
     book.add_item(nav)
 
     spine: list[object] = []
-    if cover_png:
+    if cover_image:
         spine.append("cover")
     spine.extend([title_page, "nav", *(c for _, c in chapters), colophon])
     book.spine = spine

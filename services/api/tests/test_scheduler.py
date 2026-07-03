@@ -281,3 +281,24 @@ async def test_retention_preserves_queued_and_digested(tmp_path: Path) -> None:
         cur = await conn.execute("SELECT COUNT(*) AS n FROM articles WHERE guid = 'old-again'")
         row = await cur.fetchone()
     assert row is not None and row["n"] == 1
+
+
+async def test_retention_prunes_image_cache(tmp_path: Path) -> None:
+    import os
+    import time
+
+    db = await _seed_db(tmp_path)
+    cache = tmp_path / "epubs" / ".image_cache"
+    cache.mkdir(parents=True)
+    old = cache / "old.bin"
+    fresh = cache / "fresh.bin"
+    old.write_bytes(b"x")
+    fresh.write_bytes(b"y")
+    stale = time.time() - 200 * 86400
+    os.utime(old, (stale, stale))
+
+    sched = Scheduler(db, tmp_path / "epubs", now_fn=lambda: NOW)
+    await sched._retention(AppSettings(retention_days=90))
+
+    assert not old.exists()
+    assert fresh.exists()

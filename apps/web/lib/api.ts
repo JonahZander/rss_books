@@ -51,9 +51,13 @@ export type Delivery = {
 export type RenderProfile = {
   name: string;
   link_qr: "off" | "articles" | "all";
-  table_mode: "native" | "image" | "image_rotated";
-  /** Screen-shape cap (W:H) for table images; taller tables split by rows. */
-  table_aspect: "auto" | "4:3" | "1:1" | "3:4" | "3:5" | "9:16";
+  /** "image" pre-renders sizeable tables to PNGs, auto-rotated/split to the screen. */
+  table_mode: "native" | "image";
+  /** "br" bakes code-block lines in as <br/>; "image" rasterizes each block to PNG. */
+  code_mode: "native" | "br" | "image";
+  /** Device screen in px; enables screen-fitted table/code images and photo downscaling. */
+  screen_width: number | null;
+  screen_height: number | null;
 };
 
 export type Digest = {
