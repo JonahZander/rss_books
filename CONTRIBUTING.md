@@ -43,8 +43,9 @@ uv run --directory services/api --extra dev pytest tests/test_digests.py -q
   tests never hit the network.
 - **Style:** ruff (rules `E,F,W,I,UP,B`, line length 100) and strict-ish mypy
   on the API; eslint + `tsc --noEmit` on the web app. Frontend follows
-  [docs/design-language.md](docs/design-language.md): paper/ink/amber tokens,
-  sharp corners, mono eyebrows.
+  [docs/design-language.md](docs/design-language.md): paper/ink tokens with the
+  dual blue/pink accent (`--amber` is a deprecated alias — don't use it in new
+  code), sharp corners, mono eyebrows.
 - **Commits:** conventional style (`feat:`, `fix:`, `chore:`, `docs:`...).
 
 ## Filing issues

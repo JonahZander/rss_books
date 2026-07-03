@@ -94,6 +94,10 @@ variables for operators:
 | `STATIC_DIR` | unset (`/app/static` in Docker) | Static web app to serve same-origin |
 | `SCHEDULER_ENABLED` | `1` | Set `0` to disable background polling entirely |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | unset | Override stored SMTP settings (keep credentials out of the DB) |
+| `HTTP_PORT` / `HTTPS_PORT` | `8765` / `8443` | Listener ports |
+| `TLS_ENABLED` / `TLS_CERT_FILE` / `TLS_KEY_FILE` / `TLS_SAN_IPS` | `1` / `./data/certs/...` / unset | Self-signed TLS listener for clients that require HTTPS |
+| `READER_FALLBACK` | unset | External extraction fallback for bot-walled sites: `tavily` or `jina` (also settable in Settings → Article fetching) |
+| `TAVILY_API_KEY` | unset | API key when `READER_FALLBACK=tavily` |
 
 ## Limits worth knowing
 
