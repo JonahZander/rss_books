@@ -11,6 +11,18 @@ careful EPUB edition: emailed to a Kindle, pulled over OPDS by everything else.
 
 ![Triage desk](docs/screenshots/triage.png)
 
+| Read before you queue | Review an edition | Fits in a pocket |
+|---|---|---|
+| ![Article expanded inline](docs/screenshots/article-expanded.png) | ![Editions with grouped preview](docs/screenshots/editions.png) | ![Mobile triage](docs/screenshots/mobile-triage.png) |
+
+<details>
+<summary>More screenshots: settings, device render profiles</summary>
+
+![Settings](docs/screenshots/settings.png)
+![Device render profiles](docs/screenshots/render-profiles.png)
+
+</details>
+
 ## Why this exists
 
 Every self-hosted RSS-to-ereader tool auto-sends whole feeds. Every
@@ -30,6 +42,13 @@ gap. The full "why not KindleEar / KTool / Calibre?" answer lives in
   cover, a sectioned table of contents, bylines, reading times, embedded
   images (downscaled for e-ink), real tables and code blocks, and a
   stylesheet tuned for 6–7″ greyscale screens.
+- **Render profiles per device.** Tell it your reader's screen size and it
+  fits the content to the glass: tables and code blocks are rasterized at the
+  device's resolution, rotated 90° when they're wider than the screen, and
+  split into screen-sized pages when they're taller — so even a budget e-ink
+  engine that ignores CSS renders them readably. Photos are downscaled to
+  what the screen can actually show. Downloaded images are cached on disk, so
+  recompiling an edition never re-fetches.
 - **Group your feeds.** Organize feeds into groups ("AI", "Gaming", …) and
   choose at press time: one combined edition with a chapter section per
   group, or **one edition per group**. Import/export grouping as OPML
@@ -47,10 +66,34 @@ gap. The full "why not KindleEar / KTool / Calibre?" answer lives in
 
 ## Quickstart
 
+Run the prebuilt image (amd64/arm64) — no clone needed:
+
+```yaml
+# docker-compose.yml
+services:
+  rss-books:
+    image: ghcr.io/jonahzander/rss_books:latest
+    ports:
+      - "8765:8765"   # web UI + OPDS (plain HTTP, same-origin)
+      - "8443:8443"   # HTTPS, for OPDS clients that require TLS
+    volumes:
+      - rss_kindle_data:/data
+    restart: unless-stopped
+
+volumes:
+  rss_kindle_data:
+```
+
+```bash
+docker compose up -d
+```
+
+Or build from source:
+
 ```bash
 git clone https://github.com/JonahZander/rss_books.git
 cd rss_books
-docker compose up -d
+docker compose up -d   # builds the image locally
 ```
 
 Open <http://localhost:8765>, import
@@ -58,7 +101,27 @@ Open <http://localhost:8765>, import
 feed by URL, hit *Refresh all*, tick a few articles, *Compile · EPUB*.
 
 Your database and editions live on the `rss_kindle_data` volume and survive
-rebuilds.
+rebuilds and image updates.
+
+### Proxmox / home-lab deploys
+
+The container is a single self-contained process (SQLite inside, no external
+services), so it runs anywhere Docker does — including a Docker LXC or VM on
+Proxmox (e.g. one created with the
+[community helper scripts](https://community-scripts.github.io/ProxmoxVE/)).
+Drop the compose file above into the container/VM and `docker compose up -d`.
+Notes for LAN deploys:
+
+- Point your readers at the host's LAN IP: web UI at `http://<lan-ip>:8765`,
+  OPDS at `http://<lan-ip>:8765/opds`.
+- If your reader insists on HTTPS (Crosspoint does), it can use port 8443.
+  The self-signed certificate is generated on first boot; set
+  `TLS_SAN_IPS: <lan-ip>` in the compose `environment:` so hostname-verifying
+  clients accept it, and re-download the cert from Settings if the IP changes.
+- Back up `/data` (the named volume): it holds the SQLite database, editions,
+  the image cache and the TLS cert — everything.
+- The app has no login screen; keep it on the LAN/VPN side of your firewall
+  (see [Security posture](#security-posture)).
 
 ### Development mode
 
@@ -128,7 +191,7 @@ API: one container, no CORS. No Redis, no Celery, no cron.
 
 ```
 feeds → poller (etag/backoff) → articles → [you pick] → queue
-  → digest service → extract/sanitize → images (≤1200px) → EPUB (cover/TOC/css)
+  → digest service → extract/sanitize → images (cached, device-fit) → EPUB (cover/TOC/css)
   → download · OPDS catalog · SMTP → your reader
 ```
 

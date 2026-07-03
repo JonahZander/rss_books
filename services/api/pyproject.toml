@@ -1,6 +1,6 @@
 [project]
 name = "rss-books-api"
-version = "1.1.0"
+version = "1.2.0"
 description = "FastAPI backend for RSS Books."
 requires-python = ">=3.12,<3.15"
 dependencies = [
