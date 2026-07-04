@@ -276,9 +276,10 @@ async def preview_digest(digest_id: int, request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/{digest_id}/download")
-async def download_digest(digest_id: int, request: Request) -> FileResponse:
-    db = request.app.state.db
+async def load_ready_epub_response(db: Database, digest_id: int) -> FileResponse:
+    """Shared by the (auth-free) /api download and the OPDS-authenticated
+    download: look up a ready digest's EPUB and build its FileResponse,
+    404/409 semantics identical either way."""
     async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT title, epub_path, status FROM digests WHERE id = ?",
@@ -294,3 +295,8 @@ async def download_digest(digest_id: int, request: Request) -> FileResponse:
         media_type="application/epub+zip",
         filename=f"digest-{row['title']}.epub",
     )
+
+
+@router.get("/{digest_id}/download")
+async def download_digest(digest_id: int, request: Request) -> FileResponse:
+    return await load_ready_epub_response(request.app.state.db, digest_id)
