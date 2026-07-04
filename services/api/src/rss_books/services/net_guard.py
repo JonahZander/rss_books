@@ -32,7 +32,7 @@ from urllib.parse import urlsplit
 import httpx
 
 if TYPE_CHECKING:
-    from rss_kindle.config import Settings
+    from rss_books.config import Settings
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network

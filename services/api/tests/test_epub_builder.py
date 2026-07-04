@@ -1,14 +1,14 @@
 import zipfile
 from pathlib import Path
 
-from rss_kindle.services.cover import render_cover
-from rss_kindle.services.epub_builder import (
+from rss_books.services.cover import render_cover
+from rss_books.services.epub_builder import (
     DigestArticle,
     _reading_minutes,
     build_digest_epub,
     render_preview_html,
 )
-from rss_kindle.services.image_pipeline import DigestImage
+from rss_books.services.image_pipeline import DigestImage
 
 
 def _build(tmp_path: Path, with_cover: bool = True) -> Path:
@@ -167,7 +167,7 @@ def test_cover_worst_case_bottom_rows_are_paper() -> None:
 
     from PIL import Image
 
-    from rss_kindle.services.cover import PAPER
+    from rss_books.services.cover import PAPER
 
     cover = render_cover(
         title=_WORST_CASE_TITLE,

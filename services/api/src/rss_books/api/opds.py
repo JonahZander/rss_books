@@ -9,8 +9,8 @@ from xml.etree import ElementTree as ET
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 
-from rss_kindle.api.digests import load_ready_epub_response
-from rss_kindle.services.settings_store import get_app_settings
+from rss_books.api.digests import load_ready_epub_response
+from rss_books.services.settings_store import get_app_settings
 
 router = APIRouter(tags=["opds"])
 

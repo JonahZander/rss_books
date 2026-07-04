@@ -1,4 +1,4 @@
-from rss_kindle.services.sanitizer import sanitize
+from rss_books.services.sanitizer import sanitize
 
 
 def test_script_and_event_handlers_stripped() -> None:

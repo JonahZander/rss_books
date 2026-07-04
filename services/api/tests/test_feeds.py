@@ -7,7 +7,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from conftest import feed_http_client, feed_http_client_error
-from rss_kindle.api.main import create_app
+from rss_books.api.main import create_app
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 
@@ -48,7 +48,7 @@ def test_refresh_feed_fetches_and_stores(tmp_path):
         feed_id = r.json()["id"]
 
         with patch(
-            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+            "rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
         ):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
             assert r.status_code == 200
@@ -81,7 +81,7 @@ def test_refresh_feed_sends_conditional_headers_and_handles_304(tmp_path):
         feed_id = r.json()["id"]
 
         with patch(
-            "rss_kindle.api.feeds.make_http_client",
+            "rss_books.api.feeds.make_http_client",
             new=feed_http_client(
                 FIXTURE.read_bytes(),
                 headers={"ETag": 'W/"v1"', "Last-Modified": "Tue, 01 Jan 2030 00:00:00 GMT"},
@@ -103,7 +103,7 @@ def test_refresh_feed_sends_conditional_headers_and_handles_304(tmp_path):
         def fake_client(**overrides: object) -> httpx.AsyncClient:
             return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
-        with patch("rss_kindle.api.feeds.make_http_client", new=fake_client):
+        with patch("rss_books.api.feeds.make_http_client", new=fake_client):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
         assert r.status_code == 200
         assert r.json() == {"inserted": 0}
@@ -175,11 +175,11 @@ def test_articles_group_filter(tmp_path):
         client.patch(f"/api/feeds/{a['id']}", json={"group_id": group["id"]})
 
         with patch(
-            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+            "rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
         ):
             client.post(f"/api/feeds/{a['id']}/refresh")
         other_content = FIXTURE.read_bytes().replace(b"urn:example:", b"urn:other:")
-        with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(other_content)):
+        with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(other_content)):
             client.post(f"/api/feeds/{b['id']}/refresh")
         assert len(client.get("/api/articles").json()) == 4
 
@@ -198,7 +198,7 @@ def test_manual_refresh_failure_recorded_and_cleared(tmp_path):
         feed_id = r.json()["id"]
 
         with patch(
-            "rss_kindle.api.feeds.make_http_client",
+            "rss_books.api.feeds.make_http_client",
             new=feed_http_client_error(RuntimeError("dns exploded")),
         ):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
@@ -208,7 +208,7 @@ def test_manual_refresh_failure_recorded_and_cleared(tmp_path):
         assert feed["consecutive_failures"] == 1
 
         with patch(
-            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+            "rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
         ):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
         assert r.status_code == 200
@@ -492,7 +492,7 @@ def test_poll_adopts_placeholder_title_until_renamed(tmp_path):
         assert feed["title"] == "example.com"
 
         with patch(
-            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+            "rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
         ):
             client.post(f"/api/feeds/{feed['id']}/refresh")
         # the placeholder adopted the feed's self-reported title
@@ -500,7 +500,7 @@ def test_poll_adopts_placeholder_title_until_renamed(tmp_path):
 
         client.patch(f"/api/feeds/{feed['id']}", json={"title": "Mine"})
         with patch(
-            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+            "rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
         ):
             client.post(f"/api/feeds/{feed['id']}/refresh")
         # a manual rename is never overwritten
@@ -521,7 +521,7 @@ def test_refresh_all_reports_errors(tmp_path):
         def fake_client(**overrides: object) -> httpx.AsyncClient:
             return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
-        with patch("rss_kindle.api.feeds.make_http_client", new=fake_client):
+        with patch("rss_books.api.feeds.make_http_client", new=fake_client):
             r = client.post("/api/feeds/refresh")
         assert r.status_code == 200
         assert r.json() == {"inserted": 2, "errors": 1}

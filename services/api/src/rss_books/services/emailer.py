@@ -6,8 +6,8 @@ from pathlib import Path
 
 import aiosmtplib
 
-from rss_kindle.db import Database
-from rss_kindle.models import AppSettings, Delivery
+from rss_books.db import Database
+from rss_books.models import AppSettings, Delivery
 
 logger = logging.getLogger(__name__)
 

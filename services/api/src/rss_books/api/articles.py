@@ -3,13 +3,13 @@ from __future__ import annotations
 from curl_cffi.requests.exceptions import HTTPError, RequestException
 from fastapi import APIRouter, HTTPException, Request
 
-from rss_kindle.models import Article, ArticleDetail
-from rss_kindle.services.article_fetcher import fetch_url_bytes
-from rss_kindle.services.content_extractor import extract_html
-from rss_kindle.services.net_guard import SSRFBlockedError
-from rss_kindle.services.readers import ReaderError, build_reader
-from rss_kindle.services.sanitizer import sanitize
-from rss_kindle.services.settings_store import get_app_settings
+from rss_books.models import Article, ArticleDetail
+from rss_books.services.article_fetcher import fetch_url_bytes
+from rss_books.services.content_extractor import extract_html
+from rss_books.services.net_guard import SSRFBlockedError
+from rss_books.services.readers import ReaderError, build_reader
+from rss_books.services.sanitizer import sanitize
+from rss_books.services.settings_store import get_app_settings
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
 

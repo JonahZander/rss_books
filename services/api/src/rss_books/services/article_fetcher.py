@@ -17,12 +17,12 @@ from urllib.parse import urljoin, urlsplit
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import HTTPError, RequestException
 
-from rss_kindle.config import get_settings
-from rss_kindle.models import AppSettings
-from rss_kindle.services.content_extractor import extract_html
-from rss_kindle.services.net_guard import SSRFBlockedError, check_target, guard_config_from_settings
-from rss_kindle.services.readers import ReaderError, build_reader
-from rss_kindle.services.sanitizer import sanitize_or_none
+from rss_books.config import get_settings
+from rss_books.models import AppSettings
+from rss_books.services.content_extractor import extract_html
+from rss_books.services.net_guard import SSRFBlockedError, check_target, guard_config_from_settings
+from rss_books.services.readers import ReaderError, build_reader
+from rss_books.services.sanitizer import sanitize_or_none
 
 # Politeness window between two requests to the SAME host during a batch compile.
 # Jitter (uniform 0..JITTER) avoids a lockstep cadence a WAF could pattern-match.

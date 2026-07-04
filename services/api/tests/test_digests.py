@@ -6,7 +6,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from conftest import feed_http_client
-from rss_kindle.api.main import create_app
+from rss_books.api.main import create_app
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 
@@ -14,7 +14,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 def _seed(client: TestClient) -> list[int]:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
+    with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return [a["id"] for a in client.get("/api/articles").json()]
 
@@ -26,7 +26,7 @@ def _add_feed_with_articles(
     if group_id is not None:
         client.patch(f"/api/feeds/{feed['id']}", json={"group_id": group_id})
     content = FIXTURE.read_bytes().replace(b"urn:example:", guid_prefix)
-    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(content)):
+    with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(content)):
         client.post(f"/api/feeds/{feed['id']}/refresh")
     arts = client.get("/api/articles", params={"feed_id": feed["id"]}).json()
     return sorted(a["id"] for a in arts)
@@ -93,8 +93,8 @@ async def test_build_epub_runs_off_event_loop(tmp_path):
     import asyncio
     import time
 
-    from rss_kindle.db import Database
-    from rss_kindle.services import digest_service
+    from rss_books.db import Database
+    from rss_books.services import digest_service
 
     db = Database(tmp_path / "t.db")
     await db.init()
@@ -139,7 +139,7 @@ def test_digest_build_failure_sets_failed_status(tmp_path, monkeypatch):
     with TestClient(app) as client:
         ids = _seed(client)
         with patch(
-            "rss_kindle.services.digest_service.build_digest_epub",
+            "rss_books.services.digest_service.build_digest_epub",
             side_effect=RuntimeError("boom: disk full"),
         ):
             r = client.post("/api/digests", json={"article_ids": ids})
@@ -256,7 +256,7 @@ def test_compile_fetches_missing_content_and_caches_it(tmp_path, monkeypatch):
         mapping = {u: body for u in urls.values()}
 
         with patch(
-            "rss_kindle.services.digest_service.fetch_many",
+            "rss_books.services.digest_service.fetch_many",
             new=_patched_fetch(mapping),
         ):
             r = client.post("/api/digests", json={"article_ids": ids, "title": "edition"})
@@ -279,7 +279,7 @@ def test_compile_blocked_fetch_falls_back_to_summary(tmp_path, monkeypatch):
         ids = _seed(client)
         urls = [a["url"] for a in client.get("/api/articles").json()]
         with patch(
-            "rss_kindle.services.digest_service.fetch_many",
+            "rss_books.services.digest_service.fetch_many",
             new=_patched_fetch({u: None for u in urls}),  # every fetch blocked
         ):
             r = client.post("/api/digests", json={"article_ids": ids})
@@ -299,7 +299,7 @@ def test_remove_article_rebuilds_and_empty_edition_fails(tmp_path, monkeypatch):
         assert len(ids) == 2
         urls = [a["url"] for a in client.get("/api/articles").json()]
         fake = _patched_fetch({u: "<p>body</p>" for u in urls})
-        with patch("rss_kindle.services.digest_service.fetch_many", new=fake):
+        with patch("rss_books.services.digest_service.fetch_many", new=fake):
             digest_id = client.post(
                 "/api/digests", json={"article_ids": ids, "title": "edit-me"}
             ).json()[0]["id"]
@@ -337,7 +337,7 @@ def test_batch_remove_articles_rebuilds_once(tmp_path, monkeypatch):
         assert len(ids) == 4
         urls = [a["url"] for a in client.get("/api/articles").json()]
         fake = _patched_fetch({u: "<p>body</p>" for u in urls})
-        with patch("rss_kindle.services.digest_service.fetch_many", new=fake):
+        with patch("rss_books.services.digest_service.fetch_many", new=fake):
             digest_id = client.post(
                 "/api/digests", json={"article_ids": ids, "title": "cull-me"}
             ).json()[0]["id"]
@@ -400,10 +400,10 @@ def test_compile_writes_image_cache(tmp_path, monkeypatch):
         body = '<p>text</p><img src="https://img.example/pic.png" alt="">'
         with (
             patch(
-                "rss_kindle.services.digest_service.fetch_many",
+                "rss_books.services.digest_service.fetch_many",
                 new=_patched_fetch({u: body for u in urls}),
             ),
-            patch("rss_kindle.services.digest_service.make_http_client", new=fake_client),
+            patch("rss_books.services.digest_service.make_http_client", new=fake_client),
         ):
             digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
             assert _wait_settled(client, digest_id)["status"] == "ready"
@@ -422,7 +422,7 @@ def test_preview_renders_edition_html(tmp_path, monkeypatch):
         urls = [a["url"] for a in client.get("/api/articles").json()]
         body = "<p>The body that should appear in the preview.</p>"
         with patch(
-            "rss_kindle.services.digest_service.fetch_many",
+            "rss_books.services.digest_service.fetch_many",
             new=_patched_fetch({u: body for u in urls}),
         ):
             digest_id = client.post(

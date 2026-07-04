@@ -9,8 +9,8 @@ from urllib.parse import urlparse
 
 import feedparser
 
-from rss_kindle.db import Database
-from rss_kindle.services.sanitizer import sanitize
+from rss_books.db import Database
+from rss_books.services.sanitizer import sanitize
 
 
 def placeholder_title(url: str) -> str:

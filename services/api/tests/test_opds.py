@@ -7,7 +7,7 @@ from xml.etree import ElementTree as ET
 from fastapi.testclient import TestClient
 
 from conftest import feed_http_client
-from rss_kindle.api.main import create_app
+from rss_books.api.main import create_app
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 NS = {"atom": "http://www.w3.org/2005/Atom"}
@@ -16,7 +16,7 @@ NS = {"atom": "http://www.w3.org/2005/Atom"}
 def _seed_ready_digest(client: TestClient) -> int:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
+    with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     ids = [a["id"] for a in client.get("/api/articles").json()]
     digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
@@ -45,7 +45,7 @@ def test_acquisition_feed_lists_ready_digests(tmp_path, monkeypatch):
         digest_id = _seed_ready_digest(client)
         # an unfinished digest must not appear
         with patch(
-            "rss_kindle.services.digest_service.build_digest_epub",
+            "rss_books.services.digest_service.build_digest_epub",
             side_effect=RuntimeError("broken"),
         ):
             failed_id = client.post(

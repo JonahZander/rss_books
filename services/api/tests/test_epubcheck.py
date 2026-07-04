@@ -23,9 +23,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from rss_kindle.services.cover import render_cover
-from rss_kindle.services.epub_builder import DigestArticle, build_digest_epub
-from rss_kindle.services.image_pipeline import DigestImage
+from rss_books.services.cover import render_cover
+from rss_books.services.epub_builder import DigestArticle, build_digest_epub
+from rss_books.services.image_pipeline import DigestImage
 
 pytestmark = pytest.mark.epubcheck
 

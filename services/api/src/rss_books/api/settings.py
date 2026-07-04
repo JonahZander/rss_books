@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from rss_kindle.models import AppSettings
-from rss_kindle.services.emailer import EmailError, send_test_email
-from rss_kindle.services.settings_store import get_app_settings, save_app_settings
+from rss_books.models import AppSettings
+from rss_books.services.emailer import EmailError, send_test_email
+from rss_books.services.settings_store import get_app_settings, save_app_settings
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 

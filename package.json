@@ -10,7 +10,7 @@
     "build:static": "STATIC_EXPORT=1 npm --workspace apps/web run build",
     "lint:web": "npm --workspace apps/web run lint",
     "typecheck:web": "npm --workspace apps/web run typecheck",
-    "dev:api": "uv run --directory services/api uvicorn rss_kindle.api.main:app --reload --reload-dir src --port 8765",
+    "dev:api": "uv run --directory services/api uvicorn rss_books.api.main:app --reload --reload-dir src --port 8765",
     "test:api": "uv run --directory services/api --extra dev pytest",
     "lint:api": "uv run --directory services/api --extra dev ruff check .",
     "typecheck:api": "uv run --directory services/api --extra dev mypy src",

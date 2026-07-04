@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from rss_kindle.api.main import create_app
+from rss_books.api.main import create_app
 
 
 def test_create_and_list_groups_ordered_by_position(tmp_path):

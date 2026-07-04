@@ -3,9 +3,9 @@ from pathlib import Path
 
 import httpx
 
-from rss_kindle.db import Database
-from rss_kindle.models import AppSettings
-from rss_kindle.services.scheduler import (
+from rss_books.db import Database
+from rss_books.models import AppSettings
+from rss_books.services.scheduler import (
     Scheduler,
     feed_due,
     last_scheduled_occurrence,
@@ -243,7 +243,7 @@ async def test_press_deadline_records_run_even_when_compile_fails(
     outcome, so a build failure must not leave _last_deadline_run unset -
     that would retry every tick against an already-empty queue. The failed
     digest itself is left for the Editions page to re-press."""
-    import rss_kindle.services.scheduler as scheduler_module
+    import rss_books.services.scheduler as scheduler_module
 
     async def failing_generate(db: Database, digest_id: int, epub_dir: Path) -> bool:
         async with db.connect() as conn:
@@ -267,7 +267,7 @@ async def test_press_deadline_records_run_even_when_compile_fails(
         cur = await conn.execute("SELECT status FROM digests")
         digests = [r["status"] for r in await cur.fetchall()]
     assert digests == ["failed"]
-    from rss_kindle.services.settings_store import get_value
+    from rss_books.services.settings_store import get_value
 
     assert await get_value(db, "_last_deadline_run") is not None
 
@@ -286,7 +286,7 @@ async def test_press_deadline_records_run_on_empty_queue(tmp_path: Path) -> None
 
     await sched._press_deadline(settings)
 
-    from rss_kindle.services.settings_store import get_value
+    from rss_books.services.settings_store import get_value
 
     assert await get_value(db, "_last_deadline_run") is not None
 

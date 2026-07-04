@@ -10,9 +10,9 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
-from rss_kindle.config import get_settings
-from rss_kindle.db import Database
-from rss_kindle.services.scheduler import Scheduler
+from rss_books.config import get_settings
+from rss_books.db import Database
+from rss_books.services.scheduler import Scheduler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,13 +73,13 @@ def create_app(db_path: Path | None = None) -> FastAPI:
             "db": db_status,
         }
 
-    from rss_kindle.api.articles import router as articles_router
-    from rss_kindle.api.digests import router as digests_router
-    from rss_kindle.api.feeds import router as feeds_router
-    from rss_kindle.api.groups import router as groups_router
-    from rss_kindle.api.opds import router as opds_router
-    from rss_kindle.api.queue import router as queue_router
-    from rss_kindle.api.settings import router as settings_router
+    from rss_books.api.articles import router as articles_router
+    from rss_books.api.digests import router as digests_router
+    from rss_books.api.feeds import router as feeds_router
+    from rss_books.api.groups import router as groups_router
+    from rss_books.api.opds import router as opds_router
+    from rss_books.api.queue import router as queue_router
+    from rss_books.api.settings import router as settings_router
 
     app.include_router(feeds_router)
     app.include_router(groups_router)

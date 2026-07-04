@@ -3,7 +3,7 @@ from __future__ import annotations
 import trafilatura
 from lxml import html as lxml_html
 
-from rss_kindle.services.sanitizer import sanitize_or_none
+from rss_books.services.sanitizer import sanitize_or_none
 
 
 def _tei_to_html(markup: str) -> str:

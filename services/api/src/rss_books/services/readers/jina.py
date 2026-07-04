@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import httpx
 
-from rss_kindle.models import AppSettings
-from rss_kindle.services.readers.base import ReaderError, markdown_to_html
+from rss_books.models import AppSettings
+from rss_books.services.readers.base import ReaderError, markdown_to_html
 
 _ENDPOINT = "https://r.jina.ai/"
 _TIMEOUT = 30.0

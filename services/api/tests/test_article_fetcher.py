@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
-from rss_kindle.models import AppSettings
-from rss_kindle.services import article_fetcher
+from rss_books.models import AppSettings
+from rss_books.services import article_fetcher
 
 
 async def _no_op_fetch(url: str, settings: AppSettings) -> str | None:

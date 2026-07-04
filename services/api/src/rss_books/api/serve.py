@@ -5,9 +5,9 @@ import logging
 
 import uvicorn
 
-from rss_kindle.api.certs import ensure_self_signed
-from rss_kindle.api.main import app
-from rss_kindle.config import get_settings
+from rss_books.api.certs import ensure_self_signed
+from rss_books.api.main import app
+from rss_books.config import get_settings
 
 logger = logging.getLogger(__name__)
 

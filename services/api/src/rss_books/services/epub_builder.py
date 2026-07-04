@@ -11,8 +11,8 @@ from urllib.parse import urlparse
 from ebooklib import epub
 from lxml import html as lxml_html
 
-from rss_kindle.services.image_pipeline import DigestImage
-from rss_kindle.services.qr import make_qr_data_uri, make_qr_png
+from rss_books.services.image_pipeline import DigestImage
+from rss_books.services.qr import make_qr_data_uri, make_qr_png
 
 # Inline QR codes for links the e-reader can't follow: "off" leaves links as
 # plain (often non-tappable) text; "articles" adds a QR for each chapter's own

@@ -46,10 +46,10 @@ EPUBCHECK_JAR=/path/to/epubcheck-5.3.0/epubcheck.jar \
 ## Conventions
 
 - **Migrations:** every schema change ships as a migration appended to
-  `MIGRATIONS` in `services/api/src/rss_kindle/db.py`. Never edit an applied
+  `MIGRATIONS` in `services/api/src/rss_books/db.py`. Never edit an applied
   migration; never change a table without one.
 - **API shapes are mirrored by hand** in `apps/web/lib/api.ts`. If you change a
-  Pydantic model in `services/api/src/rss_kindle/models.py`, update the
+  Pydantic model in `services/api/src/rss_books/models.py`, update the
   TypeScript types in the same PR.
 - **Tests:** pytest with `asyncio_mode = "auto"`, so plain `async def test_...` is enough,
   no decorators. HTTP is mocked (`unittest.mock.patch` / httpx MockTransport);

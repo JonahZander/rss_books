@@ -7,11 +7,11 @@ from curl_cffi.requests.exceptions import RequestException
 from fastapi.testclient import TestClient
 
 from conftest import feed_http_client
-from rss_kindle.api.main import create_app
-from rss_kindle.models import AppSettings
-from rss_kindle.services.readers import ReaderError, build_reader
-from rss_kindle.services.readers.jina import JinaReader
-from rss_kindle.services.readers.tavily import TavilyReader
+from rss_books.api.main import create_app
+from rss_books.models import AppSettings
+from rss_books.services.readers import ReaderError, build_reader
+from rss_books.services.readers.jina import JinaReader
+from rss_books.services.readers.tavily import TavilyReader
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 
@@ -82,7 +82,7 @@ def _seed_article(client: TestClient) -> int:
     feed_id = client.post(
         "/api/feeds", json={"url": "https://example.com/rss", "title": "Example"}
     ).json()["id"]
-    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
+    with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return int(client.get("/api/articles").json()[0]["id"])
 
@@ -97,10 +97,10 @@ def test_blocked_fetch_falls_back_to_reader(tmp_path: Path) -> None:
 
         with (
             patch(
-                "rss_kindle.api.articles.fetch_url_bytes",
+                "rss_books.api.articles.fetch_url_bytes",
                 side_effect=RequestException("blocked"),
             ),
-            patch("rss_kindle.api.articles.build_reader", return_value=_StubReader()),
+            patch("rss_books.api.articles.build_reader", return_value=_StubReader()),
         ):
             r = client.post(f"/api/articles/{article_id}/fetch")
         assert r.status_code == 200
@@ -116,7 +116,7 @@ def test_blocked_fetch_without_reader_still_502(tmp_path: Path) -> None:
     with TestClient(app) as client:
         article_id = _seed_article(client)  # default settings: reader_fallback="none"
         with patch(
-            "rss_kindle.api.articles.fetch_url_bytes",
+            "rss_books.api.articles.fetch_url_bytes",
             side_effect=RequestException("blocked"),
         ):
             r = client.post(f"/api/articles/{article_id}/fetch")

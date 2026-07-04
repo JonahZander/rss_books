@@ -12,14 +12,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from rss_kindle.models import AppSettings
-from rss_kindle.services.readers.base import (
+from rss_books.models import AppSettings
+from rss_books.services.readers.base import (
     ReaderError,
     ReaderProvider,
     markdown_to_html,
 )
-from rss_kindle.services.readers.jina import JinaReader
-from rss_kindle.services.readers.tavily import TavilyReader
+from rss_books.services.readers.jina import JinaReader
+from rss_books.services.readers.tavily import TavilyReader
 
 # name -> factory(settings) -> provider | None (None = selected but unconfigured)
 _REGISTRY: dict[str, Callable[[AppSettings], ReaderProvider | None]] = {

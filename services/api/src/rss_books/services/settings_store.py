@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from typing import Literal, cast
 
-from rss_kindle.config import Settings, get_settings
-from rss_kindle.db import Database
-from rss_kindle.models import AppSettings
+from rss_books.config import Settings, get_settings
+from rss_books.db import Database
+from rss_books.models import AppSettings
 
 
 async def get_app_settings(db: Database, env: Settings | None = None) -> AppSettings:

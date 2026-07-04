@@ -106,5 +106,5 @@ The edition itself follows the same language translated to e-ink: serif body
 keeps the warm print palette** (paper `#f2f1ec`, ink `#0e0f11`, amber
 `#c97a1e`) — e-ink is grayscale, so the cover optimizes for contrast and a
 printed feel rather than matching the screen accents. See
-`services/api/src/rss_kindle/services/epub_builder.py` (stylesheet) and
+`services/api/src/rss_books/services/epub_builder.py` (stylesheet) and
 `cover.py`.

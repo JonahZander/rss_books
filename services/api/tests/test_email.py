@@ -6,7 +6,7 @@ import aiosmtplib
 from fastapi.testclient import TestClient
 
 from conftest import feed_http_client
-from rss_kindle.api.main import create_app
+from rss_books.api.main import create_app
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 
@@ -14,7 +14,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 def _seed_ready_digest(client: TestClient) -> int:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
+    with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     ids = [a["id"] for a in client.get("/api/articles").json()]
     digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
@@ -42,7 +42,7 @@ def test_send_digest_records_delivery(tmp_path, monkeypatch):
     with TestClient(app) as client:
         digest_id = _seed_ready_digest(client)
         _configure_email(client)
-        with patch("rss_kindle.services.emailer.aiosmtplib.send", new=AsyncMock()) as sent:
+        with patch("rss_books.services.emailer.aiosmtplib.send", new=AsyncMock()) as sent:
             r = client.post(f"/api/digests/{digest_id}/send")
         assert r.status_code == 200
         delivery = r.json()
@@ -63,7 +63,7 @@ def test_smtp_failure_recorded(tmp_path, monkeypatch):
         digest_id = _seed_ready_digest(client)
         _configure_email(client)
         with patch(
-            "rss_kindle.services.emailer.aiosmtplib.send",
+            "rss_books.services.emailer.aiosmtplib.send",
             new=AsyncMock(side_effect=aiosmtplib.SMTPException("relay refused")),
         ):
             r = client.post(f"/api/digests/{digest_id}/send")
@@ -93,8 +93,8 @@ def test_size_guard(tmp_path, monkeypatch):
         digest_id = _seed_ready_digest(client)
         _configure_email(client)
         with (
-            patch("rss_kindle.services.emailer.MAX_ATTACHMENT_BYTES", 10),
-            patch("rss_kindle.services.emailer.aiosmtplib.send", new=AsyncMock()) as sent,
+            patch("rss_books.services.emailer.MAX_ATTACHMENT_BYTES", 10),
+            patch("rss_books.services.emailer.aiosmtplib.send", new=AsyncMock()) as sent,
         ):
             r = client.post(f"/api/digests/{digest_id}/send")
         assert r.status_code == 200
@@ -110,7 +110,7 @@ def test_email_on_ready_auto_sends(tmp_path, monkeypatch):
         r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
         feed_id = r.json()["id"]
         with patch(
-            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+            "rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
         ):
             client.post(f"/api/feeds/{feed_id}/refresh")
         ids = [a["id"] for a in client.get("/api/articles").json()]
@@ -120,7 +120,7 @@ def test_email_on_ready_auto_sends(tmp_path, monkeypatch):
         s["email_on_ready"] = True
         client.put("/api/settings", json=s)
 
-        with patch("rss_kindle.services.emailer.aiosmtplib.send", new=AsyncMock()) as sent:
+        with patch("rss_books.services.emailer.aiosmtplib.send", new=AsyncMock()) as sent:
             digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
             for _ in range(50):
                 d = client.get(f"/api/digests/{digest_id}").json()
@@ -138,7 +138,7 @@ def test_test_email_endpoint(tmp_path):
         assert r.status_code == 502  # unconfigured
 
         _configure_email(client)
-        with patch("rss_kindle.services.emailer.aiosmtplib.send", new=AsyncMock()):
+        with patch("rss_books.services.emailer.aiosmtplib.send", new=AsyncMock()):
             r = client.post("/api/settings/test-email", json={})
         assert r.status_code == 200
         assert r.json() == {"sent_to": ["reader@kindle.com"]}

@@ -9,7 +9,7 @@ from unittest.mock import patch
 import httpx
 from PIL import Image
 
-from rss_kindle.services.image_pipeline import (
+from rss_books.services.image_pipeline import (
     MAX_DECODE_PIXELS,
     MAX_IMAGE_DOWNLOAD_BYTES,
     prepare_images,
@@ -180,7 +180,7 @@ async def test_recompress_runs_off_event_loop() -> None:
     loop rather than freezing every other request for its duration."""
     import asyncio
 
-    from rss_kindle.services import image_pipeline
+    from rss_books.services import image_pipeline
 
     original_recompress = image_pipeline._recompress
 

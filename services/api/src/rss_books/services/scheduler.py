@@ -10,14 +10,14 @@ from typing import Any
 
 import httpx
 
-from rss_kindle.config import make_http_client
-from rss_kindle.db import Database
-from rss_kindle.models import AppSettings
-from rss_kindle.services.digest_service import create_digest_records, generate_digest
-from rss_kindle.services.image_pipeline import image_cache_dir, prune_image_cache
-from rss_kindle.services.poller import poll_feed
-from rss_kindle.services.saved_links import NOT_SAVED_LINKS
-from rss_kindle.services.settings_store import get_app_settings, get_value, set_value
+from rss_books.config import make_http_client
+from rss_books.db import Database
+from rss_books.models import AppSettings
+from rss_books.services.digest_service import create_digest_records, generate_digest
+from rss_books.services.image_pipeline import image_cache_dir, prune_image_cache
+from rss_books.services.poller import poll_feed
+from rss_books.services.saved_links import NOT_SAVED_LINKS
+from rss_books.services.settings_store import get_app_settings, get_value, set_value
 
 logger = logging.getLogger(__name__)
 

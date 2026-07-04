@@ -8,17 +8,17 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from rss_kindle.config import make_http_client
-from rss_kindle.db import Database, placeholders
-from rss_kindle.models import AppSettings, FetchStatus, RenderProfile
-from rss_kindle.services.article_fetcher import fetch_many
-from rss_kindle.services.cover import render_cover
-from rss_kindle.services.emailer import send_digest_and_record
-from rss_kindle.services.epub_builder import DigestArticle, LinkQr, build_digest_epub
-from rss_kindle.services.image_pipeline import DigestImage, image_cache_dir, prepare_images
-from rss_kindle.services.sanitizer import sanitize
-from rss_kindle.services.settings_store import get_app_settings
-from rss_kindle.services.table_renderer import (
+from rss_books.config import make_http_client
+from rss_books.db import Database, placeholders
+from rss_books.models import AppSettings, FetchStatus, RenderProfile
+from rss_books.services.article_fetcher import fetch_many
+from rss_books.services.cover import render_cover
+from rss_books.services.emailer import send_digest_and_record
+from rss_books.services.epub_builder import DigestArticle, LinkQr, build_digest_epub
+from rss_books.services.image_pipeline import DigestImage, image_cache_dir, prepare_images
+from rss_books.services.sanitizer import sanitize
+from rss_books.services.settings_store import get_app_settings
+from rss_books.services.table_renderer import (
     SUPERSAMPLE,
     pre_to_br,
     pre_to_images,

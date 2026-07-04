@@ -5,22 +5,22 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from fastapi.responses import FileResponse, HTMLResponse
 
-from rss_kindle.db import Database, placeholders
-from rss_kindle.models import (
+from rss_books.db import Database, placeholders
+from rss_books.models import (
     Delivery,
     Digest,
     DigestArticleEntry,
     DigestArticlesRemove,
     DigestCreate,
 )
-from rss_kindle.services.digest_service import (
+from rss_books.services.digest_service import (
     create_digest_records,
     generate_digest,
     load_digest_preview,
 )
-from rss_kindle.services.emailer import EmailError, send_digest_and_record
-from rss_kindle.services.epub_builder import render_preview_html
-from rss_kindle.services.settings_store import get_app_settings
+from rss_books.services.emailer import EmailError, send_digest_and_record
+from rss_books.services.epub_builder import render_preview_html
+from rss_books.services.settings_store import get_app_settings
 
 router = APIRouter(prefix="/api/digests", tags=["digests"])
 

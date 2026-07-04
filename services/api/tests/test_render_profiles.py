@@ -14,9 +14,9 @@ from lxml import html as lxml_html
 from PIL import Image
 
 from conftest import feed_http_client
-from rss_kindle.api.main import create_app
-from rss_kindle.services.qr import make_qr_png
-from rss_kindle.services.table_renderer import render_table_pngs, tables_to_images
+from rss_books.api.main import create_app
+from rss_books.services.qr import make_qr_png
+from rss_books.services.table_renderer import render_table_pngs, tables_to_images
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 NS = {"atom": "http://www.w3.org/2005/Atom"}
@@ -131,7 +131,7 @@ def test_wrap_hard_breaks_oversized_words() -> None:
     from PIL import Image as PILImage
     from PIL import ImageDraw, ImageFont
 
-    from rss_kindle.services.table_renderer import _wrap
+    from rss_books.services.table_renderer import _wrap
 
     draw = ImageDraw.Draw(PILImage.new("L", (1, 1)))
     font = ImageFont.load_default(size=26)
@@ -154,7 +154,7 @@ def test_simple_table_stays_native() -> None:
 
 
 def test_pre_to_br_preserves_line_structure() -> None:
-    from rss_kindle.services.table_renderer import pre_to_br
+    from rss_books.services.table_renderer import pre_to_br
 
     html = (
         "<p>before</p>"
@@ -170,7 +170,7 @@ def test_pre_to_br_preserves_line_structure() -> None:
 
 
 def test_pre_to_br_leaves_html_without_pre_untouched() -> None:
-    from rss_kindle.services.table_renderer import pre_to_br
+    from rss_books.services.table_renderer import pre_to_br
 
     html = "<p>plain &amp; simple</p>"
     assert pre_to_br(html) == html
@@ -180,7 +180,7 @@ def test_pre_to_br_leaves_html_without_pre_untouched() -> None:
 
 
 def test_pre_blocks_become_images() -> None:
-    from rss_kindle.services.table_renderer import pre_to_images
+    from rss_books.services.table_renderer import pre_to_images
 
     html = "<p>before</p><pre><code>flowchart TD\n    a --&gt; b</code></pre><p>after</p>"
     rewritten, images = pre_to_images(html)
@@ -196,7 +196,7 @@ def test_pre_blocks_become_images() -> None:
 
 
 def test_pre_image_wraps_long_lines_to_max_width() -> None:
-    from rss_kindle.services.table_renderer import MAX_WIDTH, pre_to_images
+    from rss_books.services.table_renderer import MAX_WIDTH, pre_to_images
 
     html = f"<pre><code>{'x' * 400}</code></pre>"
     _, images = pre_to_images(html)
@@ -205,7 +205,7 @@ def test_pre_image_wraps_long_lines_to_max_width() -> None:
 
 
 def test_pre_to_images_without_pre_untouched() -> None:
-    from rss_kindle.services.table_renderer import pre_to_images
+    from rss_books.services.table_renderer import pre_to_images
 
     html = "<p>plain &amp; simple</p>"
     rewritten, images = pre_to_images(html)
@@ -214,7 +214,7 @@ def test_pre_to_images_without_pre_untouched() -> None:
 
 
 def test_pre_inside_table_stays_for_table_renderer() -> None:
-    from rss_kindle.services.table_renderer import pre_to_images, tables_to_images
+    from rss_books.services.table_renderer import pre_to_images, tables_to_images
 
     html = (
         "<table><tr><th>Flag</th><th>Meaning</th></tr>"
@@ -230,7 +230,7 @@ def test_pre_inside_table_stays_for_table_renderer() -> None:
 
 
 def test_wide_code_block_auto_rotates_for_screen() -> None:
-    from rss_kindle.services.table_renderer import pre_to_images
+    from rss_books.services.table_renderer import pre_to_images
 
     # substantial block, most lines wider than the portrait budget -> rotate
     long_line = "planner --> " + " --> ".join(f"node_{i}[label {i}]" for i in range(12))
@@ -244,7 +244,7 @@ def test_wide_code_block_auto_rotates_for_screen() -> None:
 
 def test_small_wide_code_block_wraps_portrait() -> None:
     # two long lines don't justify turning the device sideways: wrap upright
-    from rss_kindle.services.table_renderer import pre_to_images
+    from rss_books.services.table_renderer import pre_to_images
 
     long_line = "SELECT feeds.title, COUNT(articles.id) AS n FROM feeds JOIN articles" * 2
     html = f"<pre><code>{long_line}\nORDER BY n DESC;</code></pre>"
@@ -257,7 +257,7 @@ def test_small_wide_code_block_wraps_portrait() -> None:
 
 
 def test_short_code_block_stays_portrait_on_screen() -> None:
-    from rss_kindle.services.table_renderer import pre_to_images
+    from rss_books.services.table_renderer import pre_to_images
 
     html = "<pre><code>flowchart TD\n    a --&gt; b</code></pre>"
     _, images = pre_to_images(html, screen=_SCREEN)
@@ -268,7 +268,7 @@ def test_short_code_block_stays_portrait_on_screen() -> None:
 
 
 def test_tall_code_block_splits_into_screen_shaped_chunks() -> None:
-    from rss_kindle.services.table_renderer import pre_to_images
+    from rss_books.services.table_renderer import pre_to_images
 
     code = "\n".join(f"step_{i} --&gt; step_{i + 1}" for i in range(120))
     html = f"<pre><code>{code}</code></pre>"
@@ -285,14 +285,14 @@ def test_tall_code_block_splits_into_screen_shaped_chunks() -> None:
 
 def test_legacy_image_rotated_coerces_to_image() -> None:
     # stored profiles predate auto-rotation; "image_rotated" must keep loading
-    from rss_kindle.models import RenderProfile
+    from rss_books.models import RenderProfile
 
     p = RenderProfile(name="old", table_mode="image_rotated")  # type: ignore[arg-type]
     assert p.table_mode == "image"
 
 
 def test_legacy_table_aspect_field_ignored() -> None:
-    from rss_kindle.models import RenderProfile
+    from rss_books.models import RenderProfile
 
     p = RenderProfile.model_validate(
         {"name": "old", "table_mode": "image", "table_aspect": "3:5"}
@@ -307,7 +307,7 @@ def test_code_font_is_compact_monospace() -> None:
     from PIL import Image as PILImage
     from PIL import ImageDraw
 
-    from rss_kindle.services.table_renderer import _code_font
+    from rss_books.services.table_renderer import _code_font
 
     font = _code_font(32)
     probe = ImageDraw.Draw(PILImage.new("L", (1, 1)))
@@ -319,7 +319,7 @@ def test_code_font_is_compact_monospace() -> None:
 def test_rotated_blocks_read_clockwise() -> None:
     # the first line must end up at the RIGHT edge (90° clockwise), so the
     # table/code begins where the tilted page begins
-    from rss_kindle.services.table_renderer import pre_to_images
+    from rss_books.services.table_renderer import pre_to_images
 
     lines = ["M" * 90] + ["M" * 70] * 8 + [""]  # dense start, empty end
     html = "<pre><code>" + "\n".join(lines) + "</code></pre>"
@@ -346,7 +346,7 @@ def test_rotated_blocks_read_clockwise() -> None:
 def _seed(client: TestClient) -> list[int]:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
+    with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return [a["id"] for a in client.get("/api/articles").json()]
 
@@ -515,7 +515,7 @@ def test_profile_screen_caps_photo_width(tmp_path, monkeypatch):
             conn.commit()
 
         with patch(
-            "rss_kindle.services.digest_service.make_http_client", new=fake_client
+            "rss_books.services.digest_service.make_http_client", new=fake_client
         ):
             created = client.post(
                 "/api/digests", json={"article_ids": [ids[0]], "profiles": ["Xteink X4"]}
@@ -531,7 +531,7 @@ def test_profile_screen_caps_photo_width(tmp_path, monkeypatch):
 
 def test_photo_max_width_helper_clamps_to_ceiling() -> None:
     # unit-level: 2x a large custom screen width would exceed the ceiling
-    from rss_kindle.services.digest_service import PHOTO_WIDTH_CEILING, _photo_max_width
+    from rss_books.services.digest_service import PHOTO_WIDTH_CEILING, _photo_max_width
 
     assert _photo_max_width(None) == 1200
     assert _photo_max_width((480, 800)) == 960  # Xteink X4, well under the ceiling
@@ -577,7 +577,7 @@ def test_custom_profile_screen_width_photo_clamped_to_ceiling(tmp_path, monkeypa
         assert client.put("/api/settings", json=settings).status_code == 200
 
         with patch(
-            "rss_kindle.services.digest_service.make_http_client",
+            "rss_books.services.digest_service.make_http_client",
             new=feed_http_client(png, headers={"content-type": "image/png"}),
         ):
             created = client.post(

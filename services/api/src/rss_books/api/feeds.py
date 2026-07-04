@@ -9,12 +9,12 @@ from xml.sax.saxutils import quoteattr
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 
-from rss_kindle.config import make_http_client
-from rss_kindle.db import Database
-from rss_kindle.models import Feed, FeedCreate, FeedUpdate, ImportResult, ImportSkip
-from rss_kindle.services.feed_poller import placeholder_title
-from rss_kindle.services.poller import poll_feed
-from rss_kindle.services.saved_links import NOT_SAVED_LINKS
+from rss_books.config import make_http_client
+from rss_books.db import Database
+from rss_books.models import Feed, FeedCreate, FeedUpdate, ImportResult, ImportSkip
+from rss_books.services.feed_poller import placeholder_title
+from rss_books.services.poller import poll_feed
+from rss_books.services.saved_links import NOT_SAVED_LINKS
 
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
 

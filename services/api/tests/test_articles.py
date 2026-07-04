@@ -6,8 +6,8 @@ from curl_cffi.requests.exceptions import ConnectTimeout, HTTPError
 from fastapi.testclient import TestClient
 
 from conftest import feed_http_client
-from rss_kindle.api.main import create_app
-from rss_kindle.config import USER_AGENT
+from rss_books.api.main import create_app
+from rss_books.config import USER_AGENT
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 
@@ -15,7 +15,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 def _seed_feed_with_articles(client: TestClient) -> int:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
+    with patch("rss_books.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return feed_id
 
@@ -55,7 +55,7 @@ def test_fetch_article_full_content(tmp_path):
             b"we need sufficient prose to pass boilerplate filters here.</p>"
             b"</article></body></html>"
         )
-        with patch("rss_kindle.api.articles.fetch_url_bytes") as mock_fetch:
+        with patch("rss_books.api.articles.fetch_url_bytes") as mock_fetch:
             mock_fetch.return_value = html
             r = client.post(f"/api/articles/{article_id}/fetch")
             assert r.status_code == 200
@@ -78,20 +78,20 @@ def test_fetch_blocked_site_returns_502_not_500(tmp_path):
         resp = Response()
         resp.status_code = 403
         err = HTTPError("HTTP Error 403: Forbidden", 0, resp)
-        with patch("rss_kindle.api.articles.fetch_url_bytes", side_effect=err):
+        with patch("rss_books.api.articles.fetch_url_bytes", side_effect=err):
             r = client.post(f"/api/articles/{article_id}/fetch")
         assert r.status_code == 502
         assert "403" in r.json()["detail"]
 
         # transport failures (timeouts, DNS, TLS) map to a generic 502
         timeout = ConnectTimeout("timed out")
-        with patch("rss_kindle.api.articles.fetch_url_bytes", side_effect=timeout):
+        with patch("rss_books.api.articles.fetch_url_bytes", side_effect=timeout):
             r = client.post(f"/api/articles/{article_id}/fetch")
         assert r.status_code == 502
 
 
 def test_user_agent_is_browser_shaped_and_shared():
-    from rss_kindle.services import poller
+    from rss_books.services import poller
 
     assert USER_AGENT.startswith("Mozilla/5.0")
     assert "rss-books" in USER_AGENT
@@ -105,7 +105,7 @@ def _seed_feed_with_full_content(client: TestClient) -> int:
     r = client.post("/api/feeds", json={"url": "https://full.example/rss", "title": "Full"})
     feed_id = r.json()["id"]
     with patch(
-        "rss_kindle.api.feeds.make_http_client",
+        "rss_books.api.feeds.make_http_client",
         new=feed_http_client(FULL_CONTENT_FIXTURE.read_bytes()),
     ):
         client.post(f"/api/feeds/{feed_id}/refresh")
@@ -120,7 +120,7 @@ def test_feed_content_encoded_populates_full_content_without_fetch(tmp_path):
     with TestClient(app) as client:
         # if any page fetch is attempted, fail loudly; polling must not fetch
         with patch(
-            "rss_kindle.api.articles.fetch_url_bytes",
+            "rss_books.api.articles.fetch_url_bytes",
             side_effect=AssertionError("must not fetch the page when feed embeds content"),
         ):
             _seed_feed_with_full_content(client)

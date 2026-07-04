@@ -1,4 +1,4 @@
-from rss_kindle.services.content_extractor import extract_html
+from rss_books.services.content_extractor import extract_html
 
 ARTICLE = (
     b"<html><body><article><h1>Hi</h1><p>Hello world. "

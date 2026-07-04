@@ -6,7 +6,7 @@ import httpx
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from rss_kindle.services.net_guard import GuardedAsyncTransport, guard_config_from_settings
+from rss_books.services.net_guard import GuardedAsyncTransport, guard_config_from_settings
 
 # One UA for everything we fetch from the public web (feeds, articles,
 # images). Browser-shaped so naive bot filters pass us (plenty of sites 403

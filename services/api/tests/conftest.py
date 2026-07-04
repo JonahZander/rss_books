@@ -10,8 +10,8 @@ def feed_http_client(
     """A make_http_client()-shaped replacement that answers every request with
     one fixed response - the common case when a test just needs a feed poll
     (manual refresh, scheduled tick) to "fetch" known bytes. Patch it over
-    rss_kindle.api.feeds.make_http_client (manual refresh) or
-    rss_kindle.services.scheduler.make_http_client (scheduled tick)."""
+    rss_books.api.feeds.make_http_client (manual refresh) or
+    rss_books.services.scheduler.make_http_client (scheduled tick)."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status_code, content=content, headers=headers or {})

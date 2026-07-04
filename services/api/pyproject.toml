@@ -36,7 +36,7 @@ dev = [
 package = true
 
 [tool.setuptools.package-data]
-rss_kindle = ["assets/*"]
+rss_books = ["assets/*"]
 
 [tool.ruff]
 line-length = 100

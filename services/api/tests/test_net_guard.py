@@ -9,9 +9,9 @@ import pytest
 from curl_cffi.requests import Response
 from curl_cffi.requests.exceptions import RequestException
 
-from rss_kindle.config import Settings, make_http_client
-from rss_kindle.services import article_fetcher, net_guard
-from rss_kindle.services.net_guard import (
+from rss_books.config import Settings, make_http_client
+from rss_books.services import article_fetcher, net_guard
+from rss_books.services.net_guard import (
     GuardConfig,
     SSRFBlockedError,
     check_target,

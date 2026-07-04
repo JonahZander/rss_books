@@ -1,8 +1,8 @@
 import asyncio
 from pathlib import Path
 
-from rss_kindle.api.main import create_app
-from rss_kindle.db import MIGRATIONS
+from rss_books.api.main import create_app
+from rss_books.db import MIGRATIONS
 
 
 async def test_concurrent_lifespans_on_fresh_db(tmp_path: Path) -> None:

@@ -30,7 +30,7 @@ from pathlib import Path
 from lxml import html as lxml_html
 from PIL import Image, ImageDraw, ImageFont
 
-from rss_kindle.services.image_pipeline import DigestImage
+from rss_books.services.image_pipeline import DigestImage
 
 logger = logging.getLogger(__name__)
 

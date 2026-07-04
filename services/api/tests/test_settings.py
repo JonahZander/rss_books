@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from rss_kindle.api.main import create_app
+from rss_books.api.main import create_app
 
 
 def test_defaults_when_unset(tmp_path):

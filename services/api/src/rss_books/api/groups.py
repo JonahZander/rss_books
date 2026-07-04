@@ -4,7 +4,7 @@ import sqlite3
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from rss_kindle.models import Group, GroupCreate, GroupUpdate
+from rss_books.models import Group, GroupCreate, GroupUpdate
 
 router = APIRouter(prefix="/api/groups", tags=["groups"])
 

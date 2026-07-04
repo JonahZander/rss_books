@@ -5,9 +5,9 @@ import sqlite3
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Request
 
-from rss_kindle.api.articles import article_state_sql
-from rss_kindle.models import Article, QueueLink, QueueUpdate
-from rss_kindle.services.saved_links import add_saved_link
+from rss_books.api.articles import article_state_sql
+from rss_books.models import Article, QueueLink, QueueUpdate
+from rss_books.services.saved_links import add_saved_link
 
 router = APIRouter(prefix="/api/queue", tags=["queue"])
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import aiosqlite
 
-from rss_kindle.db import MIGRATIONS, SCHEMA_V1, Database
+from rss_books.db import MIGRATIONS, SCHEMA_V1, Database
 
 
 async def _user_version(db: Database) -> int:

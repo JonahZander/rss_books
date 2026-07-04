@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from rss_kindle.db import Database
-from rss_kindle.services.feed_poller import parse_feed, poll_feed_content
+from rss_books.db import Database
+from rss_books.services.feed_poller import parse_feed, poll_feed_content
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 
