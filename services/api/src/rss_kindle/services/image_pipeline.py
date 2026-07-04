@@ -22,6 +22,15 @@ IMG_TAG_RE = re.compile(r"<img\b[^>]*/?>", re.IGNORECASE)
 SRC_RE = re.compile(r'\bsrc="([^"]*)"', re.IGNORECASE)
 ALT_RE = re.compile(r'\balt="([^"]*)"', re.IGNORECASE)
 
+# Decompression-bomb guards: an image tag can point at anything, so both the
+# download and the decode are capped regardless of what Content-Length claims.
+MAX_IMAGE_DOWNLOAD_BYTES = 25 * 2**20
+MAX_DECODE_PIXELS = 40_000_000
+# Belt-and-suspenders for multi-frame formats (GIF/WEBP) where the explicit
+# width*height check below only sees the first frame; the primary guard is
+# still the check before .load(), which raises before any decode work.
+Image.MAX_IMAGE_PIXELS = MAX_DECODE_PIXELS
+
 
 @dataclass
 class DigestImage:
@@ -65,6 +74,13 @@ def _recompress(data: bytes, *, max_width: int, jpeg_quality: int) -> tuple[byte
     Raises on undecodable input.
     """
     img: Image.Image = Image.open(BytesIO(data))
+    # Image.open only reads the header; check declared dimensions before the
+    # decode that .load() triggers, so a hostile IHDR can't burn CPU/memory.
+    if img.width * img.height > MAX_DECODE_PIXELS:
+        raise ValueError(
+            f"image too large to decode: {img.width}x{img.height} "
+            f"exceeds {MAX_DECODE_PIXELS} pixels"
+        )
     img.load()
     has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
     if img.width > max_width:
@@ -76,6 +92,24 @@ def _recompress(data: bytes, *, max_width: int, jpeg_quality: int) -> tuple[byte
         return buf.getvalue(), "png", "image/png"
     img.convert("RGB").save(buf, format="JPEG", quality=jpeg_quality, optimize=True)
     return buf.getvalue(), "jpg", "image/jpeg"
+
+
+async def _download_capped(client: httpx.AsyncClient, url: str) -> bytes:
+    """Stream the body, aborting once it exceeds the byte cap - a hostile or
+    misconfigured server can lie about Content-Length, so the cap is enforced
+    on bytes actually received rather than trusted upfront."""
+    async with client.stream("GET", url) as r:
+        r.raise_for_status()
+        chunks: list[bytes] = []
+        total = 0
+        async for chunk in r.aiter_bytes():
+            total += len(chunk)
+            if total > MAX_IMAGE_DOWNLOAD_BYTES:
+                raise ValueError(
+                    f"image over {MAX_IMAGE_DOWNLOAD_BYTES} byte download cap: {url}"
+                )
+            chunks.append(chunk)
+        return b"".join(chunks)
 
 
 async def prepare_images(
@@ -135,9 +169,7 @@ async def prepare_images(
             original = read_cache(url)
             downloaded = original is None
             if original is None:
-                r = await client.get(url)
-                r.raise_for_status()
-                original = r.content
+                original = await _download_capped(client, url)
             # Decode/resize/re-encode is CPU-bound; off the event loop so a
             # compile with many images doesn't stall polling and other requests.
             result = await asyncio.to_thread(
