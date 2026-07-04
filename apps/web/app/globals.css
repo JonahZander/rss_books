@@ -1757,6 +1757,18 @@ a {
   outline: none;
 }
 
+.poll-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.poll-custom-input {
+  width: 72px;
+  flex: none;
+}
+
 .opml-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

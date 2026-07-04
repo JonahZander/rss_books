@@ -21,9 +21,18 @@ type Props = {
   onDeleteGroup: (group: Group) => void;
   onRefresh: () => Promise<void>;
   onChanged: () => Promise<void>;
+  /** Settings' global default poll interval; the "Default" preset snapshots
+   * this value onto the feed at the moment it's chosen — it does not track
+   * later changes to the setting (there's no "follow the default" flag). */
+  defaultPollMinutes: number;
 };
 
 const COLLAPSE_KEY = "sidebar-collapsed";
+const POLL_PRESETS = [15, 30, 60] as const;
+
+function presetForMinutes(minutes: number): string {
+  return (POLL_PRESETS as readonly number[]).includes(minutes) ? String(minutes) : "custom";
+}
 
 function relPoll(iso: string | null): string {
   if (!iso) return "never polled";
@@ -60,6 +69,7 @@ export function FeedSidebar({
   onDeleteGroup,
   onRefresh,
   onChanged,
+  defaultPollMinutes,
 }: Props) {
   const toast = useToast();
   const [url, setUrl] = useState("");
@@ -69,6 +79,9 @@ export function FeedSidebar({
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [errorOpenId, setErrorOpenId] = useState<number | null>(null);
+  const [pollEditId, setPollEditId] = useState<number | null>(null);
+  const [pollPreset, setPollPreset] = useState("30");
+  const [pollCustomValue, setPollCustomValue] = useState("30");
   const [groupPickId, setGroupPickId] = useState<number | null>(null);
   const [renamingGroupId, setRenamingGroupId] = useState<number | null>(null);
   const [groupRenameValue, setGroupRenameValue] = useState("");
@@ -181,6 +194,42 @@ export function FeedSidebar({
     await onChanged();
   };
 
+  const openPollEdit = (feed: Feed) => {
+    setPollPreset(presetForMinutes(feed.poll_interval_minutes));
+    setPollCustomValue(String(feed.poll_interval_minutes));
+    setPollEditId(feed.id);
+  };
+
+  const savePollInterval = async (feed: Feed, minutes: number) => {
+    setPollEditId(null);
+    if (minutes === feed.poll_interval_minutes) return;
+    try {
+      await api.patchFeed(feed.id, { poll_interval_minutes: minutes });
+      await onChanged();
+      toast(`${feed.title}: polling every ${minutes}m`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "update failed", "error");
+    }
+  };
+
+  const choosePollPreset = (feed: Feed, value: string) => {
+    if (value === "custom") {
+      setPollPreset("custom");
+      return; // wait for a number in the custom field
+    }
+    if (value === "default") {
+      void savePollInterval(feed, defaultPollMinutes);
+      return;
+    }
+    void savePollInterval(feed, Number(value));
+  };
+
+  const confirmPollCustom = (feed: Feed) => {
+    const n = Number(pollCustomValue);
+    if (Number.isFinite(n) && n >= 1) void savePollInterval(feed, Math.round(n));
+    else setPollEditId(null);
+  };
+
   const importFile = async (file: File) => {
     // one Import button for both formats: .json (or a leading "{") → JSON list,
     // anything else → OPML
@@ -248,6 +297,45 @@ export function FeedSidebar({
               </option>
             ))}
           </select>
+        ) : pollEditId === f.id ? (
+          <span className="poll-edit" onClick={(e) => e.stopPropagation()}>
+            <select
+              className="feed-rename-input"
+              autoFocus={pollPreset !== "custom"}
+              value={pollPreset}
+              onChange={(e) => choosePollPreset(f, e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Escape") setPollEditId(null);
+              }}
+              aria-label={`Poll interval for ${f.title}`}
+            >
+              <option value="default">Default (currently {defaultPollMinutes}m)</option>
+              {POLL_PRESETS.map((m) => (
+                <option key={m} value={m}>
+                  {m}m
+                </option>
+              ))}
+              <option value="custom">Custom…</option>
+            </select>
+            {pollPreset === "custom" && (
+              <input
+                type="number"
+                min={1}
+                className="feed-rename-input poll-custom-input"
+                value={pollCustomValue}
+                autoFocus
+                onChange={(e) => setPollCustomValue(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter") confirmPollCustom(f);
+                  if (e.key === "Escape") setPollEditId(null);
+                }}
+                onBlur={() => confirmPollCustom(f)}
+                aria-label={`Custom poll interval in minutes for ${f.title}`}
+              />
+            )}
+          </span>
         ) : (
           <span>
             <span className="feed-row-title">
@@ -287,6 +375,18 @@ export function FeedSidebar({
               }}
             >
               ↻
+            </button>
+            <button
+              type="button"
+              className="feed-tool"
+              aria-label={`Set poll interval for ${f.title}`}
+              title={`Polling every ${f.poll_interval_minutes}m`}
+              onClick={(e) => {
+                e.stopPropagation();
+                openPollEdit(f);
+              }}
+            >
+              ⏱
             </button>
             {grouped && (
               <button

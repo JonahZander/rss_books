@@ -276,6 +276,7 @@ export default function Home() {
           onDeleteGroup={setDeleteGroupTarget}
           onRefresh={pollAll}
           onChanged={refreshFeeds}
+          defaultPollMinutes={settings?.default_poll_minutes ?? 30}
         />
         <section className="content" aria-label="Articles">
           <ArticleList
