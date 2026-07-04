@@ -15,6 +15,7 @@ type Props = {
   /** Resolved default profile name from settings; null = no profiles exist. */
   defaultProfile: string | null;
   onRemove: (article: Article) => void;
+  onReorder: (next: Article[]) => void;
   onClear: () => void;
   onAddLink: (url: string, title?: string) => Promise<void>;
   onCompiled: () => Promise<void>;
@@ -54,6 +55,7 @@ export function DigestQueue({
   profiles,
   defaultProfile,
   onRemove,
+  onReorder,
   onClear,
   onAddLink,
   onCompiled,
@@ -197,14 +199,44 @@ export function DigestQueue({
             <li key={a.id}>
               <span className="q-idx">{pad2(i + 1)}</span>
               <span className="q-title">{a.title}</span>
-              <button
-                type="button"
-                className="feed-tool danger"
-                aria-label={`Remove ${a.title} from queue`}
-                onClick={() => onRemove(a)}
-              >
-                ×
-              </button>
+              <span className="q-tools">
+                <span className="q-reorder">
+                  <button
+                    type="button"
+                    className="feed-tool"
+                    aria-label={`Move ${a.title} up in the queue`}
+                    disabled={i === 0 || compiling}
+                    onClick={() => {
+                      const next = [...queue];
+                      [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                      onReorder(next);
+                    }}
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    className="feed-tool"
+                    aria-label={`Move ${a.title} down in the queue`}
+                    disabled={i === queue.length - 1 || compiling}
+                    onClick={() => {
+                      const next = [...queue];
+                      [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                      onReorder(next);
+                    }}
+                  >
+                    ▼
+                  </button>
+                </span>
+                <button
+                  type="button"
+                  className="feed-tool danger"
+                  aria-label={`Remove ${a.title} from queue`}
+                  onClick={() => onRemove(a)}
+                >
+                  ×
+                </button>
+              </span>
             </li>
           ))}
         </ol>

@@ -1862,6 +1862,30 @@ a {
   opacity: 1;
 }
 
+.q-tools {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* Stack the reorder pair vertically (each button keeps the ≥24px hit
+   target) so the queue rail stays narrow instead of widening for a
+   side-by-side pair. */
+.q-reorder {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-reorder .feed-tool {
+  font-size: 9px;
+}
+
+.feed-tool:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* ─── Touch-visible row tools ─────────────────────────────── */
 
 /* Coarse-pointer/no-hover devices can't reveal hover-only tools at all, so

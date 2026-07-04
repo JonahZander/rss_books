@@ -198,6 +198,17 @@ export default function Home() {
     }
   };
 
+  const reorderQueue = async (next: Article[]) => {
+    const prev = queue;
+    setQueue(next); // optimistic; reconciled with the server's canonical order below
+    try {
+      setQueue(await api.replaceQueue(next.map((a) => a.id)));
+    } catch (e) {
+      setQueue(prev);
+      toast(e instanceof Error ? e.message : "reorder failed", "error");
+    }
+  };
+
   const addLink = async (url: string, title?: string) => {
     // The new article belongs to the hidden Saved-links feed, so it won't show
     // in the article list; reflecting it in the queue is enough.
@@ -307,6 +318,7 @@ export default function Home() {
           profiles={settings?.profiles.map((p) => p.name) ?? []}
           defaultProfile={settings ? defaultProfileName(settings) : null}
           onRemove={(a) => void toggleQueue(a)}
+          onReorder={(next) => void reorderQueue(next)}
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);
           }}
