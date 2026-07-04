@@ -68,7 +68,13 @@ function EditionsInner() {
   useEffect(() => {
     if (!openParam || openedParam.current === openParam) return;
     const id = Number(openParam);
-    if (!Number.isFinite(id) || !digests.some((d) => d.id === id)) return;
+    const found = Number.isFinite(id) && digests.some((d) => d.id === id);
+    if (!found) {
+      // Once the list has loaded at least once, a missing id is permanent —
+      // stop rescanning on every busy-poll refresh above.
+      if (digests.length > 0) openedParam.current = openParam;
+      return;
+    }
     openedParam.current = openParam;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreviewId(id);

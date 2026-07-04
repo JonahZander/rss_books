@@ -169,6 +169,15 @@ function jsonInit(method: string, body?: unknown): RequestInit {
   };
 }
 
+// Shared by listArticles/markAllRead: both scope to a feed and/or group the
+// same way ("none" means "articles of ungrouped feeds", sent as id 0).
+function feedGroupParams(feedId?: number, groupId?: number | "none"): URLSearchParams {
+  const params = new URLSearchParams();
+  if (feedId != null) params.set("feed_id", String(feedId));
+  if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
+  return params;
+}
+
 export const api = {
   // feeds
   listFeeds: () => fetch(`${BASE}/api/feeds`).then((r) => j<Feed[]>(r)),
@@ -217,9 +226,7 @@ export const api = {
 
   // articles
   listArticles: ({ feedId, groupId, unread, q, limit, offset }: ArticleQuery = {}, signal?: AbortSignal) => {
-    const params = new URLSearchParams();
-    if (feedId != null) params.set("feed_id", String(feedId));
-    if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
+    const params = feedGroupParams(feedId, groupId);
     if (unread) params.set("unread", "true");
     if (q) params.set("q", q);
     if (limit != null) params.set("limit", String(limit));
@@ -240,9 +247,7 @@ export const api = {
   /** Bulk-mark unread articles as read, scoped to a feed or group (or
    * everything, unscoped) — never to a search query or "unread only". */
   markAllRead: ({ feedId, groupId }: { feedId?: number; groupId?: number | "none" } = {}) => {
-    const params = new URLSearchParams();
-    if (feedId != null) params.set("feed_id", String(feedId));
-    if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
+    const params = feedGroupParams(feedId, groupId);
     const qs = params.size > 0 ? `?${params}` : "";
     return fetch(`${BASE}/api/articles/mark-all-read${qs}`, { method: "POST" }).then((r) =>
       j<{ updated: number }>(r),

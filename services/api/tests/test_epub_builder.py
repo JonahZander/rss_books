@@ -127,22 +127,29 @@ def test_cover_is_low_res_jpeg() -> None:
     assert img.size == (1200, 1920)
 
 
+# Shared by the two worst-case cover tests below: a long wrapping title
+# (>4 lines pre-cap) and many sources (>4, forcing the "+N MORE" line) is the
+# layout's worst case.
+_WORST_CASE_TITLE = (
+    "The Definitive Complete Guide To Understanding Global Economic "
+    "Trends And Their Long Term Consequences For Modern Society And "
+    "Beyond All Reasonable Expectation"
+)
+_WORST_CASE_SOURCES = [f"Feed Number {i}" for i in range(1, 8)]  # 7 sources
+
+
 def test_cover_worst_case_title_and_sources_still_renders() -> None:
-    # a long wrapping title (>4 lines pre-cap) and many sources (>4, forcing
-    # the "+N MORE" line) is the layout's worst case; must still be a valid,
-    # correctly-sized JPEG (see cover.py's y-position arithmetic comments)
+    # must still be a valid, correctly-sized JPEG (see cover.py's y-position
+    # arithmetic comments)
     import io
 
     from PIL import Image
 
-    title = (
-        "The Definitive Complete Guide To Understanding Global Economic "
-        "Trends And Their Long Term Consequences For Modern Society And "
-        "Beyond All Reasonable Expectation"
-    )
-    sources = [f"Feed Number {i}" for i in range(1, 8)]  # 7 sources
     cover = render_cover(
-        title=title, date_str="2026-07-04", article_count=42, sources=sources
+        title=_WORST_CASE_TITLE,
+        date_str="2026-07-04",
+        article_count=42,
+        sources=_WORST_CASE_SOURCES,
     )
     assert cover is not None
     assert cover[:2] == b"\xff\xd8"
@@ -162,14 +169,11 @@ def test_cover_worst_case_bottom_rows_are_paper() -> None:
 
     from rss_kindle.services.cover import PAPER
 
-    title = (
-        "The Definitive Complete Guide To Understanding Global Economic "
-        "Trends And Their Long Term Consequences For Modern Society And "
-        "Beyond All Reasonable Expectation"
-    )
-    sources = [f"Feed Number {i}" for i in range(1, 8)]
     cover = render_cover(
-        title=title, date_str="2026-07-04", article_count=42, sources=sources
+        title=_WORST_CASE_TITLE,
+        date_str="2026-07-04",
+        article_count=42,
+        sources=_WORST_CASE_SOURCES,
     )
     assert cover is not None
     img = Image.open(io.BytesIO(cover)).convert("RGB")

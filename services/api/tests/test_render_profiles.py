@@ -543,7 +543,6 @@ def test_custom_profile_screen_width_photo_clamped_to_ceiling(tmp_path, monkeypa
     # PHOTO_WIDTH_CEILING; the pipeline must clamp the output to exactly 1600
     from io import BytesIO
 
-    import httpx
     from PIL import Image as PILImage
 
     monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
@@ -551,12 +550,6 @@ def test_custom_profile_screen_width_photo_clamped_to_ceiling(tmp_path, monkeypa
     buf = BytesIO()
     PILImage.new("RGB", (2400, 1200), (10, 20, 30)).save(buf, format="PNG")
     png = buf.getvalue()
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, content=png, headers={"content-type": "image/png"})
-
-    def fake_client(**overrides):
-        return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:
@@ -584,7 +577,8 @@ def test_custom_profile_screen_width_photo_clamped_to_ceiling(tmp_path, monkeypa
         assert client.put("/api/settings", json=settings).status_code == 200
 
         with patch(
-            "rss_kindle.services.digest_service.make_http_client", new=fake_client
+            "rss_kindle.services.digest_service.make_http_client",
+            new=feed_http_client(png, headers={"content-type": "image/png"}),
         ):
             created = client.post(
                 "/api/digests", json={"article_ids": [ids[0]], "profiles": ["Big Screen"]}
