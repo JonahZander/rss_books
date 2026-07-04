@@ -126,7 +126,13 @@ class Scheduler:
         last_run = parse_db_datetime(await get_value(self.db, "_last_deadline_run"))
         if last_run is not None and last_run >= occurrence:
             return
-        await set_value(self.db, "_last_deadline_run", occurrence.isoformat())
+        # The run is recorded once the queue has been consumed (successfully
+        # or because it was empty), never left unset on a compile failure:
+        # create_digest_records already drained the queue, so leaving
+        # last-run unset would only retry against nothing every tick (log
+        # spam) and risks pressing whatever the user queues next off-schedule.
+        # A failed compile still lands as a 'failed' digest the Editions page
+        # can re-press by hand.
         try:
             # Deleted profiles are dropped silently: the deadline should still
             # press with whatever remains rather than fail the morning edition.
@@ -137,10 +143,13 @@ class Scheduler:
             )
         except ValueError:
             logger.info("press deadline: queue empty, skipping edition")
+            await set_value(self.db, "_last_deadline_run", occurrence.isoformat())
             return
+        await set_value(self.db, "_last_deadline_run", occurrence.isoformat())
         logger.info("press deadline: compiling %d edition(s)", len(digest_ids))
         for digest_id in digest_ids:
-            await generate_digest(self.db, digest_id, self.epub_dir)
+            if not await generate_digest(self.db, digest_id, self.epub_dir):
+                logger.warning("press deadline: digest %d failed to compile", digest_id)
 
     async def _retention(self, settings: AppSettings) -> None:
         if not settings.retention_enabled:

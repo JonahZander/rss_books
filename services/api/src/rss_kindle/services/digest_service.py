@@ -375,8 +375,10 @@ async def _mark_failed(db: Database, digest_id: int, exc: Exception) -> None:
         await conn.commit()
 
 
-async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
-    """Build the EPUB for a digest; lands in status 'ready' or 'failed'."""
+async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> bool:
+    """Build the EPUB for a digest; lands in status 'ready' or 'failed'.
+    Returns whether it succeeded (BackgroundTasks callers may discard this;
+    the scheduler's press deadline uses it only to log, never to retry)."""
     try:
         d, rows = await _mark_generating_and_load(db, digest_id)
 
@@ -408,6 +410,8 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
                 await send_digest_and_record(db, app_settings, digest_id)
             except Exception:
                 logger.exception("auto-email for digest %d failed", digest_id)
+        return True
     except Exception as exc:
         logger.exception("digest %d build failed", digest_id)
         await _mark_failed(db, digest_id, exc)
+        return False

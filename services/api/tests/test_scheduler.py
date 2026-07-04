@@ -236,6 +236,61 @@ async def test_press_deadline_split_per_group(tmp_path: Path) -> None:
     assert row is not None and row["n"] == 0
 
 
+async def test_press_deadline_records_run_even_when_compile_fails(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """The queue is drained by create_digest_records regardless of compile
+    outcome, so a build failure must not leave _last_deadline_run unset -
+    that would retry every tick against an already-empty queue. The failed
+    digest itself is left for the Editions page to re-press."""
+    import rss_kindle.services.scheduler as scheduler_module
+
+    async def failing_generate(db: Database, digest_id: int, epub_dir: Path) -> bool:
+        async with db.connect() as conn:
+            await conn.execute(
+                "UPDATE digests SET status = 'failed', error = 'boom' WHERE id = ?",
+                (digest_id,),
+            )
+            await conn.commit()
+        return False
+
+    monkeypatch.setattr(scheduler_module, "generate_digest", failing_generate)
+
+    db = await _seed_db(tmp_path)
+    await _queue_article(db)
+    settings = AppSettings(deadline_enabled=True, deadline_time="06:30")
+    sched = Scheduler(db, tmp_path / "epubs", now_fn=lambda: NOW)
+
+    await sched._press_deadline(settings)
+
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT status FROM digests")
+        digests = [r["status"] for r in await cur.fetchall()]
+    assert digests == ["failed"]
+    from rss_kindle.services.settings_store import get_value
+
+    assert await get_value(db, "_last_deadline_run") is not None
+
+    # same occurrence: no retry against the (already-empty) queue
+    await sched._press_deadline(settings)
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT COUNT(*) AS n FROM digests")
+        row = await cur.fetchone()
+    assert row is not None and row["n"] == 1
+
+
+async def test_press_deadline_records_run_on_empty_queue(tmp_path: Path) -> None:
+    db = await _seed_db(tmp_path)
+    settings = AppSettings(deadline_enabled=True, deadline_time="06:30")
+    sched = Scheduler(db, tmp_path / "epubs", now_fn=lambda: NOW)
+
+    await sched._press_deadline(settings)
+
+    from rss_kindle.services.settings_store import get_value
+
+    assert await get_value(db, "_last_deadline_run") is not None
+
+
 async def test_retention_preserves_queued_and_digested(tmp_path: Path) -> None:
     db = await _seed_db(tmp_path)
     feed_id = await _add_feed(db, "https://feed.example/rss")
