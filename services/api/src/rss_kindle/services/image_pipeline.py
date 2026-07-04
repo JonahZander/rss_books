@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import html as html_lib
 import logging
@@ -137,7 +138,11 @@ async def prepare_images(
                 r = await client.get(url)
                 r.raise_for_status()
                 original = r.content
-            result = _recompress(original, max_width=max_width, jpeg_quality=jpeg_quality)
+            # Decode/resize/re-encode is CPU-bound; off the event loop so a
+            # compile with many images doesn't stall polling and other requests.
+            result = await asyncio.to_thread(
+                _recompress, original, max_width=max_width, jpeg_quality=jpeg_quality
+            )
             if downloaded:
                 # only after _recompress proved the bytes decodable
                 write_cache(url, original)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from collections.abc import Callable
@@ -394,7 +395,11 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> bool:
         link_qr = profile.link_qr if profile else app_settings.link_qr
 
         images = await _render_bodies(articles, profile, epub_dir)
-        output = _build_epub(digest_id, d["title"], articles, images, epub_dir, link_qr)
+        # Cover rendering and EPUB assembly are CPU/disk-bound; off the event
+        # loop so a large compile doesn't stall polling and other requests.
+        output = await asyncio.to_thread(
+            _build_epub, digest_id, d["title"], articles, images, epub_dir, link_qr
+        )
 
         size_bytes = await _persist_ready(db, digest_id, output, member_outcomes)
         logger.info(

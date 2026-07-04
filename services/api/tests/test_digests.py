@@ -85,6 +85,54 @@ def test_link_qr_setting_embeds_codes_in_epub(tmp_path, monkeypatch):
             assert any(n.startswith("EPUB/qr/") for n in z.namelist())
 
 
+async def test_build_epub_runs_off_event_loop(tmp_path):
+    """Best-effort timing test: while the (deliberately slowed) EPUB build
+    blocks synchronously in a worker thread, a concurrent async task keeps
+    advancing - proof asyncio.to_thread actually takes _build_epub off the
+    loop rather than freezing every other request for its duration."""
+    import asyncio
+    import time
+
+    from rss_kindle.db import Database
+    from rss_kindle.services import digest_service
+
+    db = Database(tmp_path / "t.db")
+    await db.init()
+    async with db.connect() as conn:
+        await conn.execute("INSERT INTO feeds (url, title) VALUES ('https://f.example/rss', 'F')")
+        await conn.execute(
+            "INSERT INTO articles (feed_id, guid, title, url, summary, full_content) "
+            "VALUES (1, 'g1', 'T', 'https://f.example/a', '<p>s</p>', '<p>full</p>')"
+        )
+        await conn.execute("INSERT INTO digests (title, status) VALUES ('D', 'pending')")
+        await conn.execute(
+            "INSERT INTO digest_articles (digest_id, article_id, position) VALUES (1, 1, 0)"
+        )
+        await conn.commit()
+
+    original_build = digest_service._build_epub
+
+    def slow_build(*args, **kwargs):
+        time.sleep(0.2)
+        return original_build(*args, **kwargs)
+
+    counter = {"n": 0}
+
+    async def tick() -> None:
+        for _ in range(40):
+            await asyncio.sleep(0.01)
+            counter["n"] += 1
+
+    with patch.object(digest_service, "_build_epub", slow_build):
+        ok, _ = await asyncio.gather(
+            digest_service.generate_digest(db, 1, tmp_path / "epubs"),
+            tick(),
+        )
+    assert ok is True
+    # 0.2s of blocking build work must not have stalled the 10ms-interval counter
+    assert counter["n"] >= 15
+
+
 def test_digest_build_failure_sets_failed_status(tmp_path, monkeypatch):
     monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
     app = create_app(db_path=tmp_path / "t.db")
