@@ -414,7 +414,7 @@ export function DigestQueue({
             <span>Download · {d.title}.epub</span>
             <span className="queue-download-arrow">↓</span>
           </a>
-          {emailConfigured && (
+          {emailConfigured ? (
             <button
               type="button"
               className="btn btn-ghost"
@@ -424,6 +424,11 @@ export function DigestQueue({
               <span>{sendingId === d.id ? "Sending…" : "Send to e-reader"}</span>
               <span className="btn-arrow">✉</span>
             </button>
+          ) : (
+            <Link href="/settings#delivery" className="btn btn-ghost">
+              <span>Set up delivery to send</span>
+              <span className="btn-arrow">✉</span>
+            </Link>
           )}
         </div>
       ))}

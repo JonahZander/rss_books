@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { EditionPreview } from "../../components/EditionPreview";
@@ -238,18 +239,28 @@ function EditionsInner() {
                     </a>
                   )}
                   <span className="edition-tools">
-                    {d.status === "ready" && canEmail && (
-                      <button
-                        type="button"
-                        className="feed-tool"
-                        title="Send to e-reader"
-                        aria-label={`Send ${d.title} to e-reader`}
-                        disabled={sendingId === d.id}
-                        onClick={() => void send(d)}
-                      >
-                        ✉
-                      </button>
-                    )}
+                    {d.status === "ready" &&
+                      (canEmail ? (
+                        <button
+                          type="button"
+                          className="feed-tool"
+                          title="Send to e-reader"
+                          aria-label={`Send ${d.title} to e-reader`}
+                          disabled={sendingId === d.id}
+                          onClick={() => void send(d)}
+                        >
+                          ✉
+                        </button>
+                      ) : (
+                        <Link
+                          href="/settings#delivery"
+                          className="feed-tool"
+                          title="Send to e-reader — set up delivery in Settings first"
+                          aria-label={`Set up delivery to send ${d.title}`}
+                        >
+                          ✉
+                        </Link>
+                      ))}
                     {d.status === "ready" && (
                       <button
                         type="button"
