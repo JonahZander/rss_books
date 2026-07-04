@@ -1925,6 +1925,26 @@ a {
   letter-spacing: 0.1em;
 }
 
+.queue-view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+}
+
+.queue-view-link .btn-arrow {
+  transition: transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.queue-view-link:hover .btn-arrow {
+  transform: translateX(3px);
+}
+
 /* ─── Toasts ──────────────────────────────────────────────── */
 
 .toast-stack {

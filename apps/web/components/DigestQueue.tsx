@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import Link from "next/link";
 import type { Article, Digest } from "../lib/api";
 import { api } from "../lib/api";
 import { pad2 } from "../lib/format";
@@ -396,6 +397,12 @@ export function DigestQueue({
           <span className="queue-status-ref">
             Ref&nbsp;#{String(d.id).padStart(4, "0")} · {d.title}
           </span>
+          {d.status === "ready" && (
+            <Link href={`/editions?open=${d.id}`} className="queue-view-link">
+              <span>View edition</span>
+              <span className="btn-arrow">→</span>
+            </Link>
+          )}
         </div>
       ))}
 
