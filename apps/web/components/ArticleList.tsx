@@ -20,6 +20,8 @@ type Props = {
   markReadOnExpand: boolean;
   onToggleQueue: (article: Article) => void;
   onRead: (article: Article) => void;
+  onToggleRead: (article: Article) => void;
+  onMarkAllSeen: () => void;
   currentFeed: Feed | null;
   currentGroup: { name: string } | null;
   lastPoll: string | null;
@@ -122,6 +124,8 @@ export function ArticleList({
   markReadOnExpand,
   onToggleQueue,
   onRead,
+  onToggleRead,
+  onMarkAllSeen,
   currentFeed,
   currentGroup,
   lastPoll,
@@ -133,6 +137,8 @@ export function ArticleList({
 }: Props) {
   const title = currentFeed?.title ?? currentGroup?.name ?? "All dispatches";
   const total = articles.length;
+  const searchActive = search.trim() !== "";
+  const hasUnreadInView = articles.some((a) => !a.read_at);
   const numberOffset = page * pageSize;
   // null = closed. A stale index (list shrank under an open reader) simply
   // renders nothing; guarded at the render site below.
@@ -178,6 +184,16 @@ export function ArticleList({
           />
           <span>Unread only</span>
         </label>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={onMarkAllSeen}
+          disabled={searchActive || !hasUnreadInView}
+          title={searchActive ? "Clear the search to mark all seen" : undefined}
+        >
+          <span>Mark all seen</span>
+          <span className="btn-arrow">✓</span>
+        </button>
         <input
           type="search"
           className="search-input"
@@ -206,6 +222,7 @@ export function ArticleList({
               number={numberOffset + i + 1}
               queued={queuedIds.has(a.id)}
               onToggleQueue={() => onToggleQueue(a)}
+              onToggleRead={() => onToggleRead(a)}
               onOpen={() => setReadIndex(i)}
             />
           ))}

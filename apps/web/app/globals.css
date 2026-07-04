@@ -843,14 +843,39 @@ a {
   align-items: baseline;
 }
 
-/* Badge sits flush against the row's right edge, off to the side of the
-   title. Right-aligned so badges of different lengths (New / Seen / Queued /
-   In edition) all share the same right edge, stacking into a clean vertical
-   column down the side of the list. */
-.article-header .lifecycle-stamp {
+/* Badge (and the read/unread toggle above it) sit flush against the row's
+   right edge, off to the side of the title. Right-aligned so badges of
+   different lengths (New / Seen / Queued / In edition) all share the same
+   right edge, stacking into a clean vertical column down the side of the
+   list. */
+.article-header-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   justify-self: end;
   align-self: center;
+}
+
+.article-header .lifecycle-stamp {
   white-space: nowrap;
+}
+
+.read-toggle {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 2px 4px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.read-toggle:hover {
+  color: var(--accent-blue);
 }
 
 .article-index {

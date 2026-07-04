@@ -230,6 +230,17 @@ export const api = {
     fetch(`${BASE}/api/articles/${id}/read`, { method: "POST" }).then((r) => j<Article>(r)),
   markUnread: (id: number) =>
     fetch(`${BASE}/api/articles/${id}/unread`, { method: "POST" }).then((r) => j<Article>(r)),
+  /** Bulk-mark unread articles as read, scoped to a feed or group (or
+   * everything, unscoped) — never to a search query or "unread only". */
+  markAllRead: ({ feedId, groupId }: { feedId?: number; groupId?: number | "none" } = {}) => {
+    const params = new URLSearchParams();
+    if (feedId != null) params.set("feed_id", String(feedId));
+    if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
+    const qs = params.size > 0 ? `?${params}` : "";
+    return fetch(`${BASE}/api/articles/mark-all-read${qs}`, { method: "POST" }).then((r) =>
+      j<{ updated: number }>(r),
+    );
+  },
 
   // queue
   getQueue: () => fetch(`${BASE}/api/queue`).then((r) => j<Article[]>(r)),

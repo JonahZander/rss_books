@@ -215,14 +215,48 @@ export default function Home() {
     setQueue(await api.addLinkToQueue(url, title));
   };
 
-  const onRead = useCallback((updated: Article) => {
+  // Direction-aware: wasRead is the article's read state BEFORE this update,
+  // so unread_count moves the opposite way (-1 marking read, +1 unmarking).
+  const onArticleReadChange = useCallback((updated: Article, wasRead: boolean) => {
     setArticles((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     setFeeds((prev) =>
       prev.map((f) =>
-        f.id === updated.feed_id ? { ...f, unread_count: Math.max(0, f.unread_count - 1) } : f,
+        f.id === updated.feed_id
+          ? { ...f, unread_count: Math.max(0, f.unread_count + (wasRead ? 1 : -1)) }
+          : f,
       ),
     );
   }, []);
+
+  // TriageReader's mark-on-expand only ever marks read (wasRead is always
+  // false there — it checks !article.read_at before calling this).
+  const onRead = useCallback(
+    (updated: Article) => onArticleReadChange(updated, false),
+    [onArticleReadChange],
+  );
+
+  const toggleRead = async (article: Article) => {
+    const wasRead = Boolean(article.read_at);
+    try {
+      const updated = wasRead ? await api.markUnread(article.id) : await api.markRead(article.id);
+      onArticleReadChange(updated, wasRead);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "update failed", "error");
+    }
+  };
+
+  const markAllSeen = async () => {
+    try {
+      const r = await api.markAllRead({
+        feedId: selectedFeedId ?? undefined,
+        groupId: selectedGroupId ?? undefined,
+      });
+      toast(`${r.updated} marked seen`);
+      await Promise.all([refreshArticles(), refreshFeeds()]);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "mark all seen failed", "error");
+    }
+  };
 
   const onCompiled = useCallback(async () => {
     await Promise.all([refreshQueue(), refreshArticles(), refreshFeeds()]);
@@ -301,6 +335,8 @@ export default function Home() {
             markReadOnExpand={settings?.mark_read_on_expand ?? true}
             onToggleQueue={toggleQueue}
             onRead={onRead}
+            onToggleRead={(a) => void toggleRead(a)}
+            onMarkAllSeen={() => void markAllSeen()}
             currentFeed={currentFeed}
             currentGroup={currentGroup}
             lastPoll={lastPoll}
