@@ -209,7 +209,7 @@ export const api = {
   exportJsonUrl: () => `${BASE}/api/feeds/export.json`,
 
   // articles
-  listArticles: ({ feedId, groupId, unread, q, limit, offset }: ArticleQuery = {}) => {
+  listArticles: ({ feedId, groupId, unread, q, limit, offset }: ArticleQuery = {}, signal?: AbortSignal) => {
     const params = new URLSearchParams();
     if (feedId != null) params.set("feed_id", String(feedId));
     if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
@@ -218,7 +218,7 @@ export const api = {
     if (limit != null) params.set("limit", String(limit));
     if (offset != null) params.set("offset", String(offset));
     const qs = params.size > 0 ? `?${params}` : "";
-    return fetch(`${BASE}/api/articles${qs}`).then((r) => j<Article[]>(r));
+    return fetch(`${BASE}/api/articles${qs}`, { signal }).then((r) => j<Article[]>(r));
   },
   getArticle: (id: number) =>
     fetch(`${BASE}/api/articles/${id}`).then((r) => j<ArticleDetail>(r)),

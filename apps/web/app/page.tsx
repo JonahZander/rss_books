@@ -46,20 +46,39 @@ export default function Home() {
     setGroups(groupList);
   }, []);
 
+  // Guards against a slow, stale request clobbering a faster, newer one: each
+  // call aborts its predecessor and stamps a sequence number, applying its
+  // result only if nothing newer has started in the meantime.
+  const articlesAbort = useRef<AbortController | null>(null);
+  const articlesSeq = useRef(0);
   const refreshArticles = useCallback(async () => {
-    const list = await api.listArticles({
-      feedId: selectedFeedId ?? undefined,
-      groupId: selectedGroupId ?? undefined,
-      unread: unreadOnly,
-      q: search || undefined,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
-    });
-    setArticles(list);
-    // A full page implies there may be more; one short page ends the run.
-    setHasNext(list.length === PAGE_SIZE);
-    setArticlesLoaded(true);
-  }, [selectedFeedId, selectedGroupId, unreadOnly, search, page]);
+    articlesAbort.current?.abort();
+    const controller = new AbortController();
+    articlesAbort.current = controller;
+    const seq = ++articlesSeq.current;
+    try {
+      const list = await api.listArticles(
+        {
+          feedId: selectedFeedId ?? undefined,
+          groupId: selectedGroupId ?? undefined,
+          unread: unreadOnly,
+          q: search || undefined,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        },
+        controller.signal,
+      );
+      if (seq !== articlesSeq.current) return; // a newer request has since started
+      setArticles(list);
+      // A full page implies there may be more; one short page ends the run.
+      setHasNext(list.length === PAGE_SIZE);
+      setArticlesLoaded(true);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      if (seq !== articlesSeq.current) return;
+      toast(e instanceof Error ? e.message : "could not load articles", "error");
+    }
+  }, [selectedFeedId, selectedGroupId, unreadOnly, search, page, toast]);
 
   const refreshQueue = useCallback(async () => {
     setQueue(await api.getQueue());
