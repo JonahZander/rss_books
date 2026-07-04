@@ -74,3 +74,58 @@ def test_compiling_marks_articles_read(tmp_path, monkeypatch):
         ids = _seed(client)
         client.post("/api/digests", json={"article_ids": ids})
         assert client.get("/api/articles", params={"unread": True}).json() == []
+
+
+def _seed_two_feeds(client: TestClient) -> tuple[dict, dict]:
+    a = client.post("/api/feeds", json={"url": "https://a.example/rss", "title": "A"}).json()
+    b = client.post("/api/feeds", json={"url": "https://b.example/rss", "title": "B"}).json()
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
+        client.post(f"/api/feeds/{a['id']}/refresh")
+    other_content = FIXTURE.read_bytes().replace(b"urn:example:", b"urn:other:")
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(other_content)):
+        client.post(f"/api/feeds/{b['id']}/refresh")
+    return a, b
+
+
+def test_mark_all_read_scoped_to_feed(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        a, b = _seed_two_feeds(client)
+
+        r = client.post("/api/articles/mark-all-read", params={"feed_id": a["id"]})
+        assert r.status_code == 200
+        assert r.json()["updated"] == 2
+
+        unread = client.get("/api/articles", params={"unread": True}).json()
+        assert {x["feed_id"] for x in unread} == {b["id"]}
+
+
+def test_mark_all_read_scoped_to_group(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        group = client.post("/api/groups", json={"name": "AI"}).json()
+        a, b = _seed_two_feeds(client)
+        client.patch(f"/api/feeds/{a['id']}", json={"group_id": group["id"]})
+
+        r = client.post("/api/articles/mark-all-read", params={"group_id": group["id"]})
+        assert r.json()["updated"] == 2
+        unread = client.get("/api/articles", params={"unread": True}).json()
+        assert {x["feed_id"] for x in unread} == {b["id"]}
+
+        # group_id=0 is the "ungrouped feeds" sentinel
+        r = client.post("/api/articles/mark-all-read", params={"group_id": 0})
+        assert r.json()["updated"] == 2
+        assert client.get("/api/articles", params={"unread": True}).json() == []
+
+
+def test_mark_all_read_no_filter_hits_everything(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+
+        r = client.post("/api/articles/mark-all-read")
+        assert r.json()["updated"] == len(ids)
+        assert client.get("/api/articles", params={"unread": True}).json() == []
+
+        # nothing left unread: idempotent, not an error
+        assert client.post("/api/articles/mark-all-read").json()["updated"] == 0

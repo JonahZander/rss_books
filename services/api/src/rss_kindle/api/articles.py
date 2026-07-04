@@ -97,6 +97,28 @@ async def list_articles(
     return [_to_article(r) for r in rows]
 
 
+@router.post("/mark-all-read")
+async def mark_all_read(
+    request: Request, feed_id: int | None = None, group_id: int | None = None
+) -> dict[str, int]:
+    """Bulk-mark unread articles as read, scoped to a feed/group like
+    `list_articles` — but deliberately never to `q`/`unread` (a search query
+    narrows what the caller can currently SEE, not what should be marked, and
+    "unread only" is exactly the state this clears). Declared above
+    `/{article_id}` so it can never be shadowed by a future bare POST there."""
+    db = request.app.state.db
+    clauses, params = _scope_clause(feed_id, group_id)
+    clauses.append("read_at IS NULL")
+    where = " AND ".join(clauses)
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            f"UPDATE articles SET read_at = CURRENT_TIMESTAMP WHERE {where}",
+            params,
+        )
+        await conn.commit()
+    return {"updated": cur.rowcount}
+
+
 @router.get("/{article_id}", response_model=ArticleDetail)
 async def get_article(article_id: int, request: Request) -> ArticleDetail:
     db = request.app.state.db
