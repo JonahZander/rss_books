@@ -1654,10 +1654,48 @@ a {
 }
 
 .feed-error-badge {
-  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -7px -4px -7px 2px;
+  border: 0;
+  background: none;
+  padding: 0;
   color: var(--danger);
   font-size: 10px;
-  cursor: help;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.feed-error-badge:hover {
+  transform: scale(1.15);
+}
+
+.feed-error-detail {
+  margin: 0 0 8px 42px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.feed-error-detail p {
+  margin: 0 0 6px;
+}
+
+.feed-error-detail-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.feed-error-detail .btn {
+  margin-top: 2px;
 }
 
 .feed-row-tools {

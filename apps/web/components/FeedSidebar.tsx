@@ -68,6 +68,7 @@ export function FeedSidebar({
   const [refreshing, setRefreshing] = useState(false);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [errorOpenId, setErrorOpenId] = useState<number | null>(null);
   const [groupPickId, setGroupPickId] = useState<number | null>(null);
   const [renamingGroupId, setRenamingGroupId] = useState<number | null>(null);
   const [groupRenameValue, setGroupRenameValue] = useState("");
@@ -197,127 +198,155 @@ export function FeedSidebar({
   };
 
   const feedRow = (f: Feed) => (
-    <div
-      className={`feed-row ${selectedFeedId === f.id ? "active" : ""}`}
-      onClick={() => onSelect(f.id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect(f.id);
-        }
-      }}
-    >
-      <span className="feed-row-index">{pad2((indexOf.get(f.id) ?? 0) + 1)}</span>
-      {renamingId === f.id ? (
-        <input
-          className="feed-rename-input"
-          value={renameValue}
-          autoFocus
-          onChange={(e) => setRenameValue(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === "Enter") void saveRename(f);
-            if (e.key === "Escape") setRenamingId(null);
-          }}
-          onBlur={() => void saveRename(f)}
-          aria-label={`Rename ${f.title}`}
-        />
-      ) : groupPickId === f.id ? (
-        <select
-          className="feed-rename-input"
-          autoFocus
-          defaultValue={f.group_id == null ? "" : String(f.group_id)}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => void moveToGroup(f, e.target.value)}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === "Escape") setGroupPickId(null);
-          }}
-          onBlur={() => setGroupPickId(null)}
-          aria-label={`Move ${f.title} to group`}
-        >
-          <option value="">No group</option>
-          {groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <span>
-          <span className="feed-row-title">
-            {f.title}
-            {f.last_error && (
-              <span className="feed-error-badge" title={f.last_error}>
-                ▲
-              </span>
-            )}
-          </span>
-          <span className="feed-row-sub">
-            {hostnameOf(f.site_url ?? f.url)} · {relPoll(f.last_polled)}
-          </span>
-        </span>
-      )}
-      <span className="feed-row-end">
-        {f.unread_count > 0 && <span className="unread-badge">{capCount(f.unread_count)}</span>}
-        <span className="feed-row-tools">
-          <button
-            type="button"
-            className="feed-tool"
-            aria-label={`Refresh ${f.title}`}
-            title="Refresh now"
-            onClick={(e) => {
+    <>
+      <div
+        className={`feed-row ${selectedFeedId === f.id ? "active" : ""}`}
+        onClick={() => onSelect(f.id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect(f.id);
+          }
+        }}
+      >
+        <span className="feed-row-index">{pad2((indexOf.get(f.id) ?? 0) + 1)}</span>
+        {renamingId === f.id ? (
+          <input
+            className="feed-rename-input"
+            value={renameValue}
+            autoFocus
+            onChange={(e) => setRenameValue(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
               e.stopPropagation();
-              void refreshOne(f);
+              if (e.key === "Enter") void saveRename(f);
+              if (e.key === "Escape") setRenamingId(null);
             }}
+            onBlur={() => void saveRename(f)}
+            aria-label={`Rename ${f.title}`}
+          />
+        ) : groupPickId === f.id ? (
+          <select
+            className="feed-rename-input"
+            autoFocus
+            defaultValue={f.group_id == null ? "" : String(f.group_id)}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => void moveToGroup(f, e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Escape") setGroupPickId(null);
+            }}
+            onBlur={() => setGroupPickId(null)}
+            aria-label={`Move ${f.title} to group`}
           >
-            ↻
-          </button>
-          {grouped && (
+            <option value="">No group</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span>
+            <span className="feed-row-title">
+              {f.title}
+              {f.last_error && (
+                <button
+                  type="button"
+                  className="feed-error-badge"
+                  title={f.last_error}
+                  aria-label={`${f.title} failed to refresh, show details`}
+                  aria-expanded={errorOpenId === f.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setErrorOpenId(errorOpenId === f.id ? null : f.id);
+                  }}
+                >
+                  ▲
+                </button>
+              )}
+            </span>
+            <span className="feed-row-sub">
+              {hostnameOf(f.site_url ?? f.url)} · {relPoll(f.last_polled)}
+            </span>
+          </span>
+        )}
+        <span className="feed-row-end">
+          {f.unread_count > 0 && <span className="unread-badge">{capCount(f.unread_count)}</span>}
+          <span className="feed-row-tools">
             <button
               type="button"
               className="feed-tool"
-              aria-label={`Move ${f.title} to group`}
-              title="Move to group"
+              aria-label={`Refresh ${f.title}`}
+              title="Refresh now"
               onClick={(e) => {
                 e.stopPropagation();
-                setGroupPickId(f.id);
+                void refreshOne(f);
               }}
             >
-              ⊞
+              ↻
             </button>
-          )}
-          <button
-            type="button"
-            className="feed-tool"
-            aria-label={`Rename ${f.title}`}
-            title="Rename"
-            onClick={(e) => {
-              e.stopPropagation();
-              setRenameValue(f.title);
-              setRenamingId(f.id);
-            }}
-          >
-            ✎
-          </button>
-          <button
-            type="button"
-            className="feed-tool danger"
-            aria-label={`Remove ${f.title}`}
-            title="Remove"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(f);
-            }}
-          >
-            ×
-          </button>
+            {grouped && (
+              <button
+                type="button"
+                className="feed-tool"
+                aria-label={`Move ${f.title} to group`}
+                title="Move to group"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setGroupPickId(f.id);
+                }}
+              >
+                ⊞
+              </button>
+            )}
+            <button
+              type="button"
+              className="feed-tool"
+              aria-label={`Rename ${f.title}`}
+              title="Rename"
+              onClick={(e) => {
+                e.stopPropagation();
+                setRenameValue(f.title);
+                setRenamingId(f.id);
+              }}
+            >
+              ✎
+            </button>
+            <button
+              type="button"
+              className="feed-tool danger"
+              aria-label={`Remove ${f.title}`}
+              title="Remove"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(f);
+              }}
+            >
+              ×
+            </button>
+          </span>
         </span>
-      </span>
-    </div>
+      </div>
+      {errorOpenId === f.id && f.last_error && (
+        <div className="feed-error-detail">
+          <p>{f.last_error}</p>
+          <p className="feed-error-detail-meta">
+            {f.consecutive_failures} consecutive failure{f.consecutive_failures === 1 ? "" : "s"}
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => void refreshOne(f)}
+          >
+            <span>Retry now</span>
+            <span className="btn-arrow">↻</span>
+          </button>
+        </div>
+      )}
+    </>
   );
 
   const groupSection = (key: string, name: string, sectionFeeds: Feed[], group?: Group) => {
