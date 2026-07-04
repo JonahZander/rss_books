@@ -56,7 +56,9 @@ async def fetch_url_bytes(url: str) -> bytes:
                 continue
             r.raise_for_status()
             return r.content
-    raise RuntimeError(f"too many redirects (> {MAX_REDIRECTS} hops): {url}")
+    # RequestException so callers degrade the same way curl_cffi's own
+    # redirect cap did: summary fallback / 502, never a failed compile.
+    raise RequestException(f"too many redirects (> {MAX_REDIRECTS} hops): {url}")
 
 
 async def fetch_article_content(url: str, settings: AppSettings) -> str | None:

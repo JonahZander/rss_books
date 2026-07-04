@@ -7,6 +7,7 @@ import ipaddress
 import httpx
 import pytest
 from curl_cffi.requests import Response
+from curl_cffi.requests.exceptions import RequestException
 
 from rss_kindle.config import Settings, make_http_client
 from rss_kindle.services import article_fetcher, net_guard
@@ -245,5 +246,5 @@ async def test_fetch_url_bytes_redirect_loop_raises(monkeypatch: pytest.MonkeyPa
     session = _FakeAsyncSession(responses)
     monkeypatch.setattr(article_fetcher, "AsyncSession", lambda: session)
 
-    with pytest.raises(RuntimeError, match="too many redirects"):
+    with pytest.raises(RequestException, match="too many redirects"):
         await article_fetcher.fetch_url_bytes("https://loop.example/start")
