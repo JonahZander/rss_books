@@ -275,6 +275,13 @@ def build_digest_epub(
 
     if cover_image:
         book.set_cover("cover.jpg", cover_image)
+        # set_cover() puts cover.xhtml in the spine as non-linear (shown by
+        # reader chrome, not inline reading order), but never links to it
+        # from anywhere - EPUB3 requires non-linear content be reachable via
+        # a hyperlink (epubcheck OPF-096). Populating book.guide makes
+        # ebooklib emit both the epub2 <guide> reference and the epub3 nav
+        # "landmarks" link that satisfies it.
+        book.guide.append({"type": "cover", "title": "Cover", "href": "cover.xhtml"})
 
     sources = _sources(articles)
     total = len(articles)

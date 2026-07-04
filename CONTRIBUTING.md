@@ -30,6 +30,19 @@ Run a single backend test:
 uv run --directory services/api --extra dev pytest tests/test_digests.py -q
 ```
 
+The `epubcheck` marker (`tests/test_epubcheck.py`) validates a fixture edition
+against the real [epubcheck](https://github.com/w3c/epubcheck) tool; it
+self-skips unless both a JVM and `EPUBCHECK_JAR` (path to the extracted
+`epubcheck.jar`) are available, so a normal local run never needs Java. CI
+downloads and checksum-verifies the jar automatically. To run it locally,
+download and extract a release zip from the
+[releases page](https://github.com/w3c/epubcheck/releases), then:
+
+```bash
+EPUBCHECK_JAR=/path/to/epubcheck-5.3.0/epubcheck.jar \
+  uv run --directory services/api --extra dev pytest tests/test_epubcheck.py -m epubcheck
+```
+
 ## Conventions
 
 - **Migrations:** every schema change ships as a migration appended to
