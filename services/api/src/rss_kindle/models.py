@@ -110,7 +110,9 @@ class RenderProfile(BaseModel):
     code_mode: CodeMode = "native"
     # Device screen in pixels; when both are set, table/code images are drawn
     # fitted to the screen (auto-rotation, screen-shaped splitting) and photos
-    # are recompressed to 2x screen width instead of the global 1200px.
+    # are recompressed to 2x screen width instead of the global 1200px,
+    # capped at PHOTO_WIDTH_CEILING (1600px; see digest_service.py) so an
+    # oversized custom screen_width doesn't blow past any current reader.
     screen_width: int | None = Field(default=None, gt=0)
     screen_height: int | None = Field(default=None, gt=0)
 

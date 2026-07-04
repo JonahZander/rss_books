@@ -27,6 +27,20 @@ from rss_kindle.services.table_renderer import (
 
 logger = logging.getLogger(__name__)
 
+# Photos are recompressed to 2x a profile's screen width for crisp e-ink
+# rendering, but an oversized custom screen_width shouldn't blow past what
+# any current reader can usefully show (or bloat the EPUB); clamp to this.
+PHOTO_WIDTH_CEILING = 1600
+
+
+def _photo_max_width(screen: tuple[int, int] | None) -> int:
+    """Target photo width for the image pipeline: 2x the profile's screen
+    width, capped at PHOTO_WIDTH_CEILING. Profiles without screen dims (or no
+    profile at all) use the global 1200px default."""
+    if screen is None:
+        return 1200
+    return min(SUPERSAMPLE * screen[0], PHOTO_WIDTH_CEILING)
+
 
 def _safe_filename(name: str) -> str:
     """Collapse path-hostile characters so titles (and group suffixes) can't
@@ -272,9 +286,10 @@ async def _render_bodies(
     """Rewrite article HTML through the image pipeline (and table/code
     pre-rendering, when the profile asks for it); returns the images to embed
     in the EPUB. A profile with screen dimensions gets photos recompressed to
-    2x its screen width and table/code images fitted to its screen."""
+    2x its screen width (capped at PHOTO_WIDTH_CEILING) and table/code images
+    fitted to its screen."""
     screen = profile.screen if profile else None
-    max_width = SUPERSAMPLE * screen[0] if screen else 1200
+    max_width = _photo_max_width(screen)
     async with make_http_client() as client:
         rewritten, images = await prepare_images(
             [(a.html, a.url) for a in articles],
