@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from rss_kindle.models import Article, ArticleDetail
 from rss_kindle.services.article_fetcher import fetch_url_bytes
 from rss_kindle.services.content_extractor import extract_html
+from rss_kindle.services.net_guard import SSRFBlockedError
 from rss_kindle.services.readers import ReaderError, build_reader
 from rss_kindle.services.sanitizer import sanitize
 from rss_kindle.services.settings_store import get_app_settings
@@ -130,6 +131,8 @@ async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail
         )
     except RequestException as e:
         fetch_error = HTTPException(status_code=502, detail=f"fetch failed: {e}")
+    except SSRFBlockedError as e:
+        fetch_error = HTTPException(status_code=502, detail=str(e))
 
     # Blocked or empty? Hand the URL to the configured reader service (Tavily,
     # Jina, …); its output is sanitized like everything else we store.
