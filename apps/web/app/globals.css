@@ -1812,6 +1812,31 @@ a {
   opacity: 1;
 }
 
+/* ─── Touch-visible row tools ─────────────────────────────── */
+
+/* Coarse-pointer/no-hover devices can't reveal hover-only tools at all, so
+   show them always instead. `.feed-row .feed-row-tools` is normally an
+   absolute overlay (built for the hover reveal, so it doesn't reserve grid
+   space) sitting over `.feed-row-end`; forced-visible without a layout
+   change it would permanently cover the unread badge, the sidebar's primary
+   signal. Pull it back into normal flow here so the badge and tools sit
+   side by side instead. */
+@media (hover: none), (pointer: coarse) {
+  .feed-row-tools,
+  .group-head .feed-row-tools,
+  .queue-list li .feed-tool {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .feed-row .feed-row-tools {
+    position: static;
+    transform: none;
+    padding: 0;
+    background: transparent;
+  }
+}
+
 .queue-status.failed {
   color: var(--danger);
 }
