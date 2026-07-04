@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Feed, Group, ImportSkip } from "../lib/api";
 import { api } from "../lib/api";
 import { capCount, pad2 } from "../lib/format";
@@ -25,6 +25,12 @@ type Props = {
    * this value onto the feed at the moment it's chosen — it does not track
    * later changes to the setting (there's no "follow the default" flag). */
   defaultPollMinutes: number;
+  /** Bumped by the parent (e.g. the onboarding checklist) to open the
+   * add-feed form and focus its URL field from outside — the form itself is
+   * only mounted while the internal `addingFeed` state is true, so a caller
+   * can't just focus `#feed-url` without this signal. Increment to (re)open;
+   * the initial value must be 0 so mounting doesn't auto-open the form. */
+  openAddFeedSignal: number;
 };
 
 const COLLAPSE_KEY = "sidebar-collapsed";
@@ -70,6 +76,7 @@ export function FeedSidebar({
   onRefresh,
   onChanged,
   defaultPollMinutes,
+  openAddFeedSignal,
 }: Props) {
   const toast = useToast();
   const [url, setUrl] = useState("");
@@ -92,6 +99,19 @@ export function FeedSidebar({
   const [importSkips, setImportSkips] = useState<ImportSkip[]>([]);
   const [importSkipsOpen, setImportSkipsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Signal from the parent (checklist's "Add a feed →") opens the form and
+  // focuses/scrolls to it; skip the initial mount, where the signal is 0.
+  useEffect(() => {
+    if (!openAddFeedSignal) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAddingFeed(true);
+    requestAnimationFrame(() => {
+      const el = document.getElementById("feed-url");
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (el instanceof HTMLInputElement) el.focus();
+    });
+  }, [openAddFeedSignal]);
 
   const grouped = groups.length > 0;
   const ungroupedFeeds = feeds.filter((f) => f.group_id == null);

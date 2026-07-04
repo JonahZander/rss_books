@@ -687,6 +687,99 @@ a {
   font-size: 10px;
 }
 
+/* ─── Onboarding checklist ────────────────────────────────── */
+
+.onboarding-card {
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.onboarding-progress {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.onboarding-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.onboarding-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.onboarding-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.onboarding-item.done {
+  color: var(--ink-3);
+}
+
+.onboarding-tick {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* Read-only status tick: same look as the interactive .checkbox:checked
+   state, but driven by a modifier class since a plain <span> can't take a
+   :checked pseudo-class. */
+.checkbox.checkbox-done {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.checkbox.checkbox-done::before,
+.checkbox.checkbox-done::after {
+  content: "";
+  position: absolute;
+  background: var(--paper);
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+}
+
+.checkbox.checkbox-done::before {
+  width: 8px;
+  height: 1.5px;
+  transform: translate(-50%, -50%);
+}
+
+.checkbox.checkbox-done::after {
+  width: 1.5px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+}
+
+.onboarding-item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .article-row {
   position: relative;
   cursor: pointer;

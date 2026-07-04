@@ -6,6 +6,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DigestQueue } from "../components/DigestQueue";
 import { FeedSidebar } from "../components/FeedSidebar";
 import { Masthead } from "../components/Masthead";
+import { OnboardingChecklist } from "../components/OnboardingChecklist";
 import { useToast } from "../components/Toasts";
 import {
   api,
@@ -28,6 +29,7 @@ export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoaded, setArticlesLoaded] = useState(false);
   const [queue, setQueue] = useState<Article[]>([]);
+  const [digestsCount, setDigestsCount] = useState(0);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<number | "none" | null>(null);
@@ -39,6 +41,9 @@ export default function Home() {
   const [deleteTarget, setDeleteTarget] = useState<Feed | null>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<Group | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("articles");
+  // Bumped to signal FeedSidebar to open its add-feed form from outside (the
+  // onboarding checklist's "Add a feed →"); see FeedSidebar's prop doc.
+  const [openAddFeedSignal, setOpenAddFeedSignal] = useState(0);
 
   const refreshFeeds = useCallback(async () => {
     const [feedList, groupList] = await Promise.all([api.listFeeds(), api.listGroups()]);
@@ -84,14 +89,22 @@ export default function Home() {
     setQueue(await api.getQueue());
   }, []);
 
+  // Only a count: the onboarding checklist needs a boolean ("an edition
+  // exists"), and DigestQueue already owns the full, session-local digest
+  // list — this avoids a second source of truth next to it.
+  const refreshDigestsCount = useCallback(async () => {
+    setDigestsCount((await api.listDigests()).length);
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshFeeds();
     void refreshQueue();
+    void refreshDigestsCount();
     api.getSettings().then(setSettings, (e) => {
       toast(e instanceof Error ? e.message : "could not load settings", "error");
     });
-  }, [refreshFeeds, refreshQueue, toast]);
+  }, [refreshFeeds, refreshQueue, refreshDigestsCount, toast]);
 
   // Debounce only the search box; feed/group/unread switches should feel instant.
   const prevSearch = useRef(search);
@@ -259,8 +272,23 @@ export default function Home() {
   };
 
   const onCompiled = useCallback(async () => {
-    await Promise.all([refreshQueue(), refreshArticles(), refreshFeeds()]);
-  }, [refreshQueue, refreshArticles, refreshFeeds]);
+    await Promise.all([refreshQueue(), refreshArticles(), refreshFeeds(), refreshDigestsCount()]);
+  }, [refreshQueue, refreshArticles, refreshFeeds, refreshDigestsCount]);
+
+  // Onboarding checklist actions: jump to the relevant mobile panel, then
+  // hand off to the target — opening the add-feed form (FeedSidebar owns
+  // that state) or scrolling the queue/compile panel into view.
+  const focusAddFeed = useCallback(() => {
+    setMobilePanel("feeds");
+    setOpenAddFeedSignal((n) => n + 1);
+  }, []);
+
+  const goToQueue = useCallback(() => {
+    setMobilePanel("queue");
+    requestAnimationFrame(() => {
+      document.querySelector(".digest-queue")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }, []);
 
   const queuedIds = useMemo(() => new Set(queue.map((a) => a.id)), [queue]);
   const currentFeed = useMemo(
@@ -322,8 +350,17 @@ export default function Home() {
           onRefresh={pollAll}
           onChanged={refreshFeeds}
           defaultPollMinutes={settings?.default_poll_minutes ?? 30}
+          openAddFeedSignal={openAddFeedSignal}
         />
         <section className="content" aria-label="Articles">
+          <OnboardingChecklist
+            hasFeeds={feeds.length > 0}
+            hasQueuedEver={queue.length > 0 || digestsCount > 0}
+            hasEdition={digestsCount > 0}
+            deliveryReady={settings ? emailConfigured(settings) : false}
+            onFocusAddFeed={focusAddFeed}
+            onGoToQueue={goToQueue}
+          />
           <ArticleList
             articles={articles}
             loaded={articlesLoaded}
