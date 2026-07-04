@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from conftest import feed_http_client
 from rss_kindle.api.main import create_app
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
@@ -13,8 +14,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 def _seed(client: TestClient) -> list[int]:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-        m.return_value = FIXTURE.read_bytes()
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return [a["id"] for a in client.get("/api/articles").json()]
 
@@ -25,8 +25,8 @@ def _add_feed_with_articles(
     feed = client.post("/api/feeds", json={"url": url, "title": title}).json()
     if group_id is not None:
         client.patch(f"/api/feeds/{feed['id']}", json={"group_id": group_id})
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-        m.return_value = FIXTURE.read_bytes().replace(b"urn:example:", guid_prefix)
+    content = FIXTURE.read_bytes().replace(b"urn:example:", guid_prefix)
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(content)):
         client.post(f"/api/feeds/{feed['id']}/refresh")
     arts = client.get("/api/articles", params={"feed_id": feed["id"]}).json()
     return sorted(a["id"] for a in arts)

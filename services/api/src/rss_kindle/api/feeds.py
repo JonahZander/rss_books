@@ -7,13 +7,13 @@ from xml.etree import ElementTree as ET
 from xml.sax.saxutils import quoteattr
 
 import aiosqlite
-import httpx
 from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 
-from rss_kindle.config import USER_AGENT
+from rss_kindle.config import make_http_client
 from rss_kindle.db import Database
 from rss_kindle.models import Feed, FeedCreate, FeedUpdate
-from rss_kindle.services.feed_poller import placeholder_title, poll_feed_content
+from rss_kindle.services.feed_poller import placeholder_title
+from rss_kindle.services.poller import poll_feed
 from rss_kindle.services.saved_links import NOT_SAVED_LINKS
 
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
@@ -26,34 +26,6 @@ FEED_COLUMNS = (
     "(SELECT COUNT(*) FROM articles a WHERE a.feed_id = feeds.id AND a.read_at IS NULL) "
     "AS unread_count"
 )
-
-
-async def fetch_feed_bytes(url: str) -> bytes:
-    async with httpx.AsyncClient(
-        timeout=15.0,
-        follow_redirects=True,
-        headers={"User-Agent": USER_AGENT},
-    ) as client:
-        r = await client.get(url)
-        r.raise_for_status()
-        return r.content
-
-
-async def _record_poll_outcome(db: Database, feed_id: int, error: str | None) -> None:
-    async with db.connect() as conn:
-        if error is None:
-            await conn.execute(
-                "UPDATE feeds SET last_error = NULL, last_error_at = NULL, "
-                "consecutive_failures = 0 WHERE id = ?",
-                (feed_id,),
-            )
-        else:
-            await conn.execute(
-                "UPDATE feeds SET last_error = ?, last_error_at = CURRENT_TIMESTAMP, "
-                "consecutive_failures = consecutive_failures + 1 WHERE id = ?",
-                (error, feed_id),
-            )
-        await conn.commit()
 
 
 @router.get("", response_model=list[Feed])
@@ -342,46 +314,42 @@ async def delete_feed(feed_id: int, request: Request) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-async def _poll_and_record(db: Database, feed_id: int, url: str) -> tuple[int, Exception | None]:
-    """Fetch + ingest one feed and record its poll health; returns the number of
-    inserted articles and the exception (if any) so callers decide how to surface it."""
-    try:
-        content = await fetch_feed_bytes(url)
-        inserted = await poll_feed_content(db, feed_id, content)
-    except Exception as exc:
-        await _record_poll_outcome(db, feed_id, str(exc))
-        logger.warning("refresh failed for feed %d (%s): %s", feed_id, url, exc)
-        return 0, exc
-    await _record_poll_outcome(db, feed_id, None)
-    return inserted, None
-
-
 @router.post("/{feed_id}/refresh")
 async def refresh_feed(feed_id: int, request: Request) -> dict[str, int]:
+    """Manual refresh reuses the scheduled poller: same conditional GET (a
+    304 right after a scheduled poll is expected, not a bug), same health
+    bookkeeping. A blocked or failing fetch surfaces as 502 with the poller's
+    error string, which is what the UI toasts."""
     db = request.app.state.db
     async with db.connect() as conn:
-        cur = await conn.execute("SELECT url FROM feeds WHERE id = ?", (feed_id,))
+        cur = await conn.execute(
+            "SELECT id, url, etag, last_modified FROM feeds WHERE id = ?", (feed_id,)
+        )
         row = await cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="feed not found")
-    inserted, exc = await _poll_and_record(db, feed_id, row["url"])
-    if exc is not None:
-        raise HTTPException(status_code=502, detail=f"feed fetch failed: {exc}") from exc
-    return {"inserted": inserted}
+    async with make_http_client() as client:
+        result = await poll_feed(db, client, row)
+    if result.error is not None:
+        raise HTTPException(status_code=502, detail=f"feed fetch failed: {result.error}")
+    return {"inserted": result.inserted}
 
 
 @router.post("/refresh")
 async def refresh_all_feeds(request: Request) -> dict[str, int]:
     db = request.app.state.db
     async with db.connect() as conn:
-        cur = await conn.execute(f"SELECT id, url FROM feeds WHERE {NOT_SAVED_LINKS}")
+        cur = await conn.execute(
+            f"SELECT id, url, etag, last_modified FROM feeds WHERE {NOT_SAVED_LINKS}"
+        )
         rows = await cur.fetchall()
     total = 0
     errors = 0
-    for row in rows:
-        inserted, exc = await _poll_and_record(db, row["id"], row["url"])
-        total += inserted
-        if exc is not None:
-            errors += 1
+    async with make_http_client() as client:
+        for row in rows:
+            result = await poll_feed(db, client, row)
+            total += result.inserted
+            if result.error is not None:
+                errors += 1
     logger.info("refreshed %d feeds: %d new articles, %d errors", len(rows), total, errors)
     return {"inserted": total, "errors": errors}

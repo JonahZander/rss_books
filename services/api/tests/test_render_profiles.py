@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from lxml import html as lxml_html
 from PIL import Image
 
+from conftest import feed_http_client
 from rss_kindle.api.main import create_app
 from rss_kindle.services.qr import make_qr_png
 from rss_kindle.services.table_renderer import render_table_pngs, tables_to_images
@@ -345,8 +346,7 @@ def test_rotated_blocks_read_clockwise() -> None:
 def _seed(client: TestClient) -> list[int]:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-        m.return_value = FIXTURE.read_bytes()
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return [a["id"] for a in client.get("/api/articles").json()]
 
