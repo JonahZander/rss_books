@@ -8,6 +8,11 @@ Last updated: 2026-07-03.
 
 ## Polish backlog (near-term, small–medium)
 
+> **Status 2026-07-04:** shipped (see CHANGELOG *Unreleased*) — every item in
+> this section, including the "Consider" tier, rendering, and onboarding,
+> except *"verify rotated chunk order on device"*, which needs the physical
+> X4 in hand.
+
 Security/robustness first — these are the live backlog from
 [`ux-and-optimization-review.md`](ux-and-optimization-review.md) (IDs kept):
 

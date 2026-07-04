@@ -4,6 +4,80 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org/).
 
+## [Unreleased]
+
+The near-term polish backlog: hardening, triage-desk ergonomics, and a
+first-run path.
+
+### Added
+
+- **First-run checklist** on the triage desk: a dismissible "First edition"
+  card walks a fresh install through adding a feed, queuing an article,
+  compiling, and setting up delivery; it tracks real state and disappears
+  once the desk is running (or when dismissed).
+- **Mark seen / mark unseen** per article, plus a **"Mark all seen"** action
+  scoped to the current feed or group filter
+  (`POST /api/articles/mark-all-read`); the button is disabled while a search
+  is active, since the bulk action ignores search terms.
+- **Queue reordering**: move queued articles up/down; the order is the
+  edition's article order (persisted via the existing `PUT /api/queue`).
+- **Per-feed poll interval** control in the sidebar (presets or a custom
+  number of minutes; "Default" copies the current global default).
+- **Feed error details on tap**: the error badge now opens an inline panel
+  with the full fetch error, failure count, and a *Retry now* button.
+- **"View edition →"** link on freshly compiled editions, deep-linking to the
+  Editions page with that edition's review panel open
+  (`/editions?open=<id>`).
+- **Import skip reporting**: OPML/JSON feed imports list exactly which URLs
+  were skipped and why (duplicate, invalid URL) instead of a bare count.
+- **epubcheck CI gate**: CI now builds a fixture edition (tables, code,
+  images, unicode, cover) and validates it with epubcheck 5.3.0; the test
+  self-skips locally unless `EPUBCHECK_JAR` is set.
+
+### Changed
+
+- **SSRF guard on outbound fetches** (feeds, article pages, images), enabled
+  by default: private, loopback, link-local, and otherwise reserved addresses
+  are refused, including via DNS and redirects. LAN-hosted feeds need an
+  explicit `SSRF_ALLOWED_HOSTS` allowlist entry (hostnames, IPs, or CIDRs);
+  `SSRF_GUARD_ENABLED=false` disables the guard outright. **Breaking** for
+  setups whose feeds/images live on private addresses.
+- **Feed import responses changed shape** (breaking for API consumers):
+  `skipped` is now a list of `{url, reason}` objects, and a bad-scheme URL in
+  a JSON import no longer rejects the whole file — it's skipped per-row.
+  Structurally broken files still get a 400.
+- OPDS acquisition links now point at `/opds/digests/{id}/download`, which
+  honours the catalog's Basic auth; the plain `/api` download stays open for
+  the same-origin web UI.
+- Manual feed refresh now uses conditional GET (ETag/Last-Modified) through
+  the same code path as the scheduler, so it can answer "0 new" cheaply and
+  records feed health exactly once.
+- EPUB builds and image recompression run off the event loop, so the UI and
+  API stay responsive during a compile.
+- Send-to-e-reader stays visible when SMTP isn't configured — as a "Set up
+  delivery" link into Settings — instead of vanishing.
+- Feed and queue row tools are always visible on touch screens (they were
+  hover-only), without covering the unread badge.
+- Cover typography enlarged (title and source list) for small e-ink screens,
+  with the layout re-derived so worst-case titles and long source lists
+  cannot clip off-canvas.
+- Custom render profiles' photo width is clamped to 1600px so high-res
+  device profiles don't inflate editions.
+
+### Fixed
+
+- **Every cover-bearing EPUB was technically non-conformant** (epubcheck
+  OPF-096: the cover page sat in the spine unreferenced); editions now emit
+  a cover landmark. Found by the new CI gate on day one.
+- Image fetches are now hardened against decompression bombs: downloads cap
+  at 25 MiB (streamed, not trusting Content-Length) and images over 40M
+  decoded pixels are dropped before decode.
+- Fast filter/search/page switching can no longer let a slow, stale article
+  list response overwrite a newer one.
+- A failed press-deadline compile no longer retries every scheduler tick
+  against an already-drained queue; the failure stays visible as a failed
+  edition and the deadline waits for its next occurrence.
+
 ## [1.2.0] - 2026-07-02
 
 Better article fetching, and a clearer triage desk.
