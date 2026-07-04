@@ -5,6 +5,7 @@ from curl_cffi.requests import Response
 from curl_cffi.requests.exceptions import ConnectTimeout, HTTPError
 from fastapi.testclient import TestClient
 
+from conftest import feed_http_client
 from rss_kindle.api.main import create_app
 from rss_kindle.config import USER_AGENT
 
@@ -14,8 +15,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 def _seed_feed_with_articles(client: TestClient) -> int:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as mock_fetch:
-        mock_fetch.return_value = FIXTURE.read_bytes()
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return feed_id
 
@@ -104,8 +104,10 @@ FULL_CONTENT_FIXTURE = Path(__file__).parent / "fixtures" / "full_content.rss"
 def _seed_feed_with_full_content(client: TestClient) -> int:
     r = client.post("/api/feeds", json={"url": "https://full.example/rss", "title": "Full"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as mock_fetch:
-        mock_fetch.return_value = FULL_CONTENT_FIXTURE.read_bytes()
+    with patch(
+        "rss_kindle.api.feeds.make_http_client",
+        new=feed_http_client(FULL_CONTENT_FIXTURE.read_bytes()),
+    ):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return feed_id
 

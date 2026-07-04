@@ -7,7 +7,9 @@ from urllib.parse import quote
 from xml.etree import ElementTree as ET
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import FileResponse
 
+from rss_kindle.api.digests import load_ready_epub_response
 from rss_kindle.services.settings_store import get_app_settings
 
 router = APIRouter(tags=["opds"])
@@ -153,7 +155,7 @@ async def _acquisition_feed(
             entry,
             "link",
             rel=ACQ_REL,
-            href=f"{base}/api/digests/{row['id']}/download",
+            href=f"{base}/opds/digests/{row['id']}/download",
             type="application/epub+zip",
         )
 
@@ -187,3 +189,18 @@ async def opds_profile(name: str, request: Request) -> Response:
         self_path=f"/opds/profiles/{quote(name, safe='')}",
         profile=name,
     )
+
+
+@router.get("/opds/digests/{digest_id}/download")
+async def opds_download_digest(digest_id: int, request: Request) -> FileResponse:
+    """The download link every acquisition entry points at, gated by the same
+    Basic auth as the rest of /opds/*.
+
+    This is catalog-surface protection only, not access control for the API:
+    the plain /api/digests/{id}/download route stays auth-free by design (the
+    web UI reaches it via a bare `<a download>`, which can't attach an
+    Authorization header) - anyone who can reach the API at all can still
+    fetch any EPUB directly. OPDS auth only gates which catalog an e-reader
+    can browse/subscribe to, matching this app's "no API auth" model."""
+    await _check_auth(request)
+    return await load_ready_epub_response(request.app.state.db, digest_id)

@@ -179,6 +179,13 @@ Tailscale). The OPDS catalog has its own optional Basic auth, since readers
 hit it from other devices. Feed URLs are fetched server-side; keep that in
 mind before adding feeds you don't trust.
 
+Server-side fetches (feeds, article pages, images) refuse private, loopback,
+and link-local addresses by default, so a malicious feed can't probe your LAN
+through the app. If your feeds genuinely live on your LAN (a local FreshRSS,
+rsshub, or kill-the-newsletter instance), allowlist those hosts with
+`SSRF_ALLOWED_HOSTS` (comma-separated hostnames, IPs, or CIDRs) rather than
+switching the guard off wholesale with `SSRF_GUARD_ENABLED=false`.
+
 ## Architecture
 
 One FastAPI process: API + in-process asyncio scheduler + background EPUB

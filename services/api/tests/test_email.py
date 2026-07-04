@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 import aiosmtplib
 from fastapi.testclient import TestClient
 
+from conftest import feed_http_client
 from rss_kindle.api.main import create_app
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
@@ -13,8 +14,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
 def _seed_ready_digest(client: TestClient) -> int:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-        m.return_value = FIXTURE.read_bytes()
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     ids = [a["id"] for a in client.get("/api/articles").json()]
     digest_id = client.post("/api/digests", json={"article_ids": ids}).json()[0]["id"]
@@ -109,8 +109,9 @@ def test_email_on_ready_auto_sends(tmp_path, monkeypatch):
     with TestClient(app) as client:
         r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
         feed_id = r.json()["id"]
-        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-            m.return_value = FIXTURE.read_bytes()
+        with patch(
+            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+        ):
             client.post(f"/api/feeds/{feed_id}/refresh")
         ids = [a["id"] for a in client.get("/api/articles").json()]
 

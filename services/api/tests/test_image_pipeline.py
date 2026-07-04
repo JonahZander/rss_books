@@ -1,12 +1,20 @@
 import os
+import struct
 import time
+import zlib
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import patch
 
 import httpx
 from PIL import Image
 
-from rss_kindle.services.image_pipeline import prepare_images, prune_image_cache
+from rss_kindle.services.image_pipeline import (
+    MAX_DECODE_PIXELS,
+    MAX_IMAGE_DOWNLOAD_BYTES,
+    prepare_images,
+    prune_image_cache,
+)
 
 
 def _png(width: int, height: int, mode: str = "RGB") -> bytes:
@@ -14,6 +22,19 @@ def _png(width: int, height: int, mode: str = "RGB") -> bytes:
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
+
+
+def _png_chunk(tag: bytes, data: bytes) -> bytes:
+    return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data))
+
+
+def _png_huge_declared_dims(width: int, height: int) -> bytes:
+    """A structurally valid PNG (signature + IHDR + IEND) that declares
+    absurd dimensions but carries no pixel data - Image.open() parses the
+    header fine (so the size is known), but any real decode would explode.
+    Exercises the pixel-count guard, which must trip before .load()."""
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", ihdr) + _png_chunk(b"IEND", b"")
 
 
 def _client() -> httpx.AsyncClient:
@@ -150,6 +171,72 @@ def test_prune_image_cache_removes_old_files(tmp_path: Path) -> None:
 
 def test_prune_image_cache_missing_dir(tmp_path: Path) -> None:
     assert prune_image_cache(tmp_path / "nope", max_age_days=30) == 0
+
+
+async def test_recompress_runs_off_event_loop() -> None:
+    """Best-effort timing test: while the (deliberately slowed) recompress
+    blocks synchronously in a worker thread, a concurrent async task keeps
+    advancing - proof asyncio.to_thread actually takes _recompress off the
+    loop rather than freezing every other request for its duration."""
+    import asyncio
+
+    from rss_kindle.services import image_pipeline
+
+    original_recompress = image_pipeline._recompress
+
+    def slow_recompress(*args, **kwargs):
+        time.sleep(0.2)
+        return original_recompress(*args, **kwargs)
+
+    counter = {"n": 0}
+
+    async def tick() -> None:
+        for _ in range(40):
+            await asyncio.sleep(0.01)
+            counter["n"] += 1
+
+    html = '<img src="https://site.example/big.png" alt="wide">'
+    with patch.object(image_pipeline, "_recompress", slow_recompress):
+        async with _client() as client:
+            (_, images), _ = await asyncio.gather(
+                prepare_images([(html, "https://site.example/post")], client), tick()
+            )
+    assert len(images) == 1
+    assert counter["n"] >= 15
+
+
+async def test_huge_declared_dimensions_dropped() -> None:
+    """A PNG whose IHDR claims dimensions past MAX_DECODE_PIXELS is dropped
+    like any other undecodable image; no exception escapes prepare_images."""
+    side = int(MAX_DECODE_PIXELS**0.5) + 1000
+    bomb = _png_huge_declared_dims(side, side)  # comfortably past the pixel cap
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=bomb, headers={"content-type": "image/png"})
+
+    html = '<img src="https://site.example/bomb.png" alt="bomb">'
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        rewritten, images = await prepare_images([(html, "https://site.example/post")], client)
+    assert images == {}
+    assert "<img" not in rewritten[0]
+
+
+async def test_over_download_cap_dropped_and_not_cached(tmp_path: Path) -> None:
+    """A body that exceeds the byte cap is aborted mid-stream and dropped,
+    even though Content-Length (absent here) can't be trusted upfront."""
+    oversized = b"\x00" * (MAX_IMAGE_DOWNLOAD_BYTES + 1)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=oversized, headers={"content-type": "image/png"})
+
+    html = '<img src="https://site.example/huge.png" alt="huge">'
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        rewritten, images = await prepare_images(
+            [(html, "https://site.example/post")], client, cache_dir=tmp_path
+        )
+    assert images == {}
+    assert "<img" not in rewritten[0]
+    assert list(tmp_path.iterdir()) == []
 
 
 async def test_per_article_budget_drops_overflow() -> None:

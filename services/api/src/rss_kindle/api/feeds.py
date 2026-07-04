@@ -7,13 +7,13 @@ from xml.etree import ElementTree as ET
 from xml.sax.saxutils import quoteattr
 
 import aiosqlite
-import httpx
 from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 
-from rss_kindle.config import USER_AGENT
+from rss_kindle.config import make_http_client
 from rss_kindle.db import Database
-from rss_kindle.models import Feed, FeedCreate, FeedUpdate
-from rss_kindle.services.feed_poller import placeholder_title, poll_feed_content
+from rss_kindle.models import Feed, FeedCreate, FeedUpdate, ImportResult, ImportSkip
+from rss_kindle.services.feed_poller import placeholder_title
+from rss_kindle.services.poller import poll_feed
 from rss_kindle.services.saved_links import NOT_SAVED_LINKS
 
 router = APIRouter(prefix="/api/feeds", tags=["feeds"])
@@ -26,34 +26,6 @@ FEED_COLUMNS = (
     "(SELECT COUNT(*) FROM articles a WHERE a.feed_id = feeds.id AND a.read_at IS NULL) "
     "AS unread_count"
 )
-
-
-async def fetch_feed_bytes(url: str) -> bytes:
-    async with httpx.AsyncClient(
-        timeout=15.0,
-        follow_redirects=True,
-        headers={"User-Agent": USER_AGENT},
-    ) as client:
-        r = await client.get(url)
-        r.raise_for_status()
-        return r.content
-
-
-async def _record_poll_outcome(db: Database, feed_id: int, error: str | None) -> None:
-    async with db.connect() as conn:
-        if error is None:
-            await conn.execute(
-                "UPDATE feeds SET last_error = NULL, last_error_at = NULL, "
-                "consecutive_failures = 0 WHERE id = ?",
-                (feed_id,),
-            )
-        else:
-            await conn.execute(
-                "UPDATE feeds SET last_error = ?, last_error_at = CURRENT_TIMESTAMP, "
-                "consecutive_failures = consecutive_failures + 1 WHERE id = ?",
-                (error, feed_id),
-            )
-        await conn.commit()
 
 
 @router.get("", response_model=list[Feed])
@@ -118,12 +90,13 @@ async def _group_id_for(
 
 async def _import_feed_rows(
     db: Database, entries: list[tuple[str, str, str | None, str | None]]
-) -> dict[str, int]:
+) -> ImportResult:
     """Insert (url, title, site_url, group_name) rows. Existing feeds are
-    skipped, but they adopt the file's group when they are currently ungrouped,
-    so re-importing a subscription file is the upgrade path to grouping."""
+    skipped (reason "duplicate"), but they adopt the file's group when they
+    are currently ungrouped, so re-importing a subscription file is the
+    upgrade path to grouping."""
     added = 0
-    skipped = 0
+    skipped: list[ImportSkip] = []
     regrouped = 0
     async with db.connect() as conn:
         cache: dict[str, int] = {}
@@ -136,7 +109,7 @@ async def _import_feed_rows(
                 )
                 added += 1
             except sqlite3.IntegrityError:
-                skipped += 1
+                skipped.append(ImportSkip(url=url, reason="duplicate"))
                 if gid is not None:
                     cur = await conn.execute(
                         "UPDATE feeds SET group_id = ? WHERE url = ? AND group_id IS NULL",
@@ -144,11 +117,11 @@ async def _import_feed_rows(
                     )
                     regrouped += cur.rowcount
         await conn.commit()
-    return {"added": added, "skipped": skipped, "regrouped": regrouped}
+    return ImportResult(added=added, skipped=skipped, regrouped=regrouped)
 
 
-@router.post("/import")
-async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
+@router.post("/import", response_model=ImportResult)
+async def import_opml(file: UploadFile, request: Request) -> ImportResult:
     content = await file.read()
     try:
         root = ET.fromstring(content)
@@ -178,18 +151,18 @@ async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
         title = outline.get("title") or outline.get("text") or url
         entries.append((url, title, outline.get("htmlUrl"), top_folder_name(outline)))
 
-    counts = await _import_feed_rows(request.app.state.db, entries)
+    result = await _import_feed_rows(request.app.state.db, entries)
     logger.info(
         "opml import: %d added, %d skipped, %d regrouped",
-        counts["added"],
-        counts["skipped"],
-        counts["regrouped"],
+        result.added,
+        len(result.skipped),
+        result.regrouped,
     )
-    return counts
+    return result
 
 
-@router.post("/import-json")
-async def import_feeds_json(file: UploadFile, request: Request) -> dict[str, int]:
+@router.post("/import-json", response_model=ImportResult)
+async def import_feeds_json(file: UploadFile, request: Request) -> ImportResult:
     """Import a JSON feed list: {"group name": ["feed url", …]}.
 
     The key "ungrouped" (case-insensitive) means no group. URLs carry no
@@ -207,6 +180,9 @@ async def import_feeds_json(file: UploadFile, request: Request) -> dict[str, int
         )
 
     entries: list[tuple[str, str, str | None, str | None]] = []
+    # Per-URL scheme problems (unlike file-level/structural ones above) skip
+    # that one row instead of aborting the whole import.
+    pre_skips: list[ImportSkip] = []
     for group_key, urls in data.items():
         name = group_key.strip()
         if not name:
@@ -218,17 +194,19 @@ async def import_feeds_json(file: UploadFile, request: Request) -> dict[str, int
         group_name = None if name.casefold() == "ungrouped" else name
         for url in urls:
             if not url.startswith(("http://", "https://")):
-                raise HTTPException(status_code=400, detail=f"not a feed URL: {url!r}")
+                pre_skips.append(ImportSkip(url=url, reason="invalid url"))
+                continue
             entries.append((url, placeholder_title(url), None, group_name))
 
-    counts = await _import_feed_rows(request.app.state.db, entries)
+    result = await _import_feed_rows(request.app.state.db, entries)
+    result = result.model_copy(update={"skipped": pre_skips + result.skipped})
     logger.info(
         "json import: %d added, %d skipped, %d regrouped",
-        counts["added"],
-        counts["skipped"],
-        counts["regrouped"],
+        result.added,
+        len(result.skipped),
+        result.regrouped,
     )
-    return counts
+    return result
 
 
 @router.get("/export.json")
@@ -342,46 +320,42 @@ async def delete_feed(feed_id: int, request: Request) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-async def _poll_and_record(db: Database, feed_id: int, url: str) -> tuple[int, Exception | None]:
-    """Fetch + ingest one feed and record its poll health; returns the number of
-    inserted articles and the exception (if any) so callers decide how to surface it."""
-    try:
-        content = await fetch_feed_bytes(url)
-        inserted = await poll_feed_content(db, feed_id, content)
-    except Exception as exc:
-        await _record_poll_outcome(db, feed_id, str(exc))
-        logger.warning("refresh failed for feed %d (%s): %s", feed_id, url, exc)
-        return 0, exc
-    await _record_poll_outcome(db, feed_id, None)
-    return inserted, None
-
-
 @router.post("/{feed_id}/refresh")
 async def refresh_feed(feed_id: int, request: Request) -> dict[str, int]:
+    """Manual refresh reuses the scheduled poller: same conditional GET (a
+    304 right after a scheduled poll is expected, not a bug), same health
+    bookkeeping. A blocked or failing fetch surfaces as 502 with the poller's
+    error string, which is what the UI toasts."""
     db = request.app.state.db
     async with db.connect() as conn:
-        cur = await conn.execute("SELECT url FROM feeds WHERE id = ?", (feed_id,))
+        cur = await conn.execute(
+            "SELECT id, url, etag, last_modified FROM feeds WHERE id = ?", (feed_id,)
+        )
         row = await cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="feed not found")
-    inserted, exc = await _poll_and_record(db, feed_id, row["url"])
-    if exc is not None:
-        raise HTTPException(status_code=502, detail=f"feed fetch failed: {exc}") from exc
-    return {"inserted": inserted}
+    async with make_http_client() as client:
+        result = await poll_feed(db, client, row)
+    if result.error is not None:
+        raise HTTPException(status_code=502, detail=f"feed fetch failed: {result.error}")
+    return {"inserted": result.inserted}
 
 
 @router.post("/refresh")
 async def refresh_all_feeds(request: Request) -> dict[str, int]:
     db = request.app.state.db
     async with db.connect() as conn:
-        cur = await conn.execute(f"SELECT id, url FROM feeds WHERE {NOT_SAVED_LINKS}")
+        cur = await conn.execute(
+            f"SELECT id, url, etag, last_modified FROM feeds WHERE {NOT_SAVED_LINKS}"
+        )
         rows = await cur.fetchall()
     total = 0
     errors = 0
-    for row in rows:
-        inserted, exc = await _poll_and_record(db, row["id"], row["url"])
-        total += inserted
-        if exc is not None:
-            errors += 1
+    async with make_http_client() as client:
+        for row in rows:
+            result = await poll_feed(db, client, row)
+            total += result.inserted
+            if result.error is not None:
+                errors += 1
     logger.info("refreshed %d feeds: %d new articles, %d errors", len(rows), total, errors)
     return {"inserted": total, "errors": errors}

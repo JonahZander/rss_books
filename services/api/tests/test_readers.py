@@ -6,6 +6,7 @@ import pytest
 from curl_cffi.requests.exceptions import RequestException
 from fastapi.testclient import TestClient
 
+from conftest import feed_http_client
 from rss_kindle.api.main import create_app
 from rss_kindle.models import AppSettings
 from rss_kindle.services.readers import ReaderError, build_reader
@@ -81,8 +82,7 @@ def _seed_article(client: TestClient) -> int:
     feed_id = client.post(
         "/api/feeds", json={"url": "https://example.com/rss", "title": "Example"}
     ).json()["id"]
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-        m.return_value = FIXTURE.read_bytes()
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return int(client.get("/api/articles").json()[0]["id"])
 

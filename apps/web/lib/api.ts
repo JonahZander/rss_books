@@ -23,6 +23,13 @@ export type Group = {
   position: number;
 };
 
+/** One row a bulk feed import didn't insert, and why (e.g. "duplicate",
+ * "invalid url"). File-level/structural problems still fail the whole
+ * import instead; only per-URL problems show up here. */
+export type ImportSkip = { url: string; reason: string };
+
+export type ImportResult = { added: number; skipped: ImportSkip[]; regrouped: number };
+
 export type Article = {
   id: number;
   feed_id: number;
@@ -162,6 +169,15 @@ function jsonInit(method: string, body?: unknown): RequestInit {
   };
 }
 
+// Shared by listArticles/markAllRead: both scope to a feed and/or group the
+// same way ("none" means "articles of ungrouped feeds", sent as id 0).
+function feedGroupParams(feedId?: number, groupId?: number | "none"): URLSearchParams {
+  const params = new URLSearchParams();
+  if (feedId != null) params.set("feed_id", String(feedId));
+  if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
+  return params;
+}
+
 export const api = {
   // feeds
   listFeeds: () => fetch(`${BASE}/api/feeds`).then((r) => j<Feed[]>(r)),
@@ -194,7 +210,7 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file);
     return fetch(`${BASE}/api/feeds/import`, { method: "POST", body: fd }).then((r) =>
-      j<{ added: number; skipped: number; regrouped: number }>(r),
+      j<ImportResult>(r),
     );
   },
   /** JSON feed list: {"group name": ["feed url", …]}; "ungrouped" = no group. */
@@ -202,23 +218,21 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file);
     return fetch(`${BASE}/api/feeds/import-json`, { method: "POST", body: fd }).then((r) =>
-      j<{ added: number; skipped: number; regrouped: number }>(r),
+      j<ImportResult>(r),
     );
   },
   exportOpmlUrl: () => `${BASE}/api/feeds/export.opml`,
   exportJsonUrl: () => `${BASE}/api/feeds/export.json`,
 
   // articles
-  listArticles: ({ feedId, groupId, unread, q, limit, offset }: ArticleQuery = {}) => {
-    const params = new URLSearchParams();
-    if (feedId != null) params.set("feed_id", String(feedId));
-    if (groupId != null) params.set("group_id", String(groupId === "none" ? 0 : groupId));
+  listArticles: ({ feedId, groupId, unread, q, limit, offset }: ArticleQuery = {}, signal?: AbortSignal) => {
+    const params = feedGroupParams(feedId, groupId);
     if (unread) params.set("unread", "true");
     if (q) params.set("q", q);
     if (limit != null) params.set("limit", String(limit));
     if (offset != null) params.set("offset", String(offset));
     const qs = params.size > 0 ? `?${params}` : "";
-    return fetch(`${BASE}/api/articles${qs}`).then((r) => j<Article[]>(r));
+    return fetch(`${BASE}/api/articles${qs}`, { signal }).then((r) => j<Article[]>(r));
   },
   getArticle: (id: number) =>
     fetch(`${BASE}/api/articles/${id}`).then((r) => j<ArticleDetail>(r)),
@@ -230,6 +244,15 @@ export const api = {
     fetch(`${BASE}/api/articles/${id}/read`, { method: "POST" }).then((r) => j<Article>(r)),
   markUnread: (id: number) =>
     fetch(`${BASE}/api/articles/${id}/unread`, { method: "POST" }).then((r) => j<Article>(r)),
+  /** Bulk-mark unread articles as read, scoped to a feed or group (or
+   * everything, unscoped) — never to a search query or "unread only". */
+  markAllRead: ({ feedId, groupId }: { feedId?: number; groupId?: number | "none" } = {}) => {
+    const params = feedGroupParams(feedId, groupId);
+    const qs = params.size > 0 ? `?${params}` : "";
+    return fetch(`${BASE}/api/articles/mark-all-read${qs}`, { method: "POST" }).then((r) =>
+      j<{ updated: number }>(r),
+    );
+  },
 
   // queue
   getQueue: () => fetch(`${BASE}/api/queue`).then((r) => j<Article[]>(r)),

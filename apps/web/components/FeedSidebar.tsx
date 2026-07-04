@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { Feed, Group } from "../lib/api";
+import { useEffect, useRef, useState } from "react";
+import type { Feed, Group, ImportSkip } from "../lib/api";
 import { api } from "../lib/api";
 import { capCount, pad2 } from "../lib/format";
 import { hostnameOf } from "../lib/url";
@@ -21,9 +21,24 @@ type Props = {
   onDeleteGroup: (group: Group) => void;
   onRefresh: () => Promise<void>;
   onChanged: () => Promise<void>;
+  /** Settings' global default poll interval; the "Default" preset snapshots
+   * this value onto the feed at the moment it's chosen — it does not track
+   * later changes to the setting (there's no "follow the default" flag). */
+  defaultPollMinutes: number;
+  /** Bumped by the parent (e.g. the onboarding checklist) to open the
+   * add-feed form and focus its URL field from outside — the form itself is
+   * only mounted while the internal `addingFeed` state is true, so a caller
+   * can't just focus `#feed-url` without this signal. Increment to (re)open;
+   * the initial value must be 0 so mounting doesn't auto-open the form. */
+  openAddFeedSignal: number;
 };
 
 const COLLAPSE_KEY = "sidebar-collapsed";
+const POLL_PRESETS = [15, 30, 60] as const;
+
+function presetForMinutes(minutes: number): string {
+  return (POLL_PRESETS as readonly number[]).includes(minutes) ? String(minutes) : "custom";
+}
 
 function relPoll(iso: string | null): string {
   if (!iso) return "never polled";
@@ -60,6 +75,8 @@ export function FeedSidebar({
   onDeleteGroup,
   onRefresh,
   onChanged,
+  defaultPollMinutes,
+  openAddFeedSignal,
 }: Props) {
   const toast = useToast();
   const [url, setUrl] = useState("");
@@ -68,6 +85,10 @@ export function FeedSidebar({
   const [refreshing, setRefreshing] = useState(false);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [errorOpenId, setErrorOpenId] = useState<number | null>(null);
+  const [pollEditId, setPollEditId] = useState<number | null>(null);
+  const [pollPreset, setPollPreset] = useState("30");
+  const [pollCustomValue, setPollCustomValue] = useState("30");
   const [groupPickId, setGroupPickId] = useState<number | null>(null);
   const [renamingGroupId, setRenamingGroupId] = useState<number | null>(null);
   const [groupRenameValue, setGroupRenameValue] = useState("");
@@ -75,7 +96,22 @@ export function FeedSidebar({
   const [addingGroup, setAddingGroup] = useState(false);
   const [addingFeed, setAddingFeed] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapsed);
+  const [importSkips, setImportSkips] = useState<ImportSkip[]>([]);
+  const [importSkipsOpen, setImportSkipsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Signal from the parent (checklist's "Add a feed →") opens the form and
+  // focuses/scrolls to it; skip the initial mount, where the signal is 0.
+  useEffect(() => {
+    if (!openAddFeedSignal) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAddingFeed(true);
+    requestAnimationFrame(() => {
+      const el = document.getElementById("feed-url");
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (el instanceof HTMLInputElement) el.focus();
+    });
+  }, [openAddFeedSignal]);
 
   const grouped = groups.length > 0;
   const ungroupedFeeds = feeds.filter((f) => f.group_id == null);
@@ -180,6 +216,42 @@ export function FeedSidebar({
     await onChanged();
   };
 
+  const openPollEdit = (feed: Feed) => {
+    setPollPreset(presetForMinutes(feed.poll_interval_minutes));
+    setPollCustomValue(String(feed.poll_interval_minutes));
+    setPollEditId(feed.id);
+  };
+
+  const savePollInterval = async (feed: Feed, minutes: number) => {
+    setPollEditId(null);
+    if (minutes === feed.poll_interval_minutes) return;
+    try {
+      await api.patchFeed(feed.id, { poll_interval_minutes: minutes });
+      await onChanged();
+      toast(`${feed.title}: polling every ${minutes}m`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "update failed", "error");
+    }
+  };
+
+  const choosePollPreset = (feed: Feed, value: string) => {
+    if (value === "custom") {
+      setPollPreset("custom");
+      return; // wait for a number in the custom field
+    }
+    if (value === "default") {
+      void savePollInterval(feed, defaultPollMinutes);
+      return;
+    }
+    void savePollInterval(feed, Number(value));
+  };
+
+  const confirmPollCustom = (feed: Feed) => {
+    const n = Number(pollCustomValue);
+    if (Number.isFinite(n) && n >= 1) void savePollInterval(feed, Math.round(n));
+    else setPollEditId(null);
+  };
+
   const importFile = async (file: File) => {
     // one Import button for both formats: .json (or a leading "{") → JSON list,
     // anything else → OPML
@@ -189,7 +261,11 @@ export function FeedSidebar({
     try {
       const r = isJson ? await api.importFeedsJson(file) : await api.importOpml(file);
       const regrouped = r.regrouped > 0 ? `, ${r.regrouped} regrouped` : "";
-      toast(`${isJson ? "JSON" : "OPML"} import: ${r.added} added, ${r.skipped} skipped${regrouped}`);
+      toast(
+        `${isJson ? "JSON" : "OPML"} import: ${r.added} added, ${r.skipped.length} skipped${regrouped}`,
+      );
+      setImportSkips(r.skipped);
+      setImportSkipsOpen(false);
       await onChanged();
     } catch (e) {
       toast(e instanceof Error ? e.message : "import failed", "error");
@@ -197,127 +273,206 @@ export function FeedSidebar({
   };
 
   const feedRow = (f: Feed) => (
-    <div
-      className={`feed-row ${selectedFeedId === f.id ? "active" : ""}`}
-      onClick={() => onSelect(f.id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect(f.id);
-        }
-      }}
-    >
-      <span className="feed-row-index">{pad2((indexOf.get(f.id) ?? 0) + 1)}</span>
-      {renamingId === f.id ? (
-        <input
-          className="feed-rename-input"
-          value={renameValue}
-          autoFocus
-          onChange={(e) => setRenameValue(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === "Enter") void saveRename(f);
-            if (e.key === "Escape") setRenamingId(null);
-          }}
-          onBlur={() => void saveRename(f)}
-          aria-label={`Rename ${f.title}`}
-        />
-      ) : groupPickId === f.id ? (
-        <select
-          className="feed-rename-input"
-          autoFocus
-          defaultValue={f.group_id == null ? "" : String(f.group_id)}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => void moveToGroup(f, e.target.value)}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === "Escape") setGroupPickId(null);
-          }}
-          onBlur={() => setGroupPickId(null)}
-          aria-label={`Move ${f.title} to group`}
-        >
-          <option value="">No group</option>
-          {groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <span>
-          <span className="feed-row-title">
-            {f.title}
-            {f.last_error && (
-              <span className="feed-error-badge" title={f.last_error}>
-                ▲
-              </span>
+    <>
+      <div
+        className={`feed-row ${selectedFeedId === f.id ? "active" : ""}`}
+        onClick={() => onSelect(f.id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect(f.id);
+          }
+        }}
+      >
+        <span className="feed-row-index">{pad2((indexOf.get(f.id) ?? 0) + 1)}</span>
+        {renamingId === f.id ? (
+          <input
+            className="feed-rename-input"
+            value={renameValue}
+            autoFocus
+            onChange={(e) => setRenameValue(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") void saveRename(f);
+              if (e.key === "Escape") setRenamingId(null);
+            }}
+            onBlur={() => void saveRename(f)}
+            aria-label={`Rename ${f.title}`}
+          />
+        ) : groupPickId === f.id ? (
+          <select
+            className="feed-rename-input"
+            autoFocus
+            defaultValue={f.group_id == null ? "" : String(f.group_id)}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => void moveToGroup(f, e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Escape") setGroupPickId(null);
+            }}
+            onBlur={() => setGroupPickId(null)}
+            aria-label={`Move ${f.title} to group`}
+          >
+            <option value="">No group</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        ) : pollEditId === f.id ? (
+          <span className="poll-edit" onClick={(e) => e.stopPropagation()}>
+            <select
+              className="feed-rename-input"
+              autoFocus={pollPreset !== "custom"}
+              value={pollPreset}
+              onChange={(e) => choosePollPreset(f, e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Escape") setPollEditId(null);
+              }}
+              aria-label={`Poll interval for ${f.title}`}
+            >
+              <option value="default">Default (currently {defaultPollMinutes}m)</option>
+              {POLL_PRESETS.map((m) => (
+                <option key={m} value={m}>
+                  {m}m
+                </option>
+              ))}
+              <option value="custom">Custom…</option>
+            </select>
+            {pollPreset === "custom" && (
+              <input
+                type="number"
+                min={1}
+                className="feed-rename-input poll-custom-input"
+                value={pollCustomValue}
+                autoFocus
+                onChange={(e) => setPollCustomValue(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter") confirmPollCustom(f);
+                  if (e.key === "Escape") setPollEditId(null);
+                }}
+                onBlur={() => confirmPollCustom(f)}
+                aria-label={`Custom poll interval in minutes for ${f.title}`}
+              />
             )}
           </span>
-          <span className="feed-row-sub">
-            {hostnameOf(f.site_url ?? f.url)} · {relPoll(f.last_polled)}
+        ) : (
+          <span>
+            <span className="feed-row-title">
+              {f.title}
+              {f.last_error && (
+                <button
+                  type="button"
+                  className="feed-error-badge"
+                  title={f.last_error}
+                  aria-label={`${f.title} failed to refresh, show details`}
+                  aria-expanded={errorOpenId === f.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setErrorOpenId(errorOpenId === f.id ? null : f.id);
+                  }}
+                >
+                  ▲
+                </button>
+              )}
+            </span>
+            <span className="feed-row-sub">
+              {hostnameOf(f.site_url ?? f.url)} · {relPoll(f.last_polled)}
+            </span>
           </span>
-        </span>
-      )}
-      <span className="feed-row-end">
-        {f.unread_count > 0 && <span className="unread-badge">{capCount(f.unread_count)}</span>}
-        <span className="feed-row-tools">
-          <button
-            type="button"
-            className="feed-tool"
-            aria-label={`Refresh ${f.title}`}
-            title="Refresh now"
-            onClick={(e) => {
-              e.stopPropagation();
-              void refreshOne(f);
-            }}
-          >
-            ↻
-          </button>
-          {grouped && (
+        )}
+        <span className="feed-row-end">
+          {f.unread_count > 0 && <span className="unread-badge">{capCount(f.unread_count)}</span>}
+          <span className="feed-row-tools">
             <button
               type="button"
               className="feed-tool"
-              aria-label={`Move ${f.title} to group`}
-              title="Move to group"
+              aria-label={`Refresh ${f.title}`}
+              title="Refresh now"
               onClick={(e) => {
                 e.stopPropagation();
-                setGroupPickId(f.id);
+                void refreshOne(f);
               }}
             >
-              ⊞
+              ↻
             </button>
-          )}
-          <button
-            type="button"
-            className="feed-tool"
-            aria-label={`Rename ${f.title}`}
-            title="Rename"
-            onClick={(e) => {
-              e.stopPropagation();
-              setRenameValue(f.title);
-              setRenamingId(f.id);
-            }}
-          >
-            ✎
-          </button>
-          <button
-            type="button"
-            className="feed-tool danger"
-            aria-label={`Remove ${f.title}`}
-            title="Remove"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(f);
-            }}
-          >
-            ×
-          </button>
+            <button
+              type="button"
+              className="feed-tool"
+              aria-label={`Set poll interval for ${f.title}`}
+              title={`Polling every ${f.poll_interval_minutes}m`}
+              onClick={(e) => {
+                e.stopPropagation();
+                openPollEdit(f);
+              }}
+            >
+              ⏱
+            </button>
+            {grouped && (
+              <button
+                type="button"
+                className="feed-tool"
+                aria-label={`Move ${f.title} to group`}
+                title="Move to group"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setGroupPickId(f.id);
+                }}
+              >
+                ⊞
+              </button>
+            )}
+            <button
+              type="button"
+              className="feed-tool"
+              aria-label={`Rename ${f.title}`}
+              title="Rename"
+              onClick={(e) => {
+                e.stopPropagation();
+                setRenameValue(f.title);
+                setRenamingId(f.id);
+              }}
+            >
+              ✎
+            </button>
+            <button
+              type="button"
+              className="feed-tool danger"
+              aria-label={`Remove ${f.title}`}
+              title="Remove"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(f);
+              }}
+            >
+              ×
+            </button>
+          </span>
         </span>
-      </span>
-    </div>
+      </div>
+      {errorOpenId === f.id && f.last_error && (
+        <div className="feed-error-detail">
+          <p>{f.last_error}</p>
+          <p className="feed-error-detail-meta">
+            {f.consecutive_failures} consecutive failure{f.consecutive_failures === 1 ? "" : "s"}
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => void refreshOne(f)}
+          >
+            <span>Retry now</span>
+            <span className="btn-arrow">↻</span>
+          </button>
+        </div>
+      )}
+    </>
   );
 
   const groupSection = (key: string, name: string, sectionFeeds: Feed[], group?: Group) => {
@@ -552,6 +707,31 @@ export function FeedSidebar({
           <span className="btn-arrow">↓</span>
         </a>
       </div>
+
+      {importSkips.length > 0 && (
+        <div className="import-skips">
+          <button
+            type="button"
+            className="import-skips-toggle"
+            aria-expanded={importSkipsOpen}
+            onClick={() => setImportSkipsOpen((v) => !v)}
+          >
+            <span>
+              {importSkipsOpen ? "▾" : "▸"} {importSkips.length} skipped in last import
+            </span>
+          </button>
+          {importSkipsOpen && (
+            <ul className="import-skips-list">
+              {importSkips.map((s, i) => (
+                <li key={`${s.url}-${i}`}>
+                  <span className="import-skip-url">{s.url}</span>
+                  <span className="import-skip-reason">{s.reason}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

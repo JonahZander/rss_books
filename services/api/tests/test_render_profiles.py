@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from lxml import html as lxml_html
 from PIL import Image
 
+from conftest import feed_http_client
 from rss_kindle.api.main import create_app
 from rss_kindle.services.qr import make_qr_png
 from rss_kindle.services.table_renderer import render_table_pngs, tables_to_images
@@ -345,8 +346,7 @@ def test_rotated_blocks_read_clockwise() -> None:
 def _seed(client: TestClient) -> list[int]:
     r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
     feed_id = r.json()["id"]
-    with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-        m.return_value = FIXTURE.read_bytes()
+    with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())):
         client.post(f"/api/feeds/{feed_id}/refresh")
     return [a["id"] for a in client.get("/api/articles").json()]
 
@@ -527,6 +527,69 @@ def test_profile_screen_caps_photo_width(tmp_path, monkeypatch):
             (name,) = [n for n in z.namelist() if n.startswith("EPUB/images/")]
             img = Image.open(io.BytesIO(z.read(name)))
             assert img.width <= 960
+
+
+def test_photo_max_width_helper_clamps_to_ceiling() -> None:
+    # unit-level: 2x a large custom screen width would exceed the ceiling
+    from rss_kindle.services.digest_service import PHOTO_WIDTH_CEILING, _photo_max_width
+
+    assert _photo_max_width(None) == 1200
+    assert _photo_max_width((480, 800)) == 960  # Xteink X4, well under the ceiling
+    assert _photo_max_width((900, 1200)) == PHOTO_WIDTH_CEILING == 1600
+
+
+def test_custom_profile_screen_width_photo_clamped_to_ceiling(tmp_path, monkeypatch):
+    # a custom large-screen profile's 2x target (900 -> 1800) would exceed
+    # PHOTO_WIDTH_CEILING; the pipeline must clamp the output to exactly 1600
+    from io import BytesIO
+
+    from PIL import Image as PILImage
+
+    monkeypatch.setenv("EPUB_DIR", str(tmp_path / "epubs"))
+
+    buf = BytesIO()
+    PILImage.new("RGB", (2400, 1200), (10, 20, 30)).save(buf, format="PNG")
+    png = buf.getvalue()
+
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        ids = _seed(client)
+        import sqlite3
+
+        with sqlite3.connect(tmp_path / "t.db") as conn:
+            conn.execute(
+                "UPDATE articles SET full_content = ? WHERE id = ?",
+                ('<p>x</p><img src="https://img.example/wide.png" alt=""/>', ids[0]),
+            )
+            conn.commit()
+
+        settings = client.get("/api/settings").json()
+        settings["profiles"].append(
+            {
+                "name": "Big Screen",
+                "link_qr": "off",
+                "table_mode": "native",
+                "code_mode": "native",
+                "screen_width": 900,
+                "screen_height": 1200,
+            }
+        )
+        assert client.put("/api/settings", json=settings).status_code == 200
+
+        with patch(
+            "rss_kindle.services.digest_service.make_http_client",
+            new=feed_http_client(png, headers={"content-type": "image/png"}),
+        ):
+            created = client.post(
+                "/api/digests", json={"article_ids": [ids[0]], "profiles": ["Big Screen"]}
+            ).json()
+            assert _wait_settled(client, created[0]["id"])["status"] == "ready"
+
+        epub_bytes = client.get(f"/api/digests/{created[0]['id']}/download").content
+        with zipfile.ZipFile(io.BytesIO(epub_bytes)) as z:
+            (name,) = [n for n in z.namelist() if n.startswith("EPUB/images/")]
+            img = Image.open(io.BytesIO(z.read(name)))
+            assert img.width == 1600
 
 
 def test_same_day_compiles_get_numbered_titles(tmp_path, monkeypatch):

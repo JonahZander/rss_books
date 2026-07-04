@@ -1,9 +1,12 @@
+import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 from xml.etree import ElementTree as ET
 
+import httpx
 from fastapi.testclient import TestClient
 
+from conftest import feed_http_client, feed_http_client_error
 from rss_kindle.api.main import create_app
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.atom"
@@ -44,11 +47,72 @@ def test_refresh_feed_fetches_and_stores(tmp_path):
         r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
         feed_id = r.json()["id"]
 
-        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as mock_fetch:
-            mock_fetch.return_value = FIXTURE.read_bytes()
+        with patch(
+            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+        ):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
             assert r.status_code == 200
             assert r.json()["inserted"] == 2
+
+
+def _feed_health_row(db_path: Path, feed_id: int) -> sqlite3.Row:
+    """etag/last_modified/last_error/last_polled aren't in the Feed API model
+    (they're poller-internal health bookkeeping), so tests read them straight
+    from the database."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT etag, last_modified, last_error, last_polled FROM feeds WHERE id = ?",
+        (feed_id,),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def test_refresh_feed_sends_conditional_headers_and_handles_304(tmp_path):
+    """Manual refresh now goes through the same conditional-GET poller as the
+    scheduler: it stores etag/last_modified on first fetch, sends them back as
+    If-None-Match/If-Modified-Since next time, and a 304 clears error state
+    and advances last_polled without inserting anything or touching etag."""
+    db_path = tmp_path / "t.db"
+    app = create_app(db_path=db_path)
+    with TestClient(app) as client:
+        r = client.post("/api/feeds", json={"url": "https://example.com/rss", "title": "Example"})
+        feed_id = r.json()["id"]
+
+        with patch(
+            "rss_kindle.api.feeds.make_http_client",
+            new=feed_http_client(
+                FIXTURE.read_bytes(),
+                headers={"ETag": 'W/"v1"', "Last-Modified": "Tue, 01 Jan 2030 00:00:00 GMT"},
+            ),
+        ):
+            r = client.post(f"/api/feeds/{feed_id}/refresh")
+        assert r.json()["inserted"] == 2
+        health = _feed_health_row(db_path, feed_id)
+        assert health["etag"] == 'W/"v1"'
+        assert health["last_polled"] is not None
+
+        captured: dict[str, str | None] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured["if_none_match"] = request.headers.get("if-none-match")
+            captured["if_modified_since"] = request.headers.get("if-modified-since")
+            return httpx.Response(304)
+
+        def fake_client(**overrides: object) -> httpx.AsyncClient:
+            return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+        with patch("rss_kindle.api.feeds.make_http_client", new=fake_client):
+            r = client.post(f"/api/feeds/{feed_id}/refresh")
+        assert r.status_code == 200
+        assert r.json() == {"inserted": 0}
+        assert captured["if_none_match"] == 'W/"v1"'
+        assert captured["if_modified_since"] == "Tue, 01 Jan 2030 00:00:00 GMT"
+
+        health = _feed_health_row(db_path, feed_id)
+        assert health["etag"] == 'W/"v1"'  # untouched by the 304
+        assert health["last_error"] is None
 
 
 def test_patch_feed(tmp_path):
@@ -110,10 +174,12 @@ def test_articles_group_filter(tmp_path):
         b = client.post("/api/feeds", json={"url": "https://b.example/rss", "title": "B"}).json()
         client.patch(f"/api/feeds/{a['id']}", json={"group_id": group["id"]})
 
-        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-            m.return_value = FIXTURE.read_bytes()
+        with patch(
+            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+        ):
             client.post(f"/api/feeds/{a['id']}/refresh")
-            m.return_value = FIXTURE.read_bytes().replace(b"urn:example:", b"urn:other:")
+        other_content = FIXTURE.read_bytes().replace(b"urn:example:", b"urn:other:")
+        with patch("rss_kindle.api.feeds.make_http_client", new=feed_http_client(other_content)):
             client.post(f"/api/feeds/{b['id']}/refresh")
         assert len(client.get("/api/articles").json()) == 4
 
@@ -132,8 +198,8 @@ def test_manual_refresh_failure_recorded_and_cleared(tmp_path):
         feed_id = r.json()["id"]
 
         with patch(
-            "rss_kindle.api.feeds.fetch_feed_bytes",
-            side_effect=RuntimeError("dns exploded"),
+            "rss_kindle.api.feeds.make_http_client",
+            new=feed_http_client_error(RuntimeError("dns exploded")),
         ):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
         assert r.status_code == 502
@@ -141,8 +207,9 @@ def test_manual_refresh_failure_recorded_and_cleared(tmp_path):
         assert "dns exploded" in feed["last_error"]
         assert feed["consecutive_failures"] == 1
 
-        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as mock_fetch:
-            mock_fetch.return_value = FIXTURE.read_bytes()
+        with patch(
+            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+        ):
             r = client.post(f"/api/feeds/{feed_id}/refresh")
         assert r.status_code == 200
         feed = client.get("/api/feeds").json()[0]
@@ -170,12 +237,19 @@ def test_opml_import_dedupes_and_export_roundtrips(tmp_path):
             "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
         )
         assert r.status_code == 200
-        assert r.json() == {"added": 2, "skipped": 0, "regrouped": 0}
+        assert r.json() == {"added": 2, "skipped": [], "regrouped": 0}
 
         r = client.post(
             "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
         )
-        assert r.json() == {"added": 0, "skipped": 2, "regrouped": 0}
+        assert r.json() == {
+            "added": 0,
+            "skipped": [
+                {"url": "https://one.example/rss", "reason": "duplicate"},
+                {"url": "https://two.example/rss", "reason": "duplicate"},
+            ],
+            "regrouped": 0,
+        }
 
         feeds = client.get("/api/feeds").json()
         assert {f["title"] for f in feeds} == {"One", "Two"}
@@ -218,7 +292,7 @@ def test_opml_import_folders_become_groups(tmp_path):
     with TestClient(app) as client:
         assert _import_opml(client, OPML_WITH_FOLDERS) == {
             "added": 3,
-            "skipped": 0,
+            "skipped": [],
             "regrouped": 0,
         }
         groups = client.get("/api/groups").json()
@@ -246,7 +320,11 @@ def test_opml_reimport_adopts_only_ungrouped(tmp_path):
         # A (now ungrouped) adopts the file's folder; B's manual choice survives
         assert _import_opml(client, OPML_WITH_FOLDERS) == {
             "added": 0,
-            "skipped": 3,
+            "skipped": [
+                {"url": "https://a.example/rss", "reason": "duplicate"},
+                {"url": "https://b.example/rss", "reason": "duplicate"},
+                {"url": "https://c.example/rss", "reason": "duplicate"},
+            ],
             "regrouped": 1,
         }
         feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
@@ -302,7 +380,7 @@ def test_json_import_groups_and_placeholder_titles(tmp_path):
     with TestClient(app) as client:
         r = _import_json(client, FEEDS_JSON)
         assert r.status_code == 200
-        assert r.json() == {"added": 4, "skipped": 0, "regrouped": 0}
+        assert r.json() == {"added": 4, "skipped": [], "regrouped": 0}
 
         groups = client.get("/api/groups").json()
         assert [g["name"] for g in groups] == ["ai", "gaming"]  # key order; no "ungrouped" group
@@ -318,15 +396,49 @@ def test_json_import_groups_and_placeholder_titles(tmp_path):
 
 
 def test_json_import_validation(tmp_path):
+    """File-level/structural problems (bad JSON, non-dict root, non-list group
+    value, empty group name) still hard-400 the whole import. A bad URL
+    scheme is a per-URL problem, not structural, so it's a skip, not a 400 —
+    see test_json_import_skips_bad_scheme_and_duplicates below."""
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:
         assert _import_json(client, "[1, 2]").status_code == 400
         assert _import_json(client, '{"ai": "https://a.example"}').status_code == 400
         assert _import_json(client, '{"ai": [42]}').status_code == 400
-        assert _import_json(client, '{"ai": ["ftp://a.example"]}').status_code == 400
         assert _import_json(client, '{"": ["https://a.example"]}').status_code == 400
         assert _import_json(client, "{nope").status_code == 400
         assert client.get("/api/feeds").json() == []
+
+
+def test_json_import_skips_bad_scheme_and_duplicates(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        r = _import_json(client, '{"ai": ["ftp://a.example"]}')
+        assert r.status_code == 200
+        assert r.json() == {
+            "added": 0,
+            "skipped": [{"url": "ftp://a.example", "reason": "invalid url"}],
+            "regrouped": 0,
+        }
+        assert client.get("/api/feeds").json() == []
+
+        # a bad-scheme row and a duplicate row in the same import: the good
+        # row still gets added, each bad row gets its own skip reason.
+        client.post("/api/feeds", json={"url": "https://b.example/rss", "title": "B"})
+        r = _import_json(
+            client,
+            '{"ai": ["https://a.example/rss", "ftp://c.example", "https://b.example/rss"]}',
+        )
+        assert r.status_code == 200
+        assert r.json() == {
+            "added": 1,
+            "skipped": [
+                {"url": "ftp://c.example", "reason": "invalid url"},
+                {"url": "https://b.example/rss", "reason": "duplicate"},
+            ],
+            # b was previously ungrouped, so the duplicate hit adopts "ai"
+            "regrouped": 1,
+        }
 
 
 def test_json_reimport_adopts_only_ungrouped(tmp_path):
@@ -337,7 +449,16 @@ def test_json_reimport_adopts_only_ungrouped(tmp_path):
         client.patch(f"/api/feeds/{feeds['https://a.example/rss']['id']}", json={"group_id": None})
 
         r = _import_json(client, FEEDS_JSON)
-        assert r.json() == {"added": 0, "skipped": 4, "regrouped": 1}
+        assert r.json() == {
+            "added": 0,
+            "skipped": [
+                {"url": "https://a.example/rss", "reason": "duplicate"},
+                {"url": "https://b.example/rss", "reason": "duplicate"},
+                {"url": "https://g.example/rss", "reason": "duplicate"},
+                {"url": "https://c.example/rss", "reason": "duplicate"},
+            ],
+            "regrouped": 1,
+        }
         feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
         ai_id = next(g["id"] for g in client.get("/api/groups").json() if g["name"] == "ai")
         assert feeds["https://a.example/rss"]["group_id"] == ai_id
@@ -370,15 +491,17 @@ def test_poll_adopts_placeholder_title_until_renamed(tmp_path):
         feed = client.get("/api/feeds").json()[0]
         assert feed["title"] == "example.com"
 
-        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-            m.return_value = FIXTURE.read_bytes()
+        with patch(
+            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+        ):
             client.post(f"/api/feeds/{feed['id']}/refresh")
         # the placeholder adopted the feed's self-reported title
         assert client.get("/api/feeds").json()[0]["title"] == "Example Feed"
 
         client.patch(f"/api/feeds/{feed['id']}", json={"title": "Mine"})
-        with patch("rss_kindle.api.feeds.fetch_feed_bytes") as m:
-            m.return_value = FIXTURE.read_bytes()
+        with patch(
+            "rss_kindle.api.feeds.make_http_client", new=feed_http_client(FIXTURE.read_bytes())
+        ):
             client.post(f"/api/feeds/{feed['id']}/refresh")
         # a manual rename is never overwritten
         assert client.get("/api/feeds").json()[0]["title"] == "Mine"
@@ -390,12 +513,15 @@ def test_refresh_all_reports_errors(tmp_path):
         client.post("/api/feeds", json={"url": "https://ok.example.com/rss", "title": "OK"})
         client.post("/api/feeds", json={"url": "https://bad.example.com/rss", "title": "Bad"})
 
-        async def fake_fetch(url: str) -> bytes:
-            if "bad" in url:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if "bad" in request.url.host:
                 raise RuntimeError("connection refused")
-            return FIXTURE.read_bytes()
+            return httpx.Response(200, content=FIXTURE.read_bytes())
 
-        with patch("rss_kindle.api.feeds.fetch_feed_bytes", side_effect=fake_fetch):
+        def fake_client(**overrides: object) -> httpx.AsyncClient:
+            return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+        with patch("rss_kindle.api.feeds.make_http_client", new=fake_client):
             r = client.post("/api/feeds/refresh")
         assert r.status_code == 200
         assert r.json() == {"inserted": 2, "errors": 1}

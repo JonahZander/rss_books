@@ -6,6 +6,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DigestQueue } from "../components/DigestQueue";
 import { FeedSidebar } from "../components/FeedSidebar";
 import { Masthead } from "../components/Masthead";
+import { OnboardingChecklist } from "../components/OnboardingChecklist";
 import { useToast } from "../components/Toasts";
 import {
   api,
@@ -28,6 +29,7 @@ export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoaded, setArticlesLoaded] = useState(false);
   const [queue, setQueue] = useState<Article[]>([]);
+  const [digestsCount, setDigestsCount] = useState(0);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<number | "none" | null>(null);
@@ -39,6 +41,9 @@ export default function Home() {
   const [deleteTarget, setDeleteTarget] = useState<Feed | null>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<Group | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("articles");
+  // Bumped to signal FeedSidebar to open its add-feed form from outside (the
+  // onboarding checklist's "Add a feed →"); see FeedSidebar's prop doc.
+  const [openAddFeedSignal, setOpenAddFeedSignal] = useState(0);
 
   const refreshFeeds = useCallback(async () => {
     const [feedList, groupList] = await Promise.all([api.listFeeds(), api.listGroups()]);
@@ -46,33 +51,60 @@ export default function Home() {
     setGroups(groupList);
   }, []);
 
+  // Guards against a slow, stale request clobbering a faster, newer one: each
+  // call aborts its predecessor and stamps a sequence number, applying its
+  // result only if nothing newer has started in the meantime.
+  const articlesAbort = useRef<AbortController | null>(null);
+  const articlesSeq = useRef(0);
   const refreshArticles = useCallback(async () => {
-    const list = await api.listArticles({
-      feedId: selectedFeedId ?? undefined,
-      groupId: selectedGroupId ?? undefined,
-      unread: unreadOnly,
-      q: search || undefined,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
-    });
-    setArticles(list);
-    // A full page implies there may be more; one short page ends the run.
-    setHasNext(list.length === PAGE_SIZE);
-    setArticlesLoaded(true);
-  }, [selectedFeedId, selectedGroupId, unreadOnly, search, page]);
+    articlesAbort.current?.abort();
+    const controller = new AbortController();
+    articlesAbort.current = controller;
+    const seq = ++articlesSeq.current;
+    try {
+      const list = await api.listArticles(
+        {
+          feedId: selectedFeedId ?? undefined,
+          groupId: selectedGroupId ?? undefined,
+          unread: unreadOnly,
+          q: search || undefined,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        },
+        controller.signal,
+      );
+      if (seq !== articlesSeq.current) return; // a newer request has since started
+      setArticles(list);
+      // A full page implies there may be more; one short page ends the run.
+      setHasNext(list.length === PAGE_SIZE);
+      setArticlesLoaded(true);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      if (seq !== articlesSeq.current) return;
+      toast(e instanceof Error ? e.message : "could not load articles", "error");
+    }
+  }, [selectedFeedId, selectedGroupId, unreadOnly, search, page, toast]);
 
   const refreshQueue = useCallback(async () => {
     setQueue(await api.getQueue());
+  }, []);
+
+  // Only a count: the onboarding checklist needs a boolean ("an edition
+  // exists"), and DigestQueue already owns the full, session-local digest
+  // list — this avoids a second source of truth next to it.
+  const refreshDigestsCount = useCallback(async () => {
+    setDigestsCount((await api.listDigests()).length);
   }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshFeeds();
     void refreshQueue();
+    void refreshDigestsCount();
     api.getSettings().then(setSettings, (e) => {
       toast(e instanceof Error ? e.message : "could not load settings", "error");
     });
-  }, [refreshFeeds, refreshQueue, toast]);
+  }, [refreshFeeds, refreshQueue, refreshDigestsCount, toast]);
 
   // Debounce only the search box; feed/group/unread switches should feel instant.
   const prevSearch = useRef(search);
@@ -179,24 +211,84 @@ export default function Home() {
     }
   };
 
+  const reorderQueue = async (next: Article[]) => {
+    const prev = queue;
+    setQueue(next); // optimistic; reconciled with the server's canonical order below
+    try {
+      setQueue(await api.replaceQueue(next.map((a) => a.id)));
+    } catch (e) {
+      setQueue(prev);
+      toast(e instanceof Error ? e.message : "reorder failed", "error");
+    }
+  };
+
   const addLink = async (url: string, title?: string) => {
     // The new article belongs to the hidden Saved-links feed, so it won't show
     // in the article list; reflecting it in the queue is enough.
     setQueue(await api.addLinkToQueue(url, title));
   };
 
-  const onRead = useCallback((updated: Article) => {
+  // Direction-aware: wasRead is the article's read state BEFORE this update,
+  // so unread_count moves the opposite way (-1 marking read, +1 unmarking).
+  const onArticleReadChange = useCallback((updated: Article, wasRead: boolean) => {
     setArticles((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     setFeeds((prev) =>
       prev.map((f) =>
-        f.id === updated.feed_id ? { ...f, unread_count: Math.max(0, f.unread_count - 1) } : f,
+        f.id === updated.feed_id
+          ? { ...f, unread_count: Math.max(0, f.unread_count + (wasRead ? 1 : -1)) }
+          : f,
       ),
     );
   }, []);
 
+  // TriageReader's mark-on-expand only ever marks read (wasRead is always
+  // false there — it checks !article.read_at before calling this).
+  const onRead = useCallback(
+    (updated: Article) => onArticleReadChange(updated, false),
+    [onArticleReadChange],
+  );
+
+  const toggleRead = async (article: Article) => {
+    const wasRead = Boolean(article.read_at);
+    try {
+      const updated = wasRead ? await api.markUnread(article.id) : await api.markRead(article.id);
+      onArticleReadChange(updated, wasRead);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "update failed", "error");
+    }
+  };
+
+  const markAllSeen = async () => {
+    try {
+      const r = await api.markAllRead({
+        feedId: selectedFeedId ?? undefined,
+        groupId: selectedGroupId ?? undefined,
+      });
+      toast(`${r.updated} marked seen`);
+      await Promise.all([refreshArticles(), refreshFeeds()]);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "mark all seen failed", "error");
+    }
+  };
+
   const onCompiled = useCallback(async () => {
-    await Promise.all([refreshQueue(), refreshArticles(), refreshFeeds()]);
-  }, [refreshQueue, refreshArticles, refreshFeeds]);
+    await Promise.all([refreshQueue(), refreshArticles(), refreshFeeds(), refreshDigestsCount()]);
+  }, [refreshQueue, refreshArticles, refreshFeeds, refreshDigestsCount]);
+
+  // Onboarding checklist actions: jump to the relevant mobile panel, then
+  // hand off to the target — opening the add-feed form (FeedSidebar owns
+  // that state) or scrolling the queue/compile panel into view.
+  const focusAddFeed = useCallback(() => {
+    setMobilePanel("feeds");
+    setOpenAddFeedSignal((n) => n + 1);
+  }, []);
+
+  const goToQueue = useCallback(() => {
+    setMobilePanel("queue");
+    requestAnimationFrame(() => {
+      document.querySelector(".digest-queue")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }, []);
 
   const queuedIds = useMemo(() => new Set(queue.map((a) => a.id)), [queue]);
   const currentFeed = useMemo(
@@ -257,8 +349,18 @@ export default function Home() {
           onDeleteGroup={setDeleteGroupTarget}
           onRefresh={pollAll}
           onChanged={refreshFeeds}
+          defaultPollMinutes={settings?.default_poll_minutes ?? 30}
+          openAddFeedSignal={openAddFeedSignal}
         />
         <section className="content" aria-label="Articles">
+          <OnboardingChecklist
+            hasFeeds={feeds.length > 0}
+            hasQueuedEver={queue.length > 0 || digestsCount > 0}
+            hasEdition={digestsCount > 0}
+            deliveryReady={settings ? emailConfigured(settings) : false}
+            onFocusAddFeed={focusAddFeed}
+            onGoToQueue={goToQueue}
+          />
           <ArticleList
             articles={articles}
             loaded={articlesLoaded}
@@ -270,6 +372,8 @@ export default function Home() {
             markReadOnExpand={settings?.mark_read_on_expand ?? true}
             onToggleQueue={toggleQueue}
             onRead={onRead}
+            onToggleRead={(a) => void toggleRead(a)}
+            onMarkAllSeen={() => void markAllSeen()}
             currentFeed={currentFeed}
             currentGroup={currentGroup}
             lastPoll={lastPoll}
@@ -287,6 +391,7 @@ export default function Home() {
           profiles={settings?.profiles.map((p) => p.name) ?? []}
           defaultProfile={settings ? defaultProfileName(settings) : null}
           onRemove={(a) => void toggleQueue(a)}
+          onReorder={(next) => void reorderQueue(next)}
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);
           }}

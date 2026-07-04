@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { EditionPreview } from "../../components/EditionPreview";
 import { Masthead } from "../../components/Masthead";
@@ -15,8 +17,21 @@ const STATUS_LABEL: Record<Digest["status"], string> = {
   failed: "Failed",
 };
 
+/** Static export requires useSearchParams to sit under a Suspense boundary
+ * (a next build failure otherwise); this wrapper is the whole reason the
+ * page body is split into a separate component below. */
 export default function Editions() {
+  return (
+    <Suspense fallback={<Masthead />}>
+      <EditionsInner />
+    </Suspense>
+  );
+}
+
+function EditionsInner() {
   const toast = useToast();
+  const searchParams = useSearchParams();
+  const openParam = searchParams.get("open");
   const [digests, setDigests] = useState<Digest[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Digest | null>(null);
@@ -45,6 +60,30 @@ export default function Editions() {
     const id = window.setInterval(() => void refresh(), 1500);
     return () => window.clearInterval(id);
   }, [busy, refresh]);
+
+  // Coming from "View edition →" on the triage desk (?open=<id>): expand that
+  // edition's review panel and scroll it into view, once per param value so
+  // re-renders (or the busy-poll refresh above) don't keep re-triggering it.
+  const openedParam = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openParam || openedParam.current === openParam) return;
+    const id = Number(openParam);
+    const found = Number.isFinite(id) && digests.some((d) => d.id === id);
+    if (!found) {
+      // Once the list has loaded at least once, a missing id is permanent —
+      // stop rescanning on every busy-poll refresh above.
+      if (digests.length > 0) openedParam.current = openParam;
+      return;
+    }
+    openedParam.current = openParam;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPreviewId(id);
+    requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-digest-id="${id}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }, [openParam, digests]);
 
   const send = async (digest: Digest) => {
     setSendingId(digest.id);
@@ -141,7 +180,7 @@ export default function Editions() {
         ) : (
           <ul className="edition-list">
             {digests.map((d) => (
-              <li key={d.id} className={`edition-row status-${d.status}`}>
+              <li key={d.id} className={`edition-row status-${d.status}`} data-digest-id={d.id}>
                 <div className="edition-main">
                   <span className="edition-ref">#{String(d.id).padStart(4, "0")}</span>
                   <div className="edition-titleblock">
@@ -206,18 +245,28 @@ export default function Editions() {
                     </a>
                   )}
                   <span className="edition-tools">
-                    {d.status === "ready" && canEmail && (
-                      <button
-                        type="button"
-                        className="feed-tool"
-                        title="Send to e-reader"
-                        aria-label={`Send ${d.title} to e-reader`}
-                        disabled={sendingId === d.id}
-                        onClick={() => void send(d)}
-                      >
-                        ✉
-                      </button>
-                    )}
+                    {d.status === "ready" &&
+                      (canEmail ? (
+                        <button
+                          type="button"
+                          className="feed-tool"
+                          title="Send to e-reader"
+                          aria-label={`Send ${d.title} to e-reader`}
+                          disabled={sendingId === d.id}
+                          onClick={() => void send(d)}
+                        >
+                          ✉
+                        </button>
+                      ) : (
+                        <Link
+                          href="/settings#delivery"
+                          className="feed-tool"
+                          title="Send to e-reader — set up delivery in Settings first"
+                          aria-label={`Set up delivery to send ${d.title}`}
+                        >
+                          ✉
+                        </Link>
+                      ))}
                     {d.status === "ready" && (
                       <button
                         type="button"

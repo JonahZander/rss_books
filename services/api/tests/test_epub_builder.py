@@ -127,6 +127,69 @@ def test_cover_is_low_res_jpeg() -> None:
     assert img.size == (1200, 1920)
 
 
+# Shared by the two worst-case cover tests below: a long wrapping title
+# (>4 lines pre-cap) and many sources (>4, forcing the "+N MORE" line) is the
+# layout's worst case.
+_WORST_CASE_TITLE = (
+    "The Definitive Complete Guide To Understanding Global Economic "
+    "Trends And Their Long Term Consequences For Modern Society And "
+    "Beyond All Reasonable Expectation"
+)
+_WORST_CASE_SOURCES = [f"Feed Number {i}" for i in range(1, 8)]  # 7 sources
+
+
+def test_cover_worst_case_title_and_sources_still_renders() -> None:
+    # must still be a valid, correctly-sized JPEG (see cover.py's y-position
+    # arithmetic comments)
+    import io
+
+    from PIL import Image
+
+    cover = render_cover(
+        title=_WORST_CASE_TITLE,
+        date_str="2026-07-04",
+        article_count=42,
+        sources=_WORST_CASE_SOURCES,
+    )
+    assert cover is not None
+    assert cover[:2] == b"\xff\xd8"
+    img = Image.open(io.BytesIO(cover))
+    assert img.size == (1200, 1920)
+
+
+def test_cover_worst_case_bottom_rows_are_paper() -> None:
+    # regression test for the clipping class the senior review caught in an
+    # earlier draft of the layout arithmetic: with 4 wrapped title lines and
+    # 7 sources (the "+N MORE" line as the 4th source-block line), nothing
+    # may be drawn past the bottom of the canvas - the last several rows of
+    # the shipped JPEG must still be plain paper background.
+    import io
+
+    from PIL import Image
+
+    from rss_kindle.services.cover import PAPER
+
+    cover = render_cover(
+        title=_WORST_CASE_TITLE,
+        date_str="2026-07-04",
+        article_count=42,
+        sources=_WORST_CASE_SOURCES,
+    )
+    assert cover is not None
+    img = Image.open(io.BytesIO(cover)).convert("RGB")
+    w, h = img.size
+    px = img.load()
+    # JPEG is lossy, so allow a small tolerance per channel rather than an
+    # exact match; sample across the full width of the bottom band.
+    tolerance = 12
+    for y in range(h - 15, h):
+        for x in range(0, w, 40):
+            pixel = px[x, y]
+            assert all(abs(p - b) <= tolerance for p, b in zip(pixel, PAPER, strict=True)), (
+                f"expected paper background at ({x}, {y}), got {pixel}"
+            )
+
+
 def test_reading_minutes() -> None:
     assert _reading_minutes("<p>" + "word " * 460 + "</p>") == 2
     assert _reading_minutes("<p>short</p>") == 1

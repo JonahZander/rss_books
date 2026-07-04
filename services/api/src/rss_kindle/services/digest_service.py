@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from collections.abc import Callable
@@ -25,6 +26,20 @@ from rss_kindle.services.table_renderer import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Photos are recompressed to 2x a profile's screen width for crisp e-ink
+# rendering, but an oversized custom screen_width shouldn't blow past what
+# any current reader can usefully show (or bloat the EPUB); clamp to this.
+PHOTO_WIDTH_CEILING = 1600
+
+
+def _photo_max_width(screen: tuple[int, int] | None) -> int:
+    """Target photo width for the image pipeline: 2x the profile's screen
+    width, capped at PHOTO_WIDTH_CEILING. Profiles without screen dims (or no
+    profile at all) use the global 1200px default."""
+    if screen is None:
+        return 1200
+    return min(SUPERSAMPLE * screen[0], PHOTO_WIDTH_CEILING)
 
 
 def _safe_filename(name: str) -> str:
@@ -271,9 +286,10 @@ async def _render_bodies(
     """Rewrite article HTML through the image pipeline (and table/code
     pre-rendering, when the profile asks for it); returns the images to embed
     in the EPUB. A profile with screen dimensions gets photos recompressed to
-    2x its screen width and table/code images fitted to its screen."""
+    2x its screen width (capped at PHOTO_WIDTH_CEILING) and table/code images
+    fitted to its screen."""
     screen = profile.screen if profile else None
-    max_width = SUPERSAMPLE * screen[0] if screen else 1200
+    max_width = _photo_max_width(screen)
     async with make_http_client() as client:
         rewritten, images = await prepare_images(
             [(a.html, a.url) for a in articles],
@@ -375,8 +391,10 @@ async def _mark_failed(db: Database, digest_id: int, exc: Exception) -> None:
         await conn.commit()
 
 
-async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
-    """Build the EPUB for a digest; lands in status 'ready' or 'failed'."""
+async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> bool:
+    """Build the EPUB for a digest; lands in status 'ready' or 'failed'.
+    Returns whether it succeeded (BackgroundTasks callers may discard this;
+    the scheduler's press deadline uses it only to log, never to retry)."""
     try:
         d, rows = await _mark_generating_and_load(db, digest_id)
 
@@ -392,7 +410,11 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
         link_qr = profile.link_qr if profile else app_settings.link_qr
 
         images = await _render_bodies(articles, profile, epub_dir)
-        output = _build_epub(digest_id, d["title"], articles, images, epub_dir, link_qr)
+        # Cover rendering and EPUB assembly are CPU/disk-bound; off the event
+        # loop so a large compile doesn't stall polling and other requests.
+        output = await asyncio.to_thread(
+            _build_epub, digest_id, d["title"], articles, images, epub_dir, link_qr
+        )
 
         size_bytes = await _persist_ready(db, digest_id, output, member_outcomes)
         logger.info(
@@ -408,6 +430,8 @@ async def generate_digest(db: Database, digest_id: int, epub_dir: Path) -> None:
                 await send_digest_and_record(db, app_settings, digest_id)
             except Exception:
                 logger.exception("auto-email for digest %d failed", digest_id)
+        return True
     except Exception as exc:
         logger.exception("digest %d build failed", digest_id)
         await _mark_failed(db, digest_id, exc)
+        return False

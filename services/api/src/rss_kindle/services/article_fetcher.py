@@ -12,13 +12,15 @@ from __future__ import annotations
 
 import asyncio
 import random
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import HTTPError, RequestException
 
+from rss_kindle.config import get_settings
 from rss_kindle.models import AppSettings
 from rss_kindle.services.content_extractor import extract_html
+from rss_kindle.services.net_guard import SSRFBlockedError, check_target, guard_config_from_settings
 from rss_kindle.services.readers import ReaderError, build_reader
 from rss_kindle.services.sanitizer import sanitize_or_none
 
@@ -27,15 +29,36 @@ from rss_kindle.services.sanitizer import sanitize_or_none
 SAME_HOST_DELAY_SECONDS = 2.0
 SAME_HOST_JITTER_SECONDS = 1.0
 
+REDIRECT_STATUS_CODES = (301, 302, 303, 307, 308)
+# curl_cffi has no transport-level hook to re-check each redirect hop like
+# httpx's, so redirects are followed manually (allow_redirects=False) with
+# the SSRF guard re-run before every hop, capped against redirect loops.
+MAX_REDIRECTS = 5
+
 
 async def fetch_url_bytes(url: str) -> bytes:
+    """Fetch a URL, following redirects one hop at a time so the SSRF guard
+    sees (and can block) every hop, not just the first request."""
+    cfg = guard_config_from_settings(get_settings())
     # Modern WAFs fingerprint the TLS handshake (JA3/JA4) and reject any
     # non-browser client regardless of User-Agent, so we impersonate Chrome
     # at the transport layer rather than just spoofing the UA header.
     async with AsyncSession() as session:
-        r = await session.get(url, impersonate="chrome", timeout=20, allow_redirects=True)
-        r.raise_for_status()
-        return r.content
+        current = url
+        for _ in range(MAX_REDIRECTS + 1):
+            await check_target(current, cfg)
+            r = await session.get(
+                current, impersonate="chrome", timeout=20, allow_redirects=False
+            )
+            location = r.headers.get("location")
+            if r.status_code in REDIRECT_STATUS_CODES and location:
+                current = urljoin(current, location)
+                continue
+            r.raise_for_status()
+            return r.content
+    # RequestException so callers degrade the same way curl_cffi's own
+    # redirect cap did: summary fallback / 502, never a failed compile.
+    raise RequestException(f"too many redirects (> {MAX_REDIRECTS} hops): {url}")
 
 
 async def fetch_article_content(url: str, settings: AppSettings) -> str | None:
@@ -44,7 +67,7 @@ async def fetch_article_content(url: str, settings: AppSettings) -> str | None:
     try:
         raw = await fetch_url_bytes(url)
         content = extract_html(raw, url=url)
-    except (HTTPError, RequestException):
+    except (HTTPError, RequestException, SSRFBlockedError):
         content = None
     if not content:
         reader = build_reader(settings)

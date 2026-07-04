@@ -687,6 +687,69 @@ a {
   font-size: 10px;
 }
 
+/* ─── Onboarding checklist ────────────────────────────────── */
+
+.onboarding-card {
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.onboarding-progress {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.onboarding-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.onboarding-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.onboarding-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.onboarding-item.done {
+  color: var(--ink-3);
+}
+
+.onboarding-tick {
+  flex: none;
+  margin-top: 2px;
+}
+
+.onboarding-item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .article-row {
   position: relative;
   cursor: pointer;
@@ -843,14 +906,39 @@ a {
   align-items: baseline;
 }
 
-/* Badge sits flush against the row's right edge, off to the side of the
-   title. Right-aligned so badges of different lengths (New / Seen / Queued /
-   In edition) all share the same right edge, stacking into a clean vertical
-   column down the side of the list. */
-.article-header .lifecycle-stamp {
+/* Badge (and the read/unread toggle above it) sit flush against the row's
+   right edge, off to the side of the title. Right-aligned so badges of
+   different lengths (New / Seen / Queued / In edition) all share the same
+   right edge, stacking into a clean vertical column down the side of the
+   list. */
+.article-header-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   justify-self: end;
   align-self: center;
+}
+
+.article-header .lifecycle-stamp {
   white-space: nowrap;
+}
+
+.read-toggle {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 2px 4px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.read-toggle:hover {
+  color: var(--accent-blue);
 }
 
 .article-index {
@@ -884,14 +972,24 @@ a {
   background: #fff;
 }
 
-.checkbox:checked {
+/* .checkbox-done is a read-only status tick (OnboardingChecklist) with the
+   same look as the interactive :checked state below, minus the glow and the
+   entrance animation — driven by a modifier class since a plain <span> can't
+   take a :checked pseudo-class. */
+.checkbox:checked,
+.checkbox.checkbox-done {
   background: var(--accent-blue);
   border-color: var(--accent-blue);
+}
+
+.checkbox:checked {
   box-shadow: var(--glow-blue);
 }
 
 .checkbox:checked::before,
-.checkbox:checked::after {
+.checkbox:checked::after,
+.checkbox.checkbox-done::before,
+.checkbox.checkbox-done::after {
   content: "";
   position: absolute;
   background: var(--paper);
@@ -900,17 +998,25 @@ a {
   transform-origin: center;
 }
 
-.checkbox:checked::before {
+.checkbox:checked::before,
+.checkbox.checkbox-done::before {
   width: 8px;
   height: 1.5px;
   transform: translate(-50%, -50%);
+}
+
+.checkbox:checked::before {
   animation: tickDraw 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-.checkbox:checked::after {
+.checkbox:checked::after,
+.checkbox.checkbox-done::after {
   width: 1.5px;
   height: 8px;
   transform: translate(-50%, -50%);
+}
+
+.checkbox:checked::after {
   animation: tickDraw 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both 60ms;
 }
 
@@ -1423,14 +1529,18 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
 }
 
-.compile-options {
+/* .compile-options and .import-skips are both single-toggle disclosure
+   boxes (differing only in the toggle's justify-content/min-height below)
+   sharing one border/toggle-button look. */
+.compile-options,
+.import-skips {
   border: 1px solid var(--rule);
 }
 
-.compile-options-toggle {
+.compile-options-toggle,
+.import-skips-toggle {
   width: 100%;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
@@ -1445,7 +1555,16 @@ a {
   transition: color 140ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.compile-options-toggle:hover {
+.compile-options-toggle {
+  justify-content: space-between;
+}
+
+.import-skips-toggle {
+  min-height: 24px;
+}
+
+.compile-options-toggle:hover,
+.import-skips-toggle:hover {
   color: var(--ink);
 }
 
@@ -1460,6 +1579,72 @@ a {
   gap: 14px;
   padding: 10px;
   border-top: 1px solid var(--rule);
+}
+
+/* ─── Import skip disclosure ──────────────────────────────── */
+
+.import-skips {
+  border: 1px solid var(--rule);
+}
+
+.import-skips-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  min-height: 24px;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 140ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.import-skips-toggle:hover {
+  color: var(--ink);
+}
+
+.import-skips-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.import-skips-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 11px;
+}
+
+.import-skips-list li:last-child {
+  border-bottom: 0;
+}
+
+.import-skip-url {
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-skip-reason {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 /* ─── Animations ──────────────────────────────────────────── */
@@ -1654,10 +1839,48 @@ a {
 }
 
 .feed-error-badge {
-  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -7px -4px -7px 2px;
+  border: 0;
+  background: none;
+  padding: 0;
   color: var(--danger);
   font-size: 10px;
-  cursor: help;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.feed-error-badge:hover {
+  transform: scale(1.15);
+}
+
+.feed-error-detail {
+  margin: 0 0 8px 42px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.feed-error-detail p {
+  margin: 0 0 6px;
+}
+
+.feed-error-detail-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.feed-error-detail .btn {
+  margin-top: 2px;
 }
 
 .feed-row-tools {
@@ -1717,6 +1940,18 @@ a {
   font-size: 13px;
   color: var(--ink);
   outline: none;
+}
+
+.poll-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.poll-custom-input {
+  width: 72px;
+  flex: none;
 }
 
 .opml-row {
@@ -1812,6 +2047,55 @@ a {
   opacity: 1;
 }
 
+.q-tools {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* Stack the reorder pair vertically (each button keeps the ≥24px hit
+   target) so the queue rail stays narrow instead of widening for a
+   side-by-side pair. */
+.q-reorder {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-reorder .feed-tool {
+  font-size: 9px;
+}
+
+.feed-tool:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ─── Touch-visible row tools ─────────────────────────────── */
+
+/* Coarse-pointer/no-hover devices can't reveal hover-only tools at all, so
+   show them always instead. `.feed-row .feed-row-tools` is normally an
+   absolute overlay (built for the hover reveal, so it doesn't reserve grid
+   space) sitting over `.feed-row-end`; forced-visible without a layout
+   change it would permanently cover the unread badge, the sidebar's primary
+   signal. Pull it back into normal flow here so the badge and tools sit
+   side by side instead. */
+@media (hover: none), (pointer: coarse) {
+  .feed-row-tools,
+  .group-head .feed-row-tools,
+  .queue-list li .feed-tool {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .feed-row .feed-row-tools {
+    position: static;
+    transform: none;
+    padding: 0;
+    background: transparent;
+  }
+}
+
 .queue-status.failed {
   color: var(--danger);
 }
@@ -1824,6 +2108,26 @@ a {
   color: var(--ink-3);
   font-size: 9.5px;
   letter-spacing: 0.1em;
+}
+
+.queue-view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+}
+
+.queue-view-link .btn-arrow {
+  transition: transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.queue-view-link:hover .btn-arrow {
+  transform: translateX(3px);
 }
 
 /* ─── Toasts ──────────────────────────────────────────────── */
