@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, sta
 
 from rss_kindle.config import make_http_client
 from rss_kindle.db import Database
-from rss_kindle.models import Feed, FeedCreate, FeedUpdate
+from rss_kindle.models import Feed, FeedCreate, FeedUpdate, ImportResult, ImportSkip
 from rss_kindle.services.feed_poller import placeholder_title
 from rss_kindle.services.poller import poll_feed
 from rss_kindle.services.saved_links import NOT_SAVED_LINKS
@@ -90,12 +90,13 @@ async def _group_id_for(
 
 async def _import_feed_rows(
     db: Database, entries: list[tuple[str, str, str | None, str | None]]
-) -> dict[str, int]:
+) -> ImportResult:
     """Insert (url, title, site_url, group_name) rows. Existing feeds are
-    skipped, but they adopt the file's group when they are currently ungrouped,
-    so re-importing a subscription file is the upgrade path to grouping."""
+    skipped (reason "duplicate"), but they adopt the file's group when they
+    are currently ungrouped, so re-importing a subscription file is the
+    upgrade path to grouping."""
     added = 0
-    skipped = 0
+    skipped: list[ImportSkip] = []
     regrouped = 0
     async with db.connect() as conn:
         cache: dict[str, int] = {}
@@ -108,7 +109,7 @@ async def _import_feed_rows(
                 )
                 added += 1
             except sqlite3.IntegrityError:
-                skipped += 1
+                skipped.append(ImportSkip(url=url, reason="duplicate"))
                 if gid is not None:
                     cur = await conn.execute(
                         "UPDATE feeds SET group_id = ? WHERE url = ? AND group_id IS NULL",
@@ -116,11 +117,11 @@ async def _import_feed_rows(
                     )
                     regrouped += cur.rowcount
         await conn.commit()
-    return {"added": added, "skipped": skipped, "regrouped": regrouped}
+    return ImportResult(added=added, skipped=skipped, regrouped=regrouped)
 
 
-@router.post("/import")
-async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
+@router.post("/import", response_model=ImportResult)
+async def import_opml(file: UploadFile, request: Request) -> ImportResult:
     content = await file.read()
     try:
         root = ET.fromstring(content)
@@ -150,18 +151,18 @@ async def import_opml(file: UploadFile, request: Request) -> dict[str, int]:
         title = outline.get("title") or outline.get("text") or url
         entries.append((url, title, outline.get("htmlUrl"), top_folder_name(outline)))
 
-    counts = await _import_feed_rows(request.app.state.db, entries)
+    result = await _import_feed_rows(request.app.state.db, entries)
     logger.info(
         "opml import: %d added, %d skipped, %d regrouped",
-        counts["added"],
-        counts["skipped"],
-        counts["regrouped"],
+        result.added,
+        len(result.skipped),
+        result.regrouped,
     )
-    return counts
+    return result
 
 
-@router.post("/import-json")
-async def import_feeds_json(file: UploadFile, request: Request) -> dict[str, int]:
+@router.post("/import-json", response_model=ImportResult)
+async def import_feeds_json(file: UploadFile, request: Request) -> ImportResult:
     """Import a JSON feed list: {"group name": ["feed url", …]}.
 
     The key "ungrouped" (case-insensitive) means no group. URLs carry no
@@ -179,6 +180,9 @@ async def import_feeds_json(file: UploadFile, request: Request) -> dict[str, int
         )
 
     entries: list[tuple[str, str, str | None, str | None]] = []
+    # Per-URL scheme problems (unlike file-level/structural ones above) skip
+    # that one row instead of aborting the whole import.
+    pre_skips: list[ImportSkip] = []
     for group_key, urls in data.items():
         name = group_key.strip()
         if not name:
@@ -190,17 +194,19 @@ async def import_feeds_json(file: UploadFile, request: Request) -> dict[str, int
         group_name = None if name.casefold() == "ungrouped" else name
         for url in urls:
             if not url.startswith(("http://", "https://")):
-                raise HTTPException(status_code=400, detail=f"not a feed URL: {url!r}")
+                pre_skips.append(ImportSkip(url=url, reason="invalid url"))
+                continue
             entries.append((url, placeholder_title(url), None, group_name))
 
-    counts = await _import_feed_rows(request.app.state.db, entries)
+    result = await _import_feed_rows(request.app.state.db, entries)
+    result = result.model_copy(update={"skipped": pre_skips + result.skipped})
     logger.info(
         "json import: %d added, %d skipped, %d regrouped",
-        counts["added"],
-        counts["skipped"],
-        counts["regrouped"],
+        result.added,
+        len(result.skipped),
+        result.regrouped,
     )
-    return counts
+    return result
 
 
 @router.get("/export.json")

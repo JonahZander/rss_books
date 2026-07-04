@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { Feed, Group } from "../lib/api";
+import type { Feed, Group, ImportSkip } from "../lib/api";
 import { api } from "../lib/api";
 import { capCount, pad2 } from "../lib/format";
 import { hostnameOf } from "../lib/url";
@@ -89,6 +89,8 @@ export function FeedSidebar({
   const [addingGroup, setAddingGroup] = useState(false);
   const [addingFeed, setAddingFeed] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapsed);
+  const [importSkips, setImportSkips] = useState<ImportSkip[]>([]);
+  const [importSkipsOpen, setImportSkipsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const grouped = groups.length > 0;
@@ -239,7 +241,11 @@ export function FeedSidebar({
     try {
       const r = isJson ? await api.importFeedsJson(file) : await api.importOpml(file);
       const regrouped = r.regrouped > 0 ? `, ${r.regrouped} regrouped` : "";
-      toast(`${isJson ? "JSON" : "OPML"} import: ${r.added} added, ${r.skipped} skipped${regrouped}`);
+      toast(
+        `${isJson ? "JSON" : "OPML"} import: ${r.added} added, ${r.skipped.length} skipped${regrouped}`,
+      );
+      setImportSkips(r.skipped);
+      setImportSkipsOpen(false);
       await onChanged();
     } catch (e) {
       toast(e instanceof Error ? e.message : "import failed", "error");
@@ -681,6 +687,31 @@ export function FeedSidebar({
           <span className="btn-arrow">↓</span>
         </a>
       </div>
+
+      {importSkips.length > 0 && (
+        <div className="import-skips">
+          <button
+            type="button"
+            className="import-skips-toggle"
+            aria-expanded={importSkipsOpen}
+            onClick={() => setImportSkipsOpen((v) => !v)}
+          >
+            <span>
+              {importSkipsOpen ? "▾" : "▸"} {importSkips.length} skipped in last import
+            </span>
+          </button>
+          {importSkipsOpen && (
+            <ul className="import-skips-list">
+              {importSkips.map((s, i) => (
+                <li key={`${s.url}-${i}`}>
+                  <span className="import-skip-url">{s.url}</span>
+                  <span className="import-skip-reason">{s.reason}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

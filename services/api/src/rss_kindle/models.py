@@ -26,6 +26,22 @@ class Feed(BaseModel):
     group_id: int | None = None
 
 
+class ImportSkip(BaseModel):
+    """One row a bulk feed import didn't insert, and why. File-level/structural
+    problems (unparsable XML/JSON, a malformed group) still hard-fail the
+    whole import with a 400; only per-URL problems (duplicate, bad scheme)
+    become a skip entry so one bad row doesn't abort an otherwise-good file."""
+
+    url: str
+    reason: str
+
+
+class ImportResult(BaseModel):
+    added: int
+    skipped: list[ImportSkip] = []
+    regrouped: int
+
+
 class FeedUpdate(BaseModel):
     title: str | None = None
     poll_interval_minutes: int | None = Field(default=None, ge=1)

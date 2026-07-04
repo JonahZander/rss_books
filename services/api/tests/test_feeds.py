@@ -237,12 +237,19 @@ def test_opml_import_dedupes_and_export_roundtrips(tmp_path):
             "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
         )
         assert r.status_code == 200
-        assert r.json() == {"added": 2, "skipped": 0, "regrouped": 0}
+        assert r.json() == {"added": 2, "skipped": [], "regrouped": 0}
 
         r = client.post(
             "/api/feeds/import", files={"file": ("feeds.opml", OPML, "text/xml")}
         )
-        assert r.json() == {"added": 0, "skipped": 2, "regrouped": 0}
+        assert r.json() == {
+            "added": 0,
+            "skipped": [
+                {"url": "https://one.example/rss", "reason": "duplicate"},
+                {"url": "https://two.example/rss", "reason": "duplicate"},
+            ],
+            "regrouped": 0,
+        }
 
         feeds = client.get("/api/feeds").json()
         assert {f["title"] for f in feeds} == {"One", "Two"}
@@ -285,7 +292,7 @@ def test_opml_import_folders_become_groups(tmp_path):
     with TestClient(app) as client:
         assert _import_opml(client, OPML_WITH_FOLDERS) == {
             "added": 3,
-            "skipped": 0,
+            "skipped": [],
             "regrouped": 0,
         }
         groups = client.get("/api/groups").json()
@@ -313,7 +320,11 @@ def test_opml_reimport_adopts_only_ungrouped(tmp_path):
         # A (now ungrouped) adopts the file's folder; B's manual choice survives
         assert _import_opml(client, OPML_WITH_FOLDERS) == {
             "added": 0,
-            "skipped": 3,
+            "skipped": [
+                {"url": "https://a.example/rss", "reason": "duplicate"},
+                {"url": "https://b.example/rss", "reason": "duplicate"},
+                {"url": "https://c.example/rss", "reason": "duplicate"},
+            ],
             "regrouped": 1,
         }
         feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
@@ -369,7 +380,7 @@ def test_json_import_groups_and_placeholder_titles(tmp_path):
     with TestClient(app) as client:
         r = _import_json(client, FEEDS_JSON)
         assert r.status_code == 200
-        assert r.json() == {"added": 4, "skipped": 0, "regrouped": 0}
+        assert r.json() == {"added": 4, "skipped": [], "regrouped": 0}
 
         groups = client.get("/api/groups").json()
         assert [g["name"] for g in groups] == ["ai", "gaming"]  # key order; no "ungrouped" group
@@ -385,15 +396,49 @@ def test_json_import_groups_and_placeholder_titles(tmp_path):
 
 
 def test_json_import_validation(tmp_path):
+    """File-level/structural problems (bad JSON, non-dict root, non-list group
+    value, empty group name) still hard-400 the whole import. A bad URL
+    scheme is a per-URL problem, not structural, so it's a skip, not a 400 —
+    see test_json_import_skips_bad_scheme_and_duplicates below."""
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:
         assert _import_json(client, "[1, 2]").status_code == 400
         assert _import_json(client, '{"ai": "https://a.example"}').status_code == 400
         assert _import_json(client, '{"ai": [42]}').status_code == 400
-        assert _import_json(client, '{"ai": ["ftp://a.example"]}').status_code == 400
         assert _import_json(client, '{"": ["https://a.example"]}').status_code == 400
         assert _import_json(client, "{nope").status_code == 400
         assert client.get("/api/feeds").json() == []
+
+
+def test_json_import_skips_bad_scheme_and_duplicates(tmp_path):
+    app = create_app(db_path=tmp_path / "t.db")
+    with TestClient(app) as client:
+        r = _import_json(client, '{"ai": ["ftp://a.example"]}')
+        assert r.status_code == 200
+        assert r.json() == {
+            "added": 0,
+            "skipped": [{"url": "ftp://a.example", "reason": "invalid url"}],
+            "regrouped": 0,
+        }
+        assert client.get("/api/feeds").json() == []
+
+        # a bad-scheme row and a duplicate row in the same import: the good
+        # row still gets added, each bad row gets its own skip reason.
+        client.post("/api/feeds", json={"url": "https://b.example/rss", "title": "B"})
+        r = _import_json(
+            client,
+            '{"ai": ["https://a.example/rss", "ftp://c.example", "https://b.example/rss"]}',
+        )
+        assert r.status_code == 200
+        assert r.json() == {
+            "added": 1,
+            "skipped": [
+                {"url": "ftp://c.example", "reason": "invalid url"},
+                {"url": "https://b.example/rss", "reason": "duplicate"},
+            ],
+            # b was previously ungrouped, so the duplicate hit adopts "ai"
+            "regrouped": 1,
+        }
 
 
 def test_json_reimport_adopts_only_ungrouped(tmp_path):
@@ -404,7 +449,16 @@ def test_json_reimport_adopts_only_ungrouped(tmp_path):
         client.patch(f"/api/feeds/{feeds['https://a.example/rss']['id']}", json={"group_id": None})
 
         r = _import_json(client, FEEDS_JSON)
-        assert r.json() == {"added": 0, "skipped": 4, "regrouped": 1}
+        assert r.json() == {
+            "added": 0,
+            "skipped": [
+                {"url": "https://a.example/rss", "reason": "duplicate"},
+                {"url": "https://b.example/rss", "reason": "duplicate"},
+                {"url": "https://g.example/rss", "reason": "duplicate"},
+                {"url": "https://c.example/rss", "reason": "duplicate"},
+            ],
+            "regrouped": 1,
+        }
         feeds = {f["url"]: f for f in client.get("/api/feeds").json()}
         ai_id = next(g["id"] for g in client.get("/api/groups").json() if g["name"] == "ai")
         assert feeds["https://a.example/rss"]["group_id"] == ai_id

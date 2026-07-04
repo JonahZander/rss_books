@@ -23,6 +23,13 @@ export type Group = {
   position: number;
 };
 
+/** One row a bulk feed import didn't insert, and why (e.g. "duplicate",
+ * "invalid url"). File-level/structural problems still fail the whole
+ * import instead; only per-URL problems show up here. */
+export type ImportSkip = { url: string; reason: string };
+
+export type ImportResult = { added: number; skipped: ImportSkip[]; regrouped: number };
+
 export type Article = {
   id: number;
   feed_id: number;
@@ -194,7 +201,7 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file);
     return fetch(`${BASE}/api/feeds/import`, { method: "POST", body: fd }).then((r) =>
-      j<{ added: number; skipped: number; regrouped: number }>(r),
+      j<ImportResult>(r),
     );
   },
   /** JSON feed list: {"group name": ["feed url", …]}; "ungrouped" = no group. */
@@ -202,7 +209,7 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file);
     return fetch(`${BASE}/api/feeds/import-json`, { method: "POST", body: fd }).then((r) =>
-      j<{ added: number; skipped: number; regrouped: number }>(r),
+      j<ImportResult>(r),
     );
   },
   exportOpmlUrl: () => `${BASE}/api/feeds/export.opml`,
