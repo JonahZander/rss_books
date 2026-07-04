@@ -46,17 +46,11 @@ def _to_article(row: object) -> Article:
     return Article.model_validate({**data, "has_full_content": bool(data["has_full_content"])})
 
 
-@router.get("", response_model=list[Article])
-async def list_articles(
-    request: Request,
-    feed_id: int | None = None,
-    group_id: int | None = None,
-    unread: bool = False,
-    q: str | None = None,
-    limit: int = 200,
-    offset: int = 0,
-) -> list[Article]:
-    db = request.app.state.db
+def _scope_clause(feed_id: int | None, group_id: int | None) -> tuple[list[str], list[object]]:
+    """Feed/group scoping shared by `list_articles` and the bulk mark-all-read
+    endpoint. Deliberately excludes the list-view-only `unread`/`q` filters:
+    "which articles does this feed/group own" is a different question from
+    "which of those should the current list view show"."""
     clauses: list[str] = []
     params: list[object] = []
     if feed_id is not None:
@@ -69,6 +63,21 @@ async def list_articles(
         else:
             clauses.append("feed_id IN (SELECT id FROM feeds WHERE group_id = ?)")
             params.append(group_id)
+    return clauses, params
+
+
+@router.get("", response_model=list[Article])
+async def list_articles(
+    request: Request,
+    feed_id: int | None = None,
+    group_id: int | None = None,
+    unread: bool = False,
+    q: str | None = None,
+    limit: int = 200,
+    offset: int = 0,
+) -> list[Article]:
+    db = request.app.state.db
+    clauses, params = _scope_clause(feed_id, group_id)
     if unread:
         clauses.append("read_at IS NULL")
     if q:
