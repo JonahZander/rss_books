@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from urllib.parse import urlsplit
 
 import aiosqlite
@@ -20,6 +21,10 @@ def derive_title(url: str) -> str:
     compile time, so this keeps the queue legible in the meantime."""
     parts = urlsplit(url)
     last = parts.path.rstrip("/").rsplit("/", 1)[-1]
+    # ".../understanding-is-the-new-bottleneck.html" should not title the
+    # edition chapter "... bottleneck.html"; a short trailing extension is
+    # never part of the headline.
+    last = re.sub(r"\.[A-Za-z0-9]{1,5}$", "", last)
     if last:
         return last.replace("-", " ").replace("_", " ").strip()
     return (parts.hostname or url).removeprefix("www.")

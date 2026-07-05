@@ -137,6 +137,7 @@ img.link-qr {
   image-rendering: pixelated;
 }
 img.table-image, img.code-image { display: block; margin: 0.8em 0; }
+em.missing-image { font-size: 0.85em; color: #444; }
 figure { margin: 1em 0; }
 figcaption { font-size: 0.8em; color: #333; }
 table { border-collapse: collapse; font-size: 0.85em; margin: 0.8em 0; }

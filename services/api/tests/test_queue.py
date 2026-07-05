@@ -119,6 +119,21 @@ def test_queue_add_arbitrary_link(tmp_path):
         assert client.get("/api/feeds").json() == []
 
 
+def test_derive_title_strips_extension():
+    from rss_books.services.saved_links import derive_title
+
+    assert (
+        derive_title(
+            "https://www.geoffreylitt.com/2026/07/02/understanding-is-the-new-bottleneck.html"
+        )
+        == "understanding is the new bottleneck"
+    )
+    assert derive_title("https://example.com/post.aspx") == "post"
+    assert derive_title("https://example.com/no-extension") == "no extension"
+    # no path at all still falls back to the hostname
+    assert derive_title("https://www.example.com/") == "example.com"
+
+
 def test_queue_link_rejects_non_url(tmp_path):
     app = create_app(db_path=tmp_path / "t.db")
     with TestClient(app) as client:
