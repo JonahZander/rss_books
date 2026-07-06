@@ -20,7 +20,6 @@ type Props = {
   markReadOnExpand: boolean;
   onToggleQueue: (article: Article) => void;
   onRead: (article: Article) => void;
-  onToggleRead: (article: Article) => void;
   onMarkAllSeen: () => void;
   currentFeed: Feed | null;
   currentGroup: { name: string } | null;
@@ -36,7 +35,7 @@ type Props = {
  * the current article list with prev/next across it. Loads full content on
  * open (fetching it on demand when it isn't cached) and marks the article seen
  * when configured, the behaviour the old inline expander had. */
-function TriageReader({
+export function TriageReader({
   articles,
   index,
   onIndex,
@@ -124,7 +123,6 @@ export function ArticleList({
   markReadOnExpand,
   onToggleQueue,
   onRead,
-  onToggleRead,
   onMarkAllSeen,
   currentFeed,
   currentGroup,
@@ -222,7 +220,6 @@ export function ArticleList({
               number={numberOffset + i + 1}
               queued={queuedIds.has(a.id)}
               onToggleQueue={() => onToggleQueue(a)}
-              onToggleRead={() => onToggleRead(a)}
               onOpen={() => setReadIndex(i)}
             />
           ))}

@@ -16,6 +16,7 @@ type Props = {
   /** Resolved default profile name from settings; null = no profiles exist. */
   defaultProfile: string | null;
   onRemove: (article: Article) => void;
+  onOpen: (article: Article) => void;
   onReorder: (next: Article[]) => void;
   onClear: () => void;
   onAddLink: (url: string, title?: string) => Promise<void>;
@@ -56,6 +57,7 @@ export function DigestQueue({
   profiles,
   defaultProfile,
   onRemove,
+  onOpen,
   onReorder,
   onClear,
   onAddLink,
@@ -199,7 +201,14 @@ export function DigestQueue({
           {queue.map((a, i) => (
             <li key={a.id}>
               <span className="q-idx">{pad2(i + 1)}</span>
-              <span className="q-title">{a.title}</span>
+              <button
+                type="button"
+                className="q-title"
+                onClick={() => onOpen(a)}
+                title={`Read ${a.title}`}
+              >
+                {a.title}
+              </button>
               <span className="q-tools">
                 <span className="q-reorder">
                   <button

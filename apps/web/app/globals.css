@@ -924,23 +924,6 @@ a {
   white-space: nowrap;
 }
 
-.read-toggle {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  padding: 2px 4px;
-  min-height: 24px;
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-
-.read-toggle:hover {
-  color: var(--accent-blue);
-}
-
 .article-index {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -1369,6 +1352,19 @@ a {
   color: var(--ink-3);
   letter-spacing: 0.08em;
   padding-top: 2px;
+}
+
+/* Queue titles open the reader — same type as before, now a click target. */
+.queue-list li .q-title {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
+.queue-list li .q-title:hover {
+  color: var(--accent-blue);
 }
 
 .queue-empty {

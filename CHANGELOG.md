@@ -78,6 +78,17 @@ first-run path.
   against an already-drained queue; the failure stays visible as a failed
   edition and the deadline waits for its next occurrence.
 
+## [Unreleased]
+
+### Changed
+
+- Triage rows: the per-row "Mark seen" toggle is gone (the row itself and
+  bulk *Mark all seen* cover it) and the lifecycle stamp reads **Fetched**
+  instead of *Seen*.
+- Queue titles are clickable and open the article in the reader drawer —
+  including links queued via *Add a link*, which can now be read before
+  compiling.
+
 ## [1.2.0] - 2026-07-02
 
 Better article fetching, and a clearer triage desk.

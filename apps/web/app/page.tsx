@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArticleList } from "../components/ArticleList";
+import { ArticleList, TriageReader } from "../components/ArticleList";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DigestQueue } from "../components/DigestQueue";
 import { FeedSidebar } from "../components/FeedSidebar";
@@ -41,6 +41,9 @@ export default function Home() {
   const [deleteTarget, setDeleteTarget] = useState<Feed | null>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<Group | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("articles");
+  // null = closed; an index into `queue` for the reader opened from the
+  // queue panel (covers link-queued articles that aren't in the triage list).
+  const [queueReadIndex, setQueueReadIndex] = useState<number | null>(null);
   // Bumped to signal FeedSidebar to open its add-feed form from outside (the
   // onboarding checklist's "Add a feed →"); see FeedSidebar's prop doc.
   const [openAddFeedSignal, setOpenAddFeedSignal] = useState(0);
@@ -248,16 +251,6 @@ export default function Home() {
     [onArticleReadChange],
   );
 
-  const toggleRead = async (article: Article) => {
-    const wasRead = Boolean(article.read_at);
-    try {
-      const updated = wasRead ? await api.markUnread(article.id) : await api.markRead(article.id);
-      onArticleReadChange(updated, wasRead);
-    } catch (e) {
-      toast(e instanceof Error ? e.message : "update failed", "error");
-    }
-  };
-
   const markAllSeen = async () => {
     try {
       const r = await api.markAllRead({
@@ -372,7 +365,6 @@ export default function Home() {
             markReadOnExpand={settings?.mark_read_on_expand ?? true}
             onToggleQueue={toggleQueue}
             onRead={onRead}
-            onToggleRead={(a) => void toggleRead(a)}
             onMarkAllSeen={() => void markAllSeen()}
             currentFeed={currentFeed}
             currentGroup={currentGroup}
@@ -391,6 +383,7 @@ export default function Home() {
           profiles={settings?.profiles.map((p) => p.name) ?? []}
           defaultProfile={settings ? defaultProfileName(settings) : null}
           onRemove={(a) => void toggleQueue(a)}
+          onOpen={(a) => setQueueReadIndex(queue.findIndex((q) => q.id === a.id))}
           onReorder={(next) => void reorderQueue(next)}
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);
@@ -399,6 +392,16 @@ export default function Home() {
           onCompiled={onCompiled}
         />
       </main>
+      {queueReadIndex !== null && queueReadIndex >= 0 && queueReadIndex < queue.length && (
+        <TriageReader
+          articles={queue}
+          index={queueReadIndex}
+          onIndex={setQueueReadIndex}
+          onClose={() => setQueueReadIndex(null)}
+          markReadOnExpand={settings?.mark_read_on_expand ?? true}
+          onRead={onRead}
+        />
+      )}
       <ConfirmDialog
         open={deleteTarget !== null}
         title={`Remove “${deleteTarget?.title ?? ""}”?`}

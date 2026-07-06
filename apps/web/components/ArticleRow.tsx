@@ -10,7 +10,6 @@ type Props = {
   number: number;
   queued: boolean;
   onToggleQueue: () => void;
-  onToggleRead: () => void;
   onOpen: () => void;
 };
 
@@ -22,7 +21,7 @@ type Lifecycle = "new" | "seen" | "queued" | "in_edition";
 
 const LIFECYCLE_LABEL: Record<Lifecycle, string> = {
   new: "New",
-  seen: "Seen",
+  seen: "Fetched",
   queued: "Queued",
   in_edition: "In edition",
 };
@@ -39,19 +38,9 @@ function lifecycleOf(article: Article, queued: boolean): Lifecycle {
   return "new";
 }
 
-export function ArticleRow({
-  article,
-  number,
-  queued,
-  onToggleQueue,
-  onToggleRead,
-  onOpen,
-}: Props) {
+export function ArticleRow({ article, number, queued, onToggleQueue, onOpen }: Props) {
   const idx = pad(number, 2);
   const lifecycle = lifecycleOf(article, queued);
-  // Once queued or pressed into an edition the lifecycle is terminal here;
-  // read state stops mattering to triage at that point, so hide the toggle.
-  const canToggleRead = lifecycle === "new" || lifecycle === "seen";
 
   return (
     <article
@@ -79,18 +68,6 @@ export function ArticleRow({
         {/* Lifecycle badge lives in a fixed right-hand column so every row's
             stamp sits in the same spot regardless of label length. */}
         <span className="article-header-end">
-          {canToggleRead && (
-            <button
-              type="button"
-              className="read-toggle"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleRead();
-              }}
-            >
-              {article.read_at ? "Mark unseen" : "Mark seen"}
-            </button>
-          )}
           <span className={`lifecycle-stamp lc-${lifecycle}`}>
             <span className="status-square" aria-hidden />
             {LIFECYCLE_LABEL[lifecycle]}
