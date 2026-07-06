@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from rss_books.services.content_extractor import extract_html
 
 ARTICLE = (
@@ -35,6 +37,17 @@ def test_extract_html_is_sanitized() -> None:
     html = extract_html(dirty, url="https://example.com/post")
     assert html is not None
     assert "<script" not in html
+
+
+def test_extract_prefers_article_over_link_sidebar() -> None:
+    # Anonymized snapshot of a news page (theregister.com shape) whose dense
+    # "most popular" link rail wins over the article body in favor_recall
+    # mode; extraction must return the body, not the boilerplate.
+    page = (Path(__file__).parent / "fixtures" / "boilerplate_heavy_page.html").read_bytes()
+    html = extract_html(page, url="https://news.example/story")
+    assert html is not None
+    assert "postcard-sized" in html  # the article's first sentence
+    assert "MOST POPULAR" not in html.upper()
 
 
 def test_extract_returns_none_on_junk() -> None:

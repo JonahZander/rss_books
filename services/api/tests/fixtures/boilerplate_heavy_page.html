@@ -1,0 +1,1439 @@
+<html lang="en-US" dir="ltr" class="resp_fonts">
+
+    <head>
+                
+                
+                <title>C programmers commit fresh crimes against readability</title>
+                <meta name="title" content="C programmers commit fresh crimes against readability">
+                <meta name="description" content="Prepare to be befuddled and bamboozled – and probably bewitched">
+                    <link rel="canonical" href="https://www.theregister.com/offbeat/2026/07/05/c-programmers-commit-fresh-crimes-against-readability/5265981">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta property="og:type" content="article">
+                <meta property="og:title" content="C programmers commit fresh crimes against readability">
+                <meta property="og:description" content="Prepare to be befuddled and bamboozled – and probably bewitched">
+                    <meta property="og:locale" content="en-US">
+                <meta property="og:site_name" content="theregister">
+                <meta property="article:published_time" content="2026-07-05T12:00:00.000Z">
+                <meta property="article:modified_time" content="2026-07-06T07:58:09.000Z">
+                <meta property="article:author" content="Liam Proven">
+                    <meta property="article:tag" content="offbeat">
+                    <meta property="article:tag" content="linux">
+                    <meta property="article:tag" content="open source">
+                    <meta property="article:tag" content="emulation">
+                <meta property="og:image" content="https://image.theregister.com/5266043.jpg?imageId=5266043&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683">
+                <meta property="og:image:width" content="1200">
+                <meta property="og:image:height" content="684">
+                <meta name="twitter:card" content="summary_large_image">
+                
+                <meta name="twitter:title" content="C programmers commit fresh crimes against readability">
+                <meta name="twitter:description" content="Prepare to be befuddled and bamboozled – and probably bewitched">
+                <meta name="twitter:image" content="https://image.theregister.com/5266043.jpg?imageId=5266043&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683">
+                <link rel="alternate" type="application/json+oembed" href="https://www.theregister.com/offbeat/2026/07/05/c-programmers-commit-fresh-crimes-against-readability/5265981?lab_viewport=oembed">
+
+                
+                <link rel="stylesheet" href="https://cdn.theregister.com/assets/css/forum_post_counts.4501b489.css"><link rel="stylesheet" href="https://cdn.theregister.com/assets/css/article.8855f7fa.css"><link rel="stylesheet" href="https://cdn.theregister.com/assets/css/account_link.74f9c2bd.css"><link rel="stylesheet" href="https://cdn.theregister.com/assets/css/labrador_overrides.c9e9a0ef.css">
+                
+<meta property="og:url" content="https://www.theregister.com/offbeat/2026/07/05/c-programmers-commit-fresh-crimes-against-readability/5265981">
+                        <link type="image/x-icon" rel="icon" href="/view-resources/dachser2/public/theregister/favicons/favicon.ico">
+                        <link type="image/svg+xml" rel="icon" href="/view-resources/dachser2/public/theregister/favicons/favicon.svg">
+                        <link type="image/png" rel="icon" sizes="16x16" href="/view-resources/dachser2/public/theregister/favicons/favicon-16x16.png">
+                        <link type="image/png" rel="icon" sizes="32x32" href="/view-resources/dachser2/public/theregister/favicons/favicon-32x32.png">
+                        <link type="image/png" rel="icon" sizes="48x48" href="/view-resources/dachser2/public/theregister/favicons/favicon-48x48.png">
+                        <link type="image/png" rel="icon" sizes="96x96" href="/view-resources/dachser2/public/theregister/favicons/favicon-96x96.png">
+                        <link type="image/png" rel="icon" sizes="192x192" href="/view-resources/dachser2/public/theregister/favicons/web-app-manifest-192x192.png">
+                        <link type="image/png" rel="icon" sizes="512x512" href="/view-resources/dachser2/public/theregister/favicons/web-app-manifest-512x512.png">
+                        <link type="image/png" rel="apple-touch-icon" sizes="180x180" href="/view-resources/dachser2/public/theregister/favicons/apple-touch-icon.png">
+                    <link rel="manifest" href="/view-resources/dachser2/public/theregister/favicons/manifest.json">
+                <link href="https://fonts.googleapis.com/css?family=Merriweather:300,400,700,900" rel="stylesheet" media="print" onload="this.media='all'">
+                <link rel="stylesheet" href="/view-resources/view/css/grid.css?v=1782974844-L4">
+                <link rel="stylesheet" href="/view-resources/view/css/main.css?v=1782974844-L4">
+                <link rel="stylesheet" href="/view-resources/view/css/colors.css?v=1782974844-L4">
+                <link rel="stylesheet" href="/view-resources/view/css/print.css?v=1782974844-L4" media="print">
+                <link rel="stylesheet" href="/view-resources/view/css/foundation-icons/foundation-icons.css?v=1782974844-L4">
+                <link rel="stylesheet" href="/view-resources/view/css/site/theregister.css?v=1782974844-L4">
+                <link href="https://fonts.googleapis.com/css?family=Roboto:regular,italic,700,900" rel="stylesheet" media="print" onload="this.media='all'">
+                <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:regular,italic,700,900" rel="stylesheet" media="print" onload="this.media='all'">
+                <link href="https://fonts.googleapis.com/css?family=Roboto+Flex:regular" rel="stylesheet" media="print" onload="this.media='all'">
+                <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:regular,100,200,300,100italic,300italic,200italic,500,italic,500italic,700,600,600italic,700italic" rel="stylesheet" media="print" onload="this.media='all'">
+                <meta property="article:section" content="offbeat">
+</head>
+
+    <body class="l4 article site_theregister section_offbeat custom-bodytext-width custom-bodytext-alignment" data-tag="offbeat,linux,open source,emulation">
+
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KVXB44" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<a href="#main" class="skip-link">Jump to main content</a>
+
+        <header class="pageElement pageHeader">
+    <div class="row mainrow">
+    <div class="hamburger to-be-expanded" data-id="pageElements-3">
+    <div class="positionRelative">
+        <span class="hamburger-button hamburger-expander ">
+            <button class="burger-btn" aria-label="Open menu" aria-expanded="false" aria-controls="hamburger-container" aria-haspopup="menu">
+                    <i class="open fi-list"></i>
+                    <i class="close fi-x"></i>
+            </button>
+        </span>
+            <div class="hamburger-container" id="hamburger-container">        
+                <div data-id="pageElements-4" class="search visible dac-hidden-desktop-up">
+
+    <form class="search-container" action="/cse" method="get" role="search">
+        <label for="search-input-4" class="visuallyhidden">Search</label>
+        <input type="text" id="search-input-4" name="q" placeholder="Search...">
+                <button type="submit" class="search-button" aria-label="Search">
+                        <i class="open fi-magnifying-glass"></i>
+                </button>
+    </form>
+
+</div>
+
+<nav class="navigation mainMenu expandable">
+			<p class="lab-menu-name  dac-hidden-desktop-down">TOPICS</p>
+	<ul class="menu-list">
+			<li class="first-list-item has-children">
+				<span tabindex="0">Security</span>
+				<ul class="children">
+					<li class="">
+						<a href="/security" target="_self">All Security</a>
+					</li>
+					<li class="">
+						<a href="/cyber_crime" target="_self">Cyber-crime</a>
+					</li>
+					<li class="">
+						<a href="/patches" target="_self">Patches</a>
+					</li>
+					<li class="">
+						<a href="/research" target="_self">Research</a>
+					</li>
+					<li class="">
+						<a href="/cso" target="_self">CSO</a>
+					</li>
+				</ul>
+			</li>
+			<li class="first-list-item has-children">
+				<span tabindex="0">Off-Prem</span>
+				<ul class="children">
+					<li class="">
+						<a href="/off_prem" target="_self">All Off-Prem</a>
+					</li>
+					<li class="">
+						<a href="/edge_iot" target="_self">Edge and IoT</a>
+					</li>
+					<li class="">
+						<a href="/channel" target="_self">Channel</a>
+					</li>
+					<li class="">
+						<a href="/tag/paas-iaas" target="_self">PaaS and IaaS</a>
+					</li>
+					<li class="">
+						<a href="/saas" target="_self">SaaS</a>
+					</li>
+				</ul>
+			</li>
+			<li class="first-list-item has-children">
+				<span tabindex="0">On-Prem</span>
+				<ul class="children">
+					<li class="">
+						<a href="/on_prem" target="_self">All On-Prem</a>
+					</li>
+					<li class="">
+						<a href="/systems" target="_self">Systems</a>
+					</li>
+					<li class="">
+						<a href="/storage" target="_self">Storage</a>
+					</li>
+					<li class="">
+						<a href="/networks" target="_self">Networks</a>
+					</li>
+					<li class="">
+						<a href="/hpc" target="_self">HPC</a>
+					</li>
+					<li class="">
+						<a href="/personal_tech" target="_self">Personal Tech</a>
+					</li>
+					<li class="">
+						<a href="/cxo" target="_self">Cx0</a>
+					</li>
+					<li class="">
+						<a href="/public-sector" target="_self">Public Sector</a>
+					</li>
+				</ul>
+			</li>
+			<li class="first-list-item has-children">
+				<span tabindex="0">Software</span>
+				<ul class="children">
+					<li class="">
+						<a href="/software" target="_self">All Software</a>
+					</li>
+					<li class="">
+						<a href="/tag/ai%20and%20ml" target="_self">AI and ML</a>
+					</li>
+					<li class="">
+						<a href="/applications" target="_self">Applications</a>
+					</li>
+					<li class="">
+						<a href="/databases" target="_self">Databases</a>
+					</li>
+					<li class="">
+						<a href="/devops" target="_self">DevOps</a>
+					</li>
+					<li class="">
+						<a href="/tag/os%20platforms" target="_self">OS Platforms</a>
+					</li>
+					<li class="">
+						<a href="/virtualization" target="_self">Virtualization</a>
+					</li>
+				</ul>
+			</li>
+			<li class="first-list-item has-children">
+				<span tabindex="0">Offbeat</span>
+				<ul class="children">
+					<li class="">
+						<a href="/offbeat" target="_self">All Offbeat</a>
+					</li>
+					<li class="">
+						<a href="/columnists" target="_self">Columnists</a>
+					</li>
+					<li class="">
+						<a href="/science" target="_self">Science</a>
+					</li>
+					<li class="">
+						<a href="/bofh" target="_self">BOFH</a>
+					</li>
+					<li class="">
+						<a href="/legal" target="_self">Legal</a>
+					</li>
+					<li class="">
+						<a href="/site_news" target="_self">Site News</a>
+					</li>
+					<li class="">
+						<a href="https://www.theregister.com/about_us" target="_self">About Us</a>
+					</li>
+				</ul>
+			</li>
+	</ul>
+</nav>
+
+		<nav class="navigation bottomBarMenu expandable">
+	<ul class="menu-list">
+			<li class="first-list-item has-children">
+				<span tabindex="0">Special Features</span>
+				<ul class="children">
+					<li class="dac-hidden-desktop-up">
+						<a href="/special_features" target="_self">All Special Features</a>
+					</li>
+					<li class="">
+						<a href="/explainer/ai-explainer" target="_self">HPE: AI Explainers</a>
+					</li>
+					<li class="">
+						<a href="/special_features/rsa" target="_self">RSA Conference</a>
+					</li>
+					<li class="">
+						<a href="/special_features/agentic_ai" target="_self">Agentic AI</a>
+					</li>
+					<li class="">
+						<a href="/special_features/future_of_the_datacenter" target="_self">The Future of the Datacenter</a>
+					</li>
+					<li class="">
+						<a href="/special_features/aws_reinvent" target="_self">AWS:Reinvent</a>
+					</li>
+					<li class="">
+						<a href="/special_features/nvidia_gtc" target="_self">Nvidia GTC</a>
+					</li>
+					<li class="">
+						<a href="/special_features/2025_11_supercomputing_month" target="_self">Supercomputing Month</a>
+					</li>
+					<li class="">
+						<a href="/special_features/computex" target="_self">Computex 2026</a>
+					</li>
+					<li class="">
+						<a href="/special_features/ai_infrastructure_month_2026" target="_self">AI Infrastructure Month 2026</a>
+					</li>
+				</ul>
+			</li>
+			<li class="first-list-item has-children">
+				<span tabindex="0">Vendor Voice</span>
+				<ul class="children">
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/" target="_self">All Vendor Voice</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/aws_fis_capital_markets/" target="_self">Modernizing Financial Services with FIS and AWS</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/barco/" target="_self">Barco</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/infinidat/" target="_self">Infinidat</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/everpure/" target="_self">Everpure</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/rubrik/" target="_self">Rubrik</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/aws_capgemini/" target="_self">Make it real with Capgemini and AWS</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/aws_fis/" target="_self">Money Movement Hub</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/zte_news_and_stories/" target="_self">ZTE</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/nutantix_cloud_native_apps/" target="_self">Nutanix: Scale Kubernetes. Not Chaos.</a>
+					</li>
+					<li class="">
+						<a href="https://vendorvoice.theregister.com/aws_new_horizon/" target="_self">AWS New Horizon</a>
+					</li>
+				</ul>
+			</li>
+			<li class="first-list-item has-children">
+				<span tabindex="0">Resources</span>
+				<ul class="children">
+					<li class="">
+						<a href="https://intelligence.theregister.com" target="_self">Intelligence</a>
+					</li>
+					<li class="">
+						<a href="https://intelligence.theregister.com/events/list/" target="_self">Webinars &amp; Events</a>
+					</li>
+					<li class="">
+						<a href="https://account.theregister.com/login?r=https%3A%2F%2Faccount.theregister.com%2Fedit%2Fnewsletter%2F" target="_self">Newsletters</a>
+					</li>
+				</ul>
+			</li>
+	</ul>
+</nav>
+
+		</div>
+    </div>
+
+</div>
+
+<div data-id="pageElements-7" class="search to-be-expanded dac-hidden-desktop-down bonusButton">
+
+    <form class="search-container" action="/cse" method="get" role="search">
+        <label for="search-input-7" class="visuallyhidden">Search</label>
+        <input type="text" id="search-input-7" name="q" placeholder="Search...">
+                <button id="bonusButton" class="bonusButton">
+                        <i class="fi-magnifying-glass" aria-hidden="true"></i>
+                </button>
+    </form>
+
+            <button class="search-button search-expander" aria-label="Search" aria-expanded="false" aria-controls="search-input-7">
+                    <i class="open fi-magnifying-glass"></i>
+                    <i class="close fi-x"></i>
+            </button>
+</div>
+
+        <figure class="logo logo--mobile">
+    <a href="https://www.theregister.com" aria-label="Go to frontpage">
+        <img src="/view-resources/dachser2/public/theregister/logo.svg" alt="Go to frontpage. Logo, The Register" width="275">
+    </a>
+</figure>
+
+<figure class="logo logo--primary">
+    <a href="https://www.theregister.com" aria-label="Go to frontpage">
+        <img src="/view-resources/dachser2/public/theregister/logo.svg" alt="Go to frontpage. Logo, The Register" width="275">
+    </a>
+</figure>
+
+<figure class="logo logo--secondary">
+    <a href="https://www.theregister.com" aria-label="Go to frontpage">
+        <img src="/view-resources/dachser2/public/theregister/logo.svg" alt="Go to frontpage. Logo, The Register" width="275">
+    </a>
+</figure>
+<nav class="navigation topBarMenu">
+	<ul class="menu-list">
+			<li class="first-list-item login-btn">
+				<a href="https://account.theregister.com/login" target="_self">Sign in</a>
+			</li>
+	</ul>
+</nav>
+
+
+
+	</div>
+<div class="row dac-hidden-desktop-down bottom-row">
+    <div class="section">
+<nav class="navigation customMenu1">
+	<ul class="menu-list">
+			<li class="first-list-item ">
+				<a href="/tag/ai%20and%20ml" target="_self">AI</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/security" target="_self">Security</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/microsoft" target="_self">Microsoft</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/aws" target="_self">AWS</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/developer" target="_self">Developer</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/open%20source" target="_self">Open Source</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/columnists" target="_self">Columnists</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/bofh" target="_self">BOFH</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/who%20me" target="_self">Who, Me?</a>
+			</li>
+			<li class="first-list-item ">
+				<a href="/tag/on%20call/" target="_self">On Call</a>
+			</li>
+	</ul>
+</nav>
+
+
+
+	</div>
+
+</div>
+
+
+    </header>
+
+        
+
+        
+                
+
+
+        <section id="mainArticleSection" class="main article">
+            <div data-element-guid="9271a48a-d2ea-408c-df1e-3de16d748908" class="placeholder placement-top">
+<div data-element-guid="f768c95d-5800-4d55-8092-77a5b962c6ca" class="column google-ad small-12 large-12 small-abs-12 large-abs-12" style="">
+
+        <span class="ad-label">REG AD</span>
+        <div class="adunit" id="labrador/thereg/article/desktop/a" style="min-height:90px;"></div>
+        </div>
+
+</div>
+            <main class="pageWidth">
+                <article class=" ">
+
+                    <section class="main article k5a-article" id="main">
+
+                            <div></div>
+<div data-element-guid="d11159dd-82a3-4c53-901c-d41dec75505c" class="articleHeader column">
+
+    
+
+
+
+        <p class="kicker " style="">OFFBEAT</p>
+
+
+    <div class="media">
+        <div class="floatingText">        </div>
+    </div>
+
+
+
+
+
+        <h1 class="headline mainTitle " style="">C programmers commit fresh crimes against readability</h1>
+        <p class="subtitle " style="">Prepare to be befuddled and bamboozled – and probably bewitched</p>
+
+
+        <div data-element-guid="07410499-2665-44c7-ab99-ccf53f1dde69" class="meta">
+    
+
+    <div class="bylines">
+        <div data-element-guid="393c469c-38b3-45c2-81d3-c732a847acd1" class="byline column" itemscope itemtype="http://schema.org/Person">
+    
+    <div class="content">
+            
+        <address class="name lab-name-flex">
+        <span class="lab-hidden-byline-name" itemprop="name">Liam Proven</span>
+                <a rel="author" itemprop="url" href="https://www.theregister.com/author/liam-proven">
+                <span class="firstname ">Liam</span>
+                <span class="lastname ">Proven</span>
+                </a>
+        </address>
+    </div>
+</div>
+
+        
+    </div>
+
+
+    
+    <div class="dates">
+        <span class="dateGroup datePublished">
+            <span class="dateLabel">Published</span>
+            <time datetime="2026-07-05T12:00:00.000Z">sun 5 Jul 2026 // 13:00 UTC</time>
+        </span>
+    </div>
+
+
+    <div class="social">
+            <a target="_blank" href="https://www.facebook.com/sharer.php?u=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-facebook" aria-label="Share on Facebook"></a>
+            <a target="_blank" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-twitter" aria-label="Share on X (Twitter)"></a>
+            <a target="_blank" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-linkedin" aria-label="Share on LinkedIn"></a>
+            <a target="_blank" href="https://bsky.app/intent/compose?text=C%20programmers%20commit%20fresh%20crimes%20against%20readability%0Ahttps%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-bluesky" aria-label="Share on Bluesky"></a>
+            <a target="_blank" href="https://www.reddit.com/submit?url=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981&amp;title=C%20programmers%20commit%20fresh%20crimes%20against%20readability" class="fi-social-reddit" aria-label="Share on Reddit"></a>
+            <a target="_blank" href="https://api.whatsapp.com/send?text=C%20programmers%20commit%20fresh%20crimes%20against%20readability%0Ahttps%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-whatsapp" aria-label="Share on WhatsApp"></a>
+    </div>
+
+
+
+</div>
+
+</div>
+
+
+                        
+
+                        
+                        
+
+
+                        
+
+                        <div data-element-guid="4c9dc5d9-c886-4348-bf4a-01d0dc71377d" class="bodytext large-12 small-12 medium-12">
+    
+    
+
+    <p>The annual obfuscated code contest returned with a postcard-sized emulator winner.<a href="https://www.ioccc.org/2025/index.html">ipsum dolor sit amet consectetur adipiscing</a>elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor</p><p>sit amet<a href="https://www.theregister.com/software/2025/08/09/the-international-obfuscated-c-code-contest-is-back-for-2024/1065530">consectetur adipiscing elit sed do</a>eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do</p><p>eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur<a href="https://www.youtube.com/watch?v=MoWCwZx1Swc">adipiscing elit sed</a>do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do</p><div data-element-guid="dbb06d74-e548-467e-9d94-998a164be4f4" class="column google-ad widthFull" style="">
+
+        <span class="ad-label">eiusmod tempor</span>
+        <div class="adunit" id="labrador/thereg/article/desktop/b"></div>
+        </div>
+<p>incididunt ut labore et dolore<a href="https://www.ioccc.org/2025/index.html#inventory">magna aliqua lorem</a>ipsum dolor sit amet consectetur adipiscing elit sed do<a href="https://github.com/mame/">eiusmod tempor</a>incididunt<a href="https://www.craig-wood.com/nick/">ut labore</a>et dolore<a href="https://uguu.org/">magna aliqua</a>lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut</p><div data-element-guid="57a13b71-2f73-49d4-cf63-83007f25eb87" class="column google-ad floatRight widthAuto" style="">
+
+        <span class="ad-label">labore et</span>
+        <div class="adunit" id="labrador/thereg/article/desktop/c"></div>
+        </div>
+<p>dolore magna aliqua lorem ipsum dolor sit amet consectetur<a href="http://www.isthe.com/chongo/index.html">adipiscing elit sed</a>do<a href="https://www.mailcom.com/main.shtml">eiusmod tempor incididunt</a>ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor</p><h3>incididunt ut labore et dolore magna aliqua</h3><p>lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod<a href="https://www.ioccc.org/2025/cable/index.html">tempor incididunt</a><em><a href="https://www.ioccc.org/2025/cable/index.html">sit amet</a></em>ut labore et dolore magna aliqua lorem ipsum dolor</p><p>consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum</p><p>dolor sit amet consectetur<a href="https://www.eternal-software.org/">adipiscing elit sed</a>do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur<a href="https://github.com/adriancable/eternal">adipiscing elit</a>sed</p><p>do eiusmod tempor incididunt ut labore et<a href="https://esolangs.org/wiki/OISC">dolore magna aliqua lorem</a>ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing<a href="https://techtinkering.com/articles/subleq-a-one-instruction-set-computer/">elit sed do</a>eiusmod tempor incididunt ut labore et dolore magna<a href="https://arxiv.org/pdf/1106.2593">aliqua lorem ipsum dolor</a>sit</p><p>amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore</p><p>et dolore magna aliqua lorem ipsum dolor sit<a href="https://github.com/ioccc-src/winner/blob/master/2025/cable/prog.c">amet consectetur adipiscing</a>elit sed do</p><div data-element-guid="b2784183-f79a-4163-cc4e-51b055c10e74" class="column google-ad widthFull" style="">
+
+        <span class="ad-label">eiusmod tempor</span>
+        <div class="adunit" id="labrador/thereg/article/desktop/d"></div>
+        </div>
+<p><span class="font-RobotoMono " data-lab-fontface="RobotoMono">incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit</span></p><p>amet consectetur adipiscing elit sed do eiusmod tempor incididunt</p><p>ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna</p><p>aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit</p><div data-element-guid="15d17bba-a532-4398-9b0f-6662180c7f05" class="column youtube desktop-floatCenter mobile-floatCenter small-12 large-8 small-abs-12 large-abs-8">
+    
+
+        <div class="content " style="">
+            <div>
+                <div class="youtube-container">
+                    <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="//www.youtube-nocookie.com/embed/A5cWtqZ323o" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+</div><p>amet<a href="https://github.com/adriancable/eternal/blob/main/vm/vm.c">consectetur adipiscing elit sed</a>do eiusmod tempor incididunt ut labore et dolore magna</p><h3>aliqua lorem ipsum</h3><p>dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut<a href="https://www.ioccc.org/2025/ncw1/index.html">labore et dolore</a>magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem<a href="https://github.com/ioccc-src/winner/blob/master/2025/ncw1/prog.c">ipsum dolor sit amet consectetur adipiscing</a>elit sed do</p><p>eiusmod tempor incididunt ut labore<a href="https://www.ioccc.org/2025/ncw2/index.html">et dolore magna</a>aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et<a href="https://esolangs.org/wiki/Fractran">dolore</a>magna</p><div data-element-guid="7b355cb5-78b4-4355-89fa-e63dcfa22265" class="column google-ad widthFull" style="">
+
+        <span class="ad-label">aliqua lorem</span>
+        <div class="adunit" id="labrador/thereg/article/desktop/e"></div>
+        </div>
+<p>ipsum dolor sit amet consectetur adipiscing<a href="https://www.ioccc.org/2025/ncw3/index.html">elit sed do eiusmod</a>tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut</p><div data-element-guid="d40185c9-646e-4dfd-83f7-b7b8c7c62acb" class="column youtube desktop-floatCenter mobile-floatCenter small-12 large-8 small-abs-12 large-abs-8">
+    
+
+        <div class="content " style="">
+            <div>
+                <div class="youtube-container">
+                    <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="//www.youtube-nocookie.com/embed/MJl6oUxtyFw" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+</div><h3>labore et dolore magna aliqua lorem</h3><p>ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore<span class="italic m-italic " data-lab-italic="italic">et dolore</span>magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut<a href="https://pentalabs.com/blogs/tube-talk/what-is-a-nixie-tube">labore et</a>dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur<a href="https://www.daliborfarny.com/">adipiscing elit</a>sed do</p><p>eiusmod tempor incididunt ut labore et dolore magna aliqua lorem<a href="https://github.com/ioccc-src/winner/blob/master/2025/endoh1/prog.c">ipsum dolor sit amet consectetur adipiscing</a>elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do</p><div data-element-guid="721c6543-1ce7-48b1-b80c-16683d5a3b48" class="column youtube desktop-floatCenter mobile-floatCenter small-12 large-8 small-abs-12 large-abs-8">
+    
+
+        <div class="content " style="">
+            <div>
+                <div class="youtube-container">
+                    <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="//www.youtube-nocookie.com/embed/69ZIkdzVHLk" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+</div><p>eiusmod tempor incididunt ut labore et dolore magna aliqua<a href="https://www.ioccc.org/2025/endoh2/index.html">lorem ipsum dolor sit</a>amet consectetur adipiscing<a href="https://en.wikipedia.org/wiki/Lichtenberg_figure">elit sed</a>do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore</p><p>et dolore magna aliqua lorem<a href="https://www.ioccc.org/2025/endoh3/index.html">ipsum dolor</a>sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut</p><p>labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do<a href="https://www.ioccc.org/2025/tompng/index.html">eiusmod tempor</a>incididunt ut labore et dolore<a href="https://github.com/ioccc-src/winner/blob/master/2025/tompng/prog.c">magna aliqua lorem ipsum</a>dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit</p><h3>amet consectetur adipiscing elit sed</h3><p>do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod<a href="https://uellenberg.org/">tempor incididunt</a>ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem<a href="https://wiki.c2.com/?QuineProgram">ipsum dolor</a>sit amet consectetur adipiscing elit sed do eiusmod</p><p>tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut<a href="https://github.com/ioccc-src/winner/blob/master/2025/uellenberg/prog.c">labore et</a>dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna</p><p>aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod</p><div data-element-guid="3cc80971-6537-4849-a734-b7572c7d0926" class="column youtube desktop-floatCenter mobile-floatCenter small-12 large-8 small-abs-12 large-abs-8">
+    
+
+        <div class="content " style="">
+            <div>
+                <div class="youtube-container">
+                    <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="//www.youtube-nocookie.com/embed/ELWZXrccuOo" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+</div><p>tempor incididunt ut labore et dolore magna<a href="https://www.ioccc.org/2025/jhshrvdp/index.html">aliqua lorem ipsum dolor</a>sit amet consectetur adipiscing elit sed do eiusmod tempor<a href="https://github.com/ioccc-src/winner/blob/master/2025/jhshrvdp/prog.c">incididunt ut labore et dolore</a>magna</p><p>aliqua lorem ipsum dolor sit<a href="https://www.ioccc.org/2025/jingp49/index.html">amet consectetur adipiscing</a>elit sed do eiusmod tempor incididunt ut labore et<a href="https://github.com/ioccc-src/winner/blob/master/2025/jingp49/prog.c">dolore magna aliqua lorem</a>ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua</p><div data-element-guid="62c6723c-848f-4d4f-b8ad-04a6785bf25c" class="column youtube desktop-floatCenter mobile-floatCenter small-12 large-8 small-abs-12 large-abs-8">
+    
+
+        <div class="content " style="">
+            <div>
+                <div class="youtube-container">
+                    <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="//www.youtube-nocookie.com/embed/eofLsLbHatE" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+</div><p>lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet<a href="https://www.ioccc.org/2025/dogon/index.html">consectetur adipiscing elit</a>sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit</p><p>sed do eiusmod tempor incididunt ut labore<em>et dolore</em>magna aliqua lorem ipsum dolor<em>sit</em>amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor<a href="https://www.ioccc.org/2025/howe/index.html">sit amet consectetur adipiscing</a>elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua lorem</p><h3>ipsum</h3><p>dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt<a href="https://underhanded-c.org/">ut labore et</a>dolore magna aliqua lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et</p>
+
+    
+
+    
+</div>
+
+
+                        
+
+
+                        <div data-element-guid="7475c074-83b3-4e50-ab01-91bf62dcdfe6" class="column articleFooter">
+        <span class="tags">
+                    <a href="/tag/offbeat" data-tag="offbeat">offbeat</a>
+                    <a href="/tag/linux" data-tag="linux">linux</a>
+                    <a href="/tag/open%20source" data-tag="open source">open source</a>
+                    <a href="/tag/emulation" data-tag="emulation">emulation</a>
+        </span>
+    
+</div>
+
+
+                        <div class="row social">
+                            <div class="column large-12 small-12">
+                                    <a target="_blank" href="https://www.facebook.com/sharer.php?u=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-facebook" aria-label="Share on Facebook"></a>
+                                    <a target="_blank" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-twitter" aria-label="Share on X (Twitter)"></a>
+                                    <a target="_blank" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-linkedin" aria-label="Share on LinkedIn"></a>
+                                    <a target="_blank" href="https://bsky.app/intent/compose?text=C%20programmers%20commit%20fresh%20crimes%20against%20readability%0Ahttps%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-bluesky" aria-label="Share on Bluesky"></a>
+                                    <a target="_blank" href="https://www.reddit.com/submit?url=https%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981&amp;title=C%20programmers%20commit%20fresh%20crimes%20against%20readability" class="fi-social-reddit" aria-label="Share on Reddit"></a>
+                                    <a target="_blank" href="https://api.whatsapp.com/send?text=C%20programmers%20commit%20fresh%20crimes%20against%20readability%0Ahttps%3A%2F%2Fwww.theregister.com%2Foffbeat%2F2026%2F07%2F05%2Fc-programmers-commit-fresh-crimes-against-readability%2F5265981" class="fi-social-whatsapp" aria-label="Share on WhatsApp"></a>
+                            </div>
+                        </div>
+
+                    </section>
+                    
+                </article>
+                <section class="related desktop-fullWidth mobile-fullWidth fullwidthTarget">
+                <div data-element-guid="d0c67ae9-bc6c-4c61-aa6b-a98a4084c33e" class="page-content"><div data-element-guid="48ad73ec-0497-442b-c73f-e425472830d1" class="row small-12 large-12" style="">
+	<div data-element-guid="2a227cfd-445c-440f-c0a5-1880b47af5e4" class="column google-ad small-12 large-12 small-abs-12 large-abs-12 large-12 small-12" style="">
+
+        <span class="ad-label">REG AD</span>
+        <div class="adunit" id="labrador/thereg/article/desktop/f"></div>
+        </div>
+</div>
+<div data-element-guid="992da5ce-c6a2-4801-ba87-5b85fd58d59d" class="row small-12 large-12" style="">
+	
+<div data-element-guid="ba61ea0a-cdbf-4c67-ed43-65d1dbb1bcfd" class="front_rows small-12 large-12 small-abs-12 large-abs-12 large-6 small-12 large-12 small-12">
+    
+    <div class="content fullwidthTarget" style="">
+            
+            <div data-element-guid="06b3fb90-9516-4852-9951-35e6c1258027" class="row small-12 large-12" style="">
+	<div data-element-guid="d6e8ebeb-3092-49e9-b1f2-d58d8201ff65" id="markup_5253783" class="markupbox column small-12 large-12 small-abs-12 large-abs-12">
+    
+    <div class="content fullwidthTarget" style="">
+
+        
+
+        
+
+            <div data-tf-live="01KVXB1DG7G5QY7R5YEXQVYM4H"></div>
+</div>
+</div>
+</div>
+<div data-element-guid="4bbed283-a2c5-4166-9180-f14b373db0ee" class="row small-12 large-12 desktop-space-outsideTop-small mobile-space-outsideTop-small desktop-space-outsideBottom-medium mobile-space-outsideBottom-medium bg-tertiary color_mobile_bg-tertiary op-bg_80 color_mobile_op-bg_80 hasContentPadding mobile-hasContentPadding" style="">
+	<div data-element-guid="c613a685-236f-4105-8a50-8126cec1f926" class="columns small-12 large-4 small-abs-12 large-abs-4"><div data-element-guid="0ab19c22-f064-4243-94db-ad9523462ffe" class="row small-12 large-12" style="">
+	<article data-element-guid="a9be01e0-5084-4618-a6e5-bc5051e67bc3" class="column small-12 large-12 small-abs-12 large-abs-4 " data-site-alias="theregister" data-section="science" data-tag="quantum,supercomputer,hpc,science,fusion power,ai" data-instance="5248919" itemscope>
+    
+    <div class="content bg-nonary-light color_mobile_bg-nonary-light op-bg_40 color_mobile_op-bg_40 border-bg-octonary mobile_border-bg-octonary border-side-bottom mobile_border-side-bottom border_width_2 border_width_mobile_2 hasContentPadding mobile-hasContentPadding hasBorder mobile-hasBorder" style="">
+        
+            <a itemprop="url" class="" href="https://www.theregister.com/science/2026/07/06/boffins-bet-on-quantum-computers-ai-supers-to-solve-fusion-fuel-dilemma/5267199" data-k5a-url="https://www.theregister.com/a/5267199" rel="">
+
+
+        <div class="media ">
+                
+                <figure data-element-guid="0ee86205-d05f-412e-8463-ef472188c588" class="">
+    <div class="img fullwidthTarget">
+        <picture>
+            <source srcset="https://image.theregister.com/226586.jpg?imageId=226586&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=706&amp;height=318&amp;format=webp&amp;format=webp" width="353" height="159" media="(min-width: 768px)" type="image/webp">    
+            <source srcset="https://image.theregister.com/226586.jpg?imageId=226586&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=706&amp;height=318&amp;format=webp&amp;format=jpg" width="353" height="159" media="(min-width: 768px)" type="image/jpeg">    
+            <source srcset="https://image.theregister.com/226586.jpg?imageId=226586&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=960&amp;height=432&amp;format=webp&amp;format=webp" width="480" height="216" media="(max-width: 767px)" type="image/webp">    
+            <source srcset="https://image.theregister.com/226586.jpg?imageId=226586&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=960&amp;height=432&amp;format=webp&amp;format=jpg" width="480" height="216" media="(max-width: 767px)" type="image/jpeg">    
+            <img src="https://image.theregister.com/226586.jpg?imageId=226586&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=960&amp;height=432&amp;format=webp&amp;format=jpg" width="480" height="216" alt="" loading="lazy" style="">
+        </source></source></source></source></picture>        
+            </div>
+    
+</figure>
+
+                
+                
+                
+                
+                
+                
+                
+                
+
+            <div class="floatingText">
+                    <div style="" class="kicker floating bg-primary color_mobile_bg-primary secondary color_mobile_secondary hasTextPadding mobile-hasTextPadding hasTextColor hasTextColorMobile">
+Science
+</div>
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <h2 itemprop="headline" class="headline t19" style="">Boffins bet on quantum computers, AI supers to solve fusion fuel dilemma
+</h2>
+                <p itemprop="description" class="subtitle t14" style="">
+    Department of Energy, Cleveland Clinic, and IBM simulate a soup of molten salts and techno babble in pursuit of tritium
+</p>
+
+
+        
+
+
+
+
+        </a>
+
+        <time itemprop="datePublished" datetime="2026-07-06T22:20:39+02:00"></time>
+    </div>
+</article>
+<article data-element-guid="d5752714-6923-482a-acff-6c7be1ba49a1" class="column small-12 large-12 small-abs-12 large-abs-4 " data-site-alias="theregister" data-section="ai and ml" data-tag="openai,anthropic,ai and ml,ai,levels.fyi,software developers" data-instance="5248921" itemscope>
+    
+    <div class="content bg-nonary-light color_mobile_bg-nonary-light op-bg_60 color_mobile_op-bg_60 border-bg-octonary mobile_border-bg-octonary border-side-bottom mobile_border-side-bottom border_width_2 border_width_mobile_2 hasContentPadding mobile-hasContentPadding hasBorder mobile-hasBorder" style="">
+        
+            <a itemprop="url" class="" href="https://www.theregister.com/ai-and-ml/2026/07/06/software-engineers-can-still-rake-in-big-bucks-by-working-for-fast-growing-companies/5267213" data-k5a-url="https://www.theregister.com/a/5267213" rel="">
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <div style="" class="kicker below t14">
+AI and ML
+</div>
+                <h2 itemprop="headline" class="headline t19" style="">Software engineers can still rake in big bucks by working for fast-growing companies
+</h2>
+                <p itemprop="description" class="subtitle t14" style="">
+    AI's impact on tech business is complicated
+</p>
+
+
+        
+
+
+
+
+        </a>
+
+        <time itemprop="datePublished" datetime="2026-07-06T21:57:45+02:00"></time>
+    </div>
+</article>
+<article data-element-guid="bb22098e-9b3c-4782-b74c-7711294fcf2a" class="column small-12 large-12 small-abs-12 large-abs-4 " data-site-alias="theregister" data-section="cxo" data-tag="cxo" data-instance="5248923" itemscope>
+    
+    <div class="content bg-nonary-light color_mobile_bg-nonary-light op-bg_60 color_mobile_op-bg_60 border-bg-septenary mobile_border-bg-septenary mobile_no_border_side border_width_2 border_width_mobile_2 hasContentPadding mobile-hasContentPadding hasBorder mobile-hasBorder" style="">
+        
+            <a itemprop="url" class="" href="https://www.theregister.com/cxo/2026/07/03/in-a-volatile-world-a-consistent-sustainability-policy-is-critical/5266035" data-k5a-url="https://www.theregister.com/a/5266035" rel="sponsored ">
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <h2 itemprop="headline" class="headline t19" style="">In a volatile world, a consistent sustainability policy is critical
+</h2>
+                <p itemprop="description" class="subtitle t14" style="">
+    SPONSORED FEATURE: ZTE unveils 2025 milestones
+</p>
+
+
+        
+
+
+
+
+        </a>
+
+        <time itemprop="datePublished" datetime="2026-07-03T03:00:00+02:00"></time>
+    </div>
+</article>
+</div>
+</div><div data-element-guid="f6ddbf86-659e-49fc-a8b1-49335cdab812" class="columns small-12 large-4 small-abs-12 large-abs-4"><div data-element-guid="0bc148e8-a10f-48d0-a80c-9cb123d20afe" class="row small-12 large-12" style="">
+	<article data-element-guid="757c9104-16dd-484d-b68d-5426da1adfef" class="column small-12 large-12 small-abs-12 large-abs-4 " data-site-alias="theregister" data-section="systems" data-tag="systems,hardware,youtube,gpu" data-instance="5248925" itemscope>
+    
+    <div class="content bg-nonary-light color_mobile_bg-nonary-light op-bg_60 color_mobile_op-bg_60 border-bg-octonary mobile_border-bg-octonary border-side-bottom mobile_border-side-bottom border_width_2 border_width_mobile_2 hasContentPadding mobile-hasContentPadding hasBorder mobile-hasBorder" style="">
+        
+            <a itemprop="url" class="" href="https://www.theregister.com/systems/2026/07/06/madlad-builds-homebrew-gpu-using-8192-risc-v-chips/5267175" data-k5a-url="https://www.theregister.com/a/5267175" rel="">
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <div style="" class="kicker below t14">
+systems
+</div>
+                <h2 itemprop="headline" class="headline t19" style="">Madlad builds homebrew GPU using 8,192 RISC-V chips
+</h2>
+                <p itemprop="description" class="subtitle t14" style="">
+    The next version will have 32,000 MCUs
+</p>
+
+
+        
+
+
+
+
+        </a>
+
+        <time itemprop="datePublished" datetime="2026-07-06T21:39:04+02:00"></time>
+    </div>
+</article>
+<article data-element-guid="9e6258d2-802b-484c-8eee-51bc92196816" class="column small-12 large-12 small-abs-12 large-abs-4 " data-site-alias="theregister" data-section="columnists" data-tag="ai and ml,claude,columnists" data-instance="5248927" itemscope>
+    
+    <div class="content bg-nonary-light color_mobile_bg-nonary-light op-bg_40 color_mobile_op-bg_40 border-bg-octonary mobile_border-bg-octonary border-side-bottom mobile_border-side-bottom border_width_2 border_width_mobile_2 hasContentPadding mobile-hasContentPadding hasBorder mobile-hasBorder" style="">
+        
+            <a itemprop="url" class="" href="https://www.theregister.com/columnists/2026/07/06/insert-token-to-continue-says-ai-yeah-about-that/5266319" data-k5a-url="https://www.theregister.com/a/5266319" rel="">
+
+
+        <div class="media ">
+                
+                <figure data-element-guid="1958528f-18fc-4f52-8a68-18ef1aa447d8" class="">
+    <div class="img fullwidthTarget">
+        <picture>
+            <source srcset="https://image.theregister.com/5258205.jpg?imageId=5258205&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=706&amp;height=318&amp;format=webp&amp;format=webp" width="353" height="159" media="(min-width: 768px)" type="image/webp">    
+            <source srcset="https://image.theregister.com/5258205.jpg?imageId=5258205&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=706&amp;height=318&amp;format=webp&amp;format=jpg" width="353" height="159" media="(min-width: 768px)" type="image/jpeg">    
+            <source srcset="https://image.theregister.com/5258205.jpg?imageId=5258205&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=960&amp;height=432&amp;format=webp&amp;format=webp" width="480" height="216" media="(max-width: 767px)" type="image/webp">    
+            <source srcset="https://image.theregister.com/5258205.jpg?imageId=5258205&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=960&amp;height=432&amp;format=webp&amp;format=jpg" width="480" height="216" media="(max-width: 767px)" type="image/jpeg">    
+            <img src="https://image.theregister.com/5258205.jpg?imageId=5258205&amp;panox=0.00&amp;panoy=0.00&amp;panow=100.00&amp;panoh=100.00&amp;heightx=0.00&amp;heighty=0.00&amp;heightw=100.00&amp;heighth=100.00&amp;width=960&amp;height=432&amp;format=webp&amp;format=jpg" width="480" height="216" alt="Pixelated arcade screen showing 'CONTINUE?', a large 9, and 'INSERT COIN'." loading="lazy" style="">
+        </source></source></source></source></picture>        
+            </div>
+    
+</figure>
+
+                
+                
+                
+                
+                
+                
+                
+                
+
+            <div class="floatingText">
+                    <div style="" class="kicker floating bg-primary color_mobile_bg-primary secondary color_mobile_secondary hasTextPadding mobile-hasTextPadding hasTextColor hasTextColorMobile">
+columnists
+</div>
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <h2 itemprop="headline" class="headline t19" style="">Insert token to continue, says AI. Yeah, about that...
+</h2>
+                <p itemprop="description" class="subtitle t14" style="">
+    Barney Rubble points to bubble trouble
+</p>
+
+
+        
+
+
+
+
+        </a>
+
+        <time itemprop="datePublished" datetime="2026-07-06T10:30:00+02:00"></time>
+    </div>
+</article>
+<article data-element-guid="b8d1c518-25f5-4e1e-b9b0-92bec0bde645" class="column small-12 large-12 small-abs-12 large-abs-4 " data-site-alias="theregister" data-section="devops" data-tag="github,devops,sony,microsoft" data-instance="5248929" itemscope>
+    
+    <div class="content bg-nonary-light color_mobile_bg-nonary-light op-bg_60 color_mobile_op-bg_60 border-bg-octonary mobile_border-bg-octonary border-side-bottom mobile_border-side-bottom border_width_2 border_width_mobile_2 hasContentPadding mobile-hasContentPadding hasBorder mobile-hasBorder" style="">
+        
+            <a itemprop="url" class="" href="https://www.theregister.com/devops/2026/07/06/github-cuts-short-offer-to-burn-repos-on-cd-after-mockery-ensues/5267113" data-k5a-url="https://www.theregister.com/a/5267113" rel="">
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <div style="" class="kicker below t14">
+DEVOPS
+</div>
+                <h2 itemprop="headline" class="headline t19" style="">GitHub cuts short offer to burn repos on CD after mockery ensues
+</h2>
+                <p itemprop="description" class="subtitle t14" style="">
+    A purported jab of Sony’s physical media phase-out blows up on GitHub itself.
+</p>
+
+
+        
+
+
+
+
+        </a>
+
+        <time itemprop="datePublished" datetime="2026-07-06T20:46:45+02:00"></time>
+    </div>
+</article>
+</div>
+</div>
+<div data-element-guid="b0b79df7-305b-4d35-9581-2ac153eddd40" id="toplist_5248931" class="column toplist layout_vertical small-12 large-4 small-abs-12 large-abs-4">
+    
+    <div class="content bg-secondary color_mobile_bg-secondary hasContentPadding mobile-hasContentPadding" style="--active-tab-background-color: var(--bg-primary);">
+
+
+                <h3 class="headline t32 font-weight-bold m-font-weight-bold bg-primary color_mobile_bg-primary align-center mobile_text_align_align-center font-Roboto hasTextPadding mobile-hasTextPadding">
+                    MOST POPULAR
+                </h3>
+
+
+
+        <ul class="toplist-results toplist-counter">
+                <li data-section="security" data-tags="pwned,security" data-hostname="www.theregister.com" data-source-display-name="www.theregister.com" data-tab-content="">
+                    <figure class="media paywall-position-hidePaywallLabel">
+                        <a href="/security/2026/07/02/hackers-shoveled-snow-for-company-were-rewarded-with-network-admin-access/5265240">
+                            <img src="//image.theregister.com/5265252.jpg?imageId=5265252&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=70&amp;height=60" alt="">
+                        </a>
+                    </figure>
+                    <div class="text kicker-position-aboveTitle paywall-position-hidePaywallLabel">
+                        <a href="/security/2026/07/02/hackers-shoveled-snow-for-company-were-rewarded-with-network-admin-access/5265240">
+                            <div class="kicker-paywall-container">
+                                <span class="kicker">Security</span>
+                            </div>
+                            <h4>Hackers shoveled snow for company, were rewarded with network admin access</h4>
+                            
+                        </a>
+                    </div>
+                </li>
+                <li data-section="os platforms" data-tags="applications,os platforms,text editor,windows" data-hostname="www.theregister.com" data-source-display-name="www.theregister.com" data-tab-content="">
+                    <figure class="media paywall-position-hidePaywallLabel">
+                        <a href="/os-platforms/2026/06/30/former-microsoft-engineer-shrinks-notepad-down-to-size/5264319">
+                            <img src="//image.theregister.com/234966.jpg?imageId=234966&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=92.81&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=92.81&amp;width=70&amp;height=60" alt="">
+                        </a>
+                    </figure>
+                    <div class="text kicker-position-aboveTitle paywall-position-hidePaywallLabel">
+                        <a href="/os-platforms/2026/06/30/former-microsoft-engineer-shrinks-notepad-down-to-size/5264319">
+                            <div class="kicker-paywall-container">
+                                <span class="kicker">os platforms</span>
+                            </div>
+                            <h4>Former Microsoft engineer shrinks Notepad down to size</h4>
+                            
+                        </a>
+                    </div>
+                </li>
+                <li data-section="ai and ml" data-tags="ai and ml,china,humanoid robot" data-hostname="www.theregister.com" data-source-display-name="www.theregister.com" data-tab-content="">
+                    <figure class="media paywall-position-hidePaywallLabel">
+                        <a href="/ai-and-ml/2026/07/02/new-humanoid-robots-from-china-look-like-creepy-pop-star-action-figures-complete-with-slightly-dodgy-lip-synch/5265490">
+                            <img src="//image.theregister.com/5265514.jpg?imageId=5265514&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=70&amp;height=60" alt="">
+                        </a>
+                    </figure>
+                    <div class="text kicker-position-aboveTitle paywall-position-hidePaywallLabel">
+                        <a href="/ai-and-ml/2026/07/02/new-humanoid-robots-from-china-look-like-creepy-pop-star-action-figures-complete-with-slightly-dodgy-lip-synch/5265490">
+                            <div class="kicker-paywall-container">
+                                <span class="kicker">AI AND ML</span>
+                            </div>
+                            <h4>New humanoid robots from China look like creepy pop star action figures – complete with slightly dodgy lip-synch</h4>
+                            
+                        </a>
+                    </div>
+                </li>
+                <li data-section="offbeat" data-tags="emulation,linux,offbeat,open source" data-hostname="www.theregister.com" data-source-display-name="www.theregister.com" data-tab-content="">
+                    <figure class="media paywall-position-hidePaywallLabel">
+                        <a href="/offbeat/2026/07/05/c-programmers-commit-fresh-crimes-against-readability/5265981">
+                            <img src="//image.theregister.com/5266043.jpg?imageId=5266043&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=70&amp;height=60" alt="">
+                        </a>
+                    </figure>
+                    <div class="text kicker-position-aboveTitle paywall-position-hidePaywallLabel">
+                        <a href="/offbeat/2026/07/05/c-programmers-commit-fresh-crimes-against-readability/5265981">
+                            <div class="kicker-paywall-container">
+                                <span class="kicker">OFFBEAT</span>
+                            </div>
+                            <h4>C programmers commit fresh crimes against readability</h4>
+                            
+                        </a>
+                    </div>
+                </li>
+                <li data-section="security" data-tags="digital sovereignty,europe,google,google cloud,intel,security,trusted platform module" data-hostname="www.theregister.com" data-source-display-name="www.theregister.com" data-tab-content="">
+                    <figure class="media paywall-position-hidePaywallLabel">
+                        <a href="/security/2026/07/04/confidential-computings-core-trust-mechanism-is-broken-the-fix-may-not-exist/5266056">
+                            <img src="//image.theregister.com/5266120.jpg?imageId=5266120&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=70&amp;height=60" alt="">
+                        </a>
+                    </figure>
+                    <div class="text kicker-position-aboveTitle paywall-position-hidePaywallLabel">
+                        <a href="/security/2026/07/04/confidential-computings-core-trust-mechanism-is-broken-the-fix-may-not-exist/5266056">
+                            <div class="kicker-paywall-container">
+                                <span class="kicker">SECURITY</span>
+                            </div>
+                            <h4>Confidential computing's core trust mechanism is broken. The fix may not exist</h4>
+                            
+                        </a>
+                    </div>
+                </li>
+        </ul>
+    </div>
+</div>
+
+</div>
+<div data-element-guid="ea3e891d-a254-4fa5-9e86-0042e6799ec6" class="row small-12 large-12 desktop-space-outsideTop-medium mobile-space-outsideTop-medium" style="">
+	
+<div data-element-guid="5867f2f9-d789-4ebd-ac97-87265a1e9759" class="column articlesByTag toplist small-12 large-4 small-abs-12 large-abs-4">
+    
+    <div class="content " style="">
+                <h3 itemprop="headline" class="t30 tm27 font-weight-bold m-font-weight-bold bg-black color_mobile_bg-black font-Roboto underline hasTextPadding mobile-hasTextPadding" style=""><a href="https://beta.theregister.com/tag/ai" aria-label="AI">AI</a></h3>
+            <ul>
+                    <li>
+                        <a href="/science/2026/07/06/boffins-bet-on-quantum-computers-ai-supers-to-solve-fusion-fuel-dilemma/5267199">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">Science</p>
+                                    <h4 class="abt-title">Boffins bet on quantum computers, AI supers to solve fusion fuel dilemma</h4>
+                                    <p class="abt-subtitle">Department of Energy, Cleveland Clinic, and IBM simulate a soup of molten salts and techno babble in pursuit of tritium</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/ai-and-ml/2026/07/06/software-engineers-can-still-rake-in-big-bucks-by-working-for-fast-growing-companies/5267213">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">AI and ML</p>
+                                    <h4 class="abt-title">Software engineers can still rake in big bucks by working for fast-growing companies</h4>
+                                    <p class="abt-subtitle">AI's impact on tech business is complicated</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/software/2026/07/06/microsoft-says-the-world-is-changing-faster-than-it-can-keep-up-as-it-guts-commercial-xbox-teams/5267032">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">software</p>
+                                    <h4 class="abt-title">Microsoft says the world is changing faster than it can keep up as it guts commercial, Xbox teams</h4>
+                                    <p class="abt-subtitle">Xbox chief says company can't afford to mistake longevity for inevitability</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/ai-and-ml/2026/07/06/amds-ryzen-ai-halo-makes-local-ai-look-easy-but-at-4k-easy-doesnt-come-cheap/5266711">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">AI and ML</p>
+                                    <h4 class="abt-title">AMD’s Ryzen AI Halo makes local AI look easy, but at $4K, easy doesn't come cheap</h4>
+                                    <p class="abt-subtitle">128 GB of memory! In this economy?</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/ai-and-ml/2026/07/02/nvidia-floats-double-dipping-datacenter-financing-scheme/5266184">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">AI and ML</p>
+                                    <h4 class="abt-title">Nvidia floats double-dipping datacenter financing scheme</h4>
+                                    <p class="abt-subtitle">What's better than getting paid once? Getting paid twice of course</p>
+                            </div>
+                        </a>
+                    </li>
+            </ul>
+    </div>
+</div>
+
+
+<div data-element-guid="e5d90dd5-e92e-472a-9948-b2389698e07e" class="column articlesByTag toplist small-12 large-4 small-abs-12 large-abs-4">
+    
+    <div class="content " style="">
+                <h3 itemprop="headline" class="t30 tm27 font-weight-bold m-font-weight-bold bg-black color_mobile_bg-black font-Roboto underline hasTextPadding mobile-hasTextPadding" style=""><a href="https://beta.theregister.com/security" aria-label="InfoSec">Infosec</a></h3>
+            <ul>
+                    <li>
+                        <a href="/security/2026/03/22/russians-posing-as-signal-support-to-launch-phishing-raids/5221189">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">Security</p>
+                                    <h4 class="abt-title">Russians are posing as Signal support to launch phishing attacks</h4>
+                                    <p class="abt-subtitle">PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/security/2025/07/21/microsoft-warns-on-prem-sharepoint-users-of-a-zero-day/550805">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">Security</p>
+                                    <h4 class="abt-title">Microsoft patches failed to fix on-prem SharePoint, which is now under zero-day attack</h4>
+                                    <p class="abt-subtitle">PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/special-features/2024/08/12/def-con-launches-public-policy-report-volunteer-program/408600">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">Black Hat and DEF CON</p>
+                                    <h4 class="abt-title">DEF CON Franklin project enlists hackers to harden critical infrastructure</h4>
+                                    <p class="abt-subtitle">Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/security/2024/08/07/eqt-buys-majority-share-in-cybersecurity-outfit-acronis/853853">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">Security</p>
+                                    <h4 class="abt-title">EQT buys majority share in Swiss cybersecurity biz Acronis</h4>
+                                    <p class="abt-subtitle">Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/special-features/2024/05/08/10-years-since-the-first-corp-ransomware-and-no-end-in-sight/1259096">
+                            <div class="text-container">                    
+                                    <p class="abt-kicker">Malware Month</p>
+                                    <h4 class="abt-title">Ten years since the first corp ransomware, Mikko Hyppönen sees no end in sight</h4>
+                                    <p class="abt-subtitle">On the plus side, infosec's a good bet for a long, stable career</p>
+                            </div>
+                        </a>
+                    </li>
+            </ul>
+    </div>
+</div>
+
+
+<div data-element-guid="83da923f-416e-4549-8d8f-1b9302e80c05" class="column articlesByTag toplist small-12 large-4 small-abs-12 large-abs-4">
+    
+    <div class="content " style="">
+                <h3 itemprop="headline" class="t30 tm27 font-weight-bold m-font-weight-bold bg-black color_mobile_bg-black underline hasTextPadding mobile-hasTextPadding" style=""><a href="https://beta.theregister.com/tag/FOSS">FOSS</a></h3>
+            <ul>
+                    <li>
+                        <a href="/applications/2026/06/25/collabora-releases-code-2604-as-rivalry-between-foss-cloudy-office-suites-heats-up/5261468">
+                            <div class="text-container">                    
+                                    <h4 class="abt-title">Collabora releases CODE 26.04 as rivalry between FOSS cloudy office suites heats up</h4>
+                                    <p class="abt-subtitle">Now with Markdown support and smarter formula error handling – plus integrated AI, though it's off by default</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/software/2026/06/23/blast-from-the-past-as-gimp-054-is-revived-in-flatpak-form/5259651">
+                            <div class="text-container">                    
+                                    <h4 class="abt-title">Blast from the past as GIMP 0.54 is revived in Flatpak form</h4>
+                                    <p class="abt-subtitle">Retro-computing fun for the nostalgic with first (and last) release to use Motif instead of GTK</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/software/2026/06/19/bcachefs-exits-experimental-status-in-new-performance-release/5258801">
+                            <div class="text-container">                    
+                                    <h4 class="abt-title">Bcachefs exits experimental status in new 'performance release'</h4>
+                                    <p class="abt-subtitle">More Rust, but more trouble with AI slop, too</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/on-prem/2026/06/16/frances-digital-sovereignty-push-is-struggling-to-escape-the-microsoft-gravity-well/5255380">
+                            <div class="text-container">                    
+                                    <h4 class="abt-title">France's digital sovereignty push is struggling to escape the Microsoft gravity well</h4>
+                                    <p class="abt-subtitle">Nextcloud rollout shows locally controlled storage is one thing; getting users off Office is quite another</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/os-platforms/2026/06/08/history-of-centos-how-a-biochemists-linux-hobby-project-became-the-enterprise-worlds-default-operating-system/5251530">
+                            <div class="text-container">                    
+                                    <h4 class="abt-title">History of CentOS: How a biochemist's Linux hobby project became the enterprise world's default operating system</h4>
+                                    <p class="abt-subtitle">When a community came together after Red Hat said Windows was 'probably the right product' </p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/ai-ml/2026/05/31/netflix-wiz-creates-app-to-slash-ai-bills-then-open-sources-it/5248702">
+                            <div class="text-container">                    
+                                    <h4 class="abt-title">Netflix wiz creates app to slash AI bills, then open sources it</h4>
+                                    <p class="abt-subtitle">Project Headroom could save you big money, too</p>
+                            </div>
+                        </a>
+                    </li>
+            </ul>
+    </div>
+</div>
+
+</div>
+
+    </div>
+</div>
+
+</div>
+</div>
+
+                </section>
+            </main>
+            
+            
+        </section>
+
+            <template class="definitionTemplate">
+                <div class="definitionPopup">
+                    <div class="definitionInfo">
+                        <p></p>
+                        <span></span>
+                        <button class="definitionClose">✕</button>
+                    </div>
+                </div>
+            </template>
+
+
+        <footer class="page">
+    <div data-element-guid="1b2aade5-2711-4202-83e0-c1ee17a28b9b" class="row-section desktop-space-outsideBottom-none mobile-space-outsideBottom-none bg-quaternary color_mobile_bg-quaternary hasContentPadding mobile-hasContentPadding" style="">
+<div class="row small-12 large-12 desktop-space-outsideBottom-none mobile-space-outsideBottom-none desktop-space-insideTop-none mobile-space-insideTop-none bg-quaternary color_mobile_bg-quaternary hasContentPadding mobile-hasContentPadding" style="">
+	<div data-element-guid="342e5400-b668-48dd-b811-7f53040cac1f" id="markup_102602" class="markupbox column small-12 large-12 small-abs-12 large-abs-12 desktop-fullWidth mobile-fullWidth">
+    <div class="content fullwidthTarget bg-quaternary color_mobile_bg-quaternary hasContentPadding mobile-hasContentPadding" style="">
+
+        
+
+        
+
+            <div style="display: flex; justify-content: center; margin-top: -0.5rem; margin-bottom: -0.5rem;">
+    <img src="https://www.theregister.com/files/2025/10/15/The_register_full_icon_white.svg" alt="Logo" width="120" style="margin-bottom: 0.25rem;"> 
+    <p style="font-family: Roboto; font-size: 14px; margin-bottom: 0.25rem; margin-left: 0.5rem; font-weight: 700;">Biting the hand that feeds IT</p>
+</div>
+
+        
+        
+    </div>
+</div>
+</div>
+</div>
+<div data-element-guid="652fb46f-93f4-42cd-8110-7307542d326a" class="row-section desktop-space-outsideTop-none mobile-space-outsideTop-none bg-quinary color_mobile_bg-quinary hasContentPadding mobile-hasContentPadding" style="">
+<div class="row small-12 large-12 desktop-space-outsideTop-none mobile-space-outsideTop-none bg-quinary color_mobile_bg-quinary hasContentPadding mobile-hasContentPadding" style="">
+	<article data-element-guid="eb364ced-8795-41d6-ac71-8c68f9bb5aa7" class="column small-12 large-2 small-abs-12 large-abs-2 " data-site-alias="" data-section="" data-instance="100744" itemscope>
+    <div class="content" style="">
+        
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <h2 itemprop="headline" class="headline t16 tm16 font-Roboto" style="">About Us
+</h2>
+                <p itemprop="description" class="subtitle t14 tm14 font-Roboto" style="">
+    <a href="https://www.theregister.com/profile/contact" aria-label="Contact our reporters securely and safely" data-lab-underline="" class="">Contact us</a><br><a href="https://situationpublishing.com/contact/" target="_blank">Advertise with us</a><br><a href="https://www.theregister.com/profile/about_the_register">Who we are</a><br><a href="https://account.theregister.com/register/?product=reg_weekly">Newsletter</a>
+</p>
+
+
+        
+
+
+
+
+        
+
+        <time itemprop="datePublished" datetime=""></time>
+    </div>
+</article>
+<article data-element-guid="93b271a3-0687-4bc8-8aa0-f8608675b096" class="column small-12 large-2 small-abs-12 large-abs-2 " data-site-alias="" data-section="" data-instance="100745" itemscope>
+    <div class="content" style="">
+        
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <h2 itemprop="headline" class="headline t16 tm16 font-Roboto" style="">Our Websites
+</h2>
+                <p itemprop="description" class="subtitle t14 tm14 font-Roboto" style="">
+    <a href="https://www.nextplatform.com/" target="_blank">The Next Platform</a><br><a href="https://devclass.com/" target="_blank">DevClass</a><br><a href="https://blocksandfiles.com/" target="_blank">Blocks and Files</a><br><a href="https://situationpublishing.com/" target="_blank">Situation Publishing</a>
+</p>
+
+
+        
+
+
+
+
+        
+
+        <time itemprop="datePublished" datetime=""></time>
+    </div>
+</article>
+<article data-element-guid="95965a77-7ca7-4314-ad6b-45263a326748" class="column small-12 large-2 small-abs-12 large-abs-2 " data-site-alias="" data-section="" data-instance="100746" itemscope>
+    <div class="content mobile_no_border_color mobile_no_border_side" style="">
+        
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <h2 itemprop="headline" class="headline t16 tm16" style="">Your Privacy
+</h2>
+                <p itemprop="description" class="subtitle t14 tm14 font-Roboto" style="">
+    <a href="https://www.theregister.com/Profile/cookies">Cookies Policy</a><br><a href="https://www.theregister.com/profile/privacy" aria-label="Privacy Policy">Privacy Policy</a><br><a href="https://www.theregister.com/profile/terms_and_conditions_of_use">Ts &amp; Cs</a><br><a href="https://www.theregister.com/Profile/privacy_policy_california_residents/">Do not share my personal information</a><br><a href="https://www.theregister.com/profile/terms_and_conditions_of_use" aria-label="Your Consent Options">Your Consent Options</a>
+</p>
+
+
+        
+
+
+
+
+        
+
+        <time itemprop="datePublished" datetime=""></time>
+    </div>
+</article>
+<article data-element-guid="cf683f5c-2c72-45ed-adc7-1d2b49035294" class="column small-12 large-4 small-abs-12 large-abs-4 " data-site-alias="" data-section="" data-instance="102499" itemscope>
+    <div class="content mobile_no_border_color mobile_no_border_side" style="">
+        
+
+
+        <div class="media ">
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+                <h2 itemprop="headline" class="headline t16 tm14" style="">Archives<br class="newline newline-desktop"><span data-lab-font_weight_desktop="font-weight-normal" class="font-weight-normal m-font-weight-normal t14" data-lab-text_size_desktop="14"><a href="https://www.theregister.com/archive" aria-label="Archives" target="_blank">27 years of articles</a></span>
+</h2>
+
+        
+
+
+
+
+        
+
+        <time itemprop="datePublished" datetime=""></time>
+    </div>
+</article>
+<article data-element-guid="181414e4-8d1d-4724-9997-6e1172b8476c" class="column small-12 large-2 small-abs-12 large-abs-2 " data-site-alias="" data-section="" data-instance="2918009" itemscope>
+    <div class="content color_mobile_no_bg_color border-side-left mobile_border-side-top border_width_2 border_width_mobile_2" style="">
+        
+
+
+        <div class="media ">
+                
+                
+                
+                
+                
+                
+                <div data-element-guid="2f5fde96-d7da-483d-abd8-5991a1502f25" id="markup_2918010" class="markupbox column small-12 large-12 small-abs-12 large-abs-2">
+    <div class="content fullwidthTarget" style="">
+
+        
+
+        
+
+            <div>
+<img src="https://beta.theregister.com/files/2025/10/09/SituationPublishing_Logo_Evolution_Twolines-White-Barlow%20(1).svg" alt="Situation Publishing Logo" style="max-width: 200px; height: auto; display: block; margin: 0 auto 0.5rem;">
+    <p style="font-family: Roboto, sans-serif; font-size: 12px; color: #FFFFFF; margin: 0;">
+        Copyright. All rights reserved © 1998-2026.
+    </p>
+</div>
+
+        
+        
+    </div>
+</div>
+
+                
+                
+                
+
+            <div class="floatingText">
+
+                <div class="labels">
+                </div>
+            </div>
+            
+
+        </div>
+
+
+        
+
+        
+
+
+
+
+        
+
+        <time itemprop="datePublished" datetime=""></time>
+    </div>
+</article>
+</div>
+</div>
+
+</footer>
+
+
+
+</body>
+</html>

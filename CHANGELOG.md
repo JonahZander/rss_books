@@ -89,6 +89,14 @@ first-run path.
   including links queued via *Add a link*, which can now be read before
   compiling.
 
+### Fixed
+
+- Extraction no longer runs trafilatura in `favor_recall` mode first: on
+  boilerplate-heavy news pages (theregister.com) that mode extracted the
+  "most popular" link rail instead of the article. Default extraction runs
+  first; recall mode remains as the rescue pass when the default finds
+  nothing.
+
 ## [1.2.0] - 2026-07-02
 
 Better article fetching, and a clearer triage desk.

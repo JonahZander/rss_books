@@ -54,15 +54,26 @@ def _tei_to_html(markup: str) -> str:
 
 
 def extract_html(raw: bytes, url: str) -> str | None:
-    """Extract the readable article from a page as sanitized HTML."""
-    extracted = trafilatura.extract(
-        raw.decode("utf-8", errors="replace"),
-        url=url,
-        output_format="html",
-        include_links=True,
-        include_images=True,
-        favor_recall=True,
-    )
+    """Extract the readable article from a page as sanitized HTML.
+
+    Default (precision-leaning) extraction first: on boilerplate-heavy news
+    pages, favor_recall can latch onto a dense "most popular" link rail
+    instead of the article body. Recall mode is kept only as the rescue pass
+    for sparse pages where the default finds nothing.
+    """
+    text = raw.decode("utf-8", errors="replace")
+
+    def run(favor_recall: bool) -> str | None:
+        return trafilatura.extract(
+            text,
+            url=url,
+            output_format="html",
+            include_links=True,
+            include_images=True,
+            favor_recall=favor_recall,
+        )
+
+    extracted = run(favor_recall=False) or run(favor_recall=True)
     if not extracted:
         return None
     return sanitize_or_none(_tei_to_html(extracted))
