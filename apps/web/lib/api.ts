@@ -242,8 +242,6 @@ export const api = {
     ),
   markRead: (id: number) =>
     fetch(`${BASE}/api/articles/${id}/read`, { method: "POST" }).then((r) => j<Article>(r)),
-  markUnread: (id: number) =>
-    fetch(`${BASE}/api/articles/${id}/unread`, { method: "POST" }).then((r) => j<Article>(r)),
   /** Bulk-mark unread articles as read, scoped to a feed or group (or
    * everything, unscoped) — never to a search query or "unread only". */
   markAllRead: ({ feedId, groupId }: { feedId?: number; groupId?: number | "none" } = {}) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Article, ArticleDetail, Feed } from "../lib/api";
 import { api } from "../lib/api";
 import { hhmmss, plainSummary, ymd } from "../lib/format";
@@ -17,9 +17,9 @@ type Props = {
   onUnreadOnly: (v: boolean) => void;
   search: string;
   onSearch: (v: string) => void;
-  markReadOnExpand: boolean;
   onToggleQueue: (article: Article) => void;
-  onRead: (article: Article) => void;
+  /** Open the page-level reader at this index into `articles`. */
+  onOpen: (index: number) => void;
   onMarkAllSeen: () => void;
   currentFeed: Feed | null;
   currentGroup: { name: string } | null;
@@ -30,6 +30,11 @@ type Props = {
   onPrev: () => void;
   onNext: () => void;
 };
+
+// Session-wide content cache, keyed by article id. Module-level so it survives
+// the reader unmounting on close — re-opening an article never refetches
+// (which for link-queued articles would be a full backend fetch pipeline).
+const detailCache = new Map<number, ArticleDetail>();
 
 /** The triage reader: the same slide-over as the edition review, opened over
  * the current article list with prev/next across it. Loads full content on
@@ -51,18 +56,16 @@ export function TriageReader({
   onRead: (article: Article) => void;
 }) {
   const article = articles[index];
-  // Per-session content cache, keyed by article id. Re-opening an article we've
-  // already pulled this session returns straight from here with no second fetch.
-  const cache = useRef<Map<number, ArticleDetail>>(new Map());
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let live = true;
 
-    const cached = cache.current.get(article.id);
+    const cached = detailCache.get(article.id);
     if (cached) {
       // Already fetched this session: show it immediately, skip the network.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDetail(cached);
       setLoading(false);
       return;
@@ -83,7 +86,7 @@ export function TriageReader({
     load
       .then((d) => {
         if (!live) return;
-        cache.current.set(article.id, d);
+        detailCache.set(article.id, d);
         setDetail(d);
       })
       .catch(() => live && setDetail(null))
@@ -120,9 +123,8 @@ export function ArticleList({
   onUnreadOnly,
   search,
   onSearch,
-  markReadOnExpand,
   onToggleQueue,
-  onRead,
+  onOpen,
   onMarkAllSeen,
   currentFeed,
   currentGroup,
@@ -138,9 +140,6 @@ export function ArticleList({
   const searchActive = search.trim() !== "";
   const hasUnreadInView = articles.some((a) => !a.read_at);
   const numberOffset = page * pageSize;
-  // null = closed. A stale index (list shrank under an open reader) simply
-  // renders nothing; guarded at the render site below.
-  const [readIndex, setReadIndex] = useState<number | null>(null);
 
   // Jump back to the top of the scroll column whenever the page turns.
   useEffect(() => {
@@ -187,9 +186,9 @@ export function ArticleList({
           className="btn btn-ghost btn-sm"
           onClick={onMarkAllSeen}
           disabled={searchActive || !hasUnreadInView}
-          title={searchActive ? "Clear the search to mark all seen" : undefined}
+          title={searchActive ? "Clear the search to mark all fetched" : undefined}
         >
-          <span>Mark all seen</span>
+          <span>Mark all fetched</span>
           <span className="btn-arrow">✓</span>
         </button>
         <input
@@ -220,7 +219,7 @@ export function ArticleList({
               number={numberOffset + i + 1}
               queued={queuedIds.has(a.id)}
               onToggleQueue={() => onToggleQueue(a)}
-              onOpen={() => setReadIndex(i)}
+              onOpen={() => onOpen(i)}
             />
           ))}
         </div>
@@ -250,16 +249,6 @@ export function ArticleList({
         </div>
       )}
 
-      {readIndex !== null && readIndex < articles.length && (
-        <TriageReader
-          articles={articles}
-          index={readIndex}
-          onIndex={setReadIndex}
-          onClose={() => setReadIndex(null)}
-          markReadOnExpand={markReadOnExpand}
-          onRead={onRead}
-        />
-      )}
     </div>
   );
 }

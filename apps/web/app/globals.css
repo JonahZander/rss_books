@@ -1354,13 +1354,10 @@ a {
   padding-top: 2px;
 }
 
-/* Queue titles open the reader — same type as before, now a click target. */
+/* Queue titles open the reader; the global button reset covers the rest. */
 .queue-list li .q-title {
   font: inherit;
-  color: inherit;
   text-align: left;
-  padding: 0;
-  cursor: pointer;
 }
 
 .queue-list li .q-title:hover {

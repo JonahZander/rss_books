@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from curl_cffi.requests.exceptions import HTTPError, RequestException
 from fastapi import APIRouter, HTTPException, Request
 
@@ -151,7 +153,8 @@ async def fetch_full_content(article_id: int, request: Request) -> ArticleDetail
     fetch_error: HTTPException | None = None
     try:
         raw = await fetch_url_bytes(url)
-        content = extract_html(raw, url=url)
+        # CPU-bound extraction off the event loop (matches article_fetcher)
+        content = await asyncio.to_thread(extract_html, raw, url)
     except HTTPError as e:
         # bot-walled sites (403/429/…) are an upstream refusal, not our crash.
         # raise_for_status() attaches the response; guard in case it's absent.

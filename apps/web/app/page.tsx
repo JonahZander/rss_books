@@ -41,9 +41,10 @@ export default function Home() {
   const [deleteTarget, setDeleteTarget] = useState<Feed | null>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<Group | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("articles");
-  // null = closed; an index into `queue` for the reader opened from the
-  // queue panel (covers link-queued articles that aren't in the triage list).
-  const [queueReadIndex, setQueueReadIndex] = useState<number | null>(null);
+  // The single reader drawer, opened from either the triage list or the queue
+  // panel (the latter covers link-queued articles that aren't in the list).
+  // One owner means the two entry points can never stack two drawers.
+  const [reader, setReader] = useState<{ source: "list" | "queue"; index: number } | null>(null);
   // Bumped to signal FeedSidebar to open its add-feed form from outside (the
   // onboarding checklist's "Add a feed →"); see FeedSidebar's prop doc.
   const [openAddFeedSignal, setOpenAddFeedSignal] = useState(0);
@@ -257,7 +258,7 @@ export default function Home() {
         feedId: selectedFeedId ?? undefined,
         groupId: selectedGroupId ?? undefined,
       });
-      toast(`${r.updated} marked seen`);
+      toast(`${r.updated} marked fetched`);
       await Promise.all([refreshArticles(), refreshFeeds()]);
     } catch (e) {
       toast(e instanceof Error ? e.message : "mark all seen failed", "error");
@@ -362,9 +363,8 @@ export default function Home() {
             onUnreadOnly={changeUnreadOnly}
             search={search}
             onSearch={changeSearch}
-            markReadOnExpand={settings?.mark_read_on_expand ?? true}
             onToggleQueue={toggleQueue}
-            onRead={onRead}
+            onOpen={(index) => setReader({ source: "list", index })}
             onMarkAllSeen={() => void markAllSeen()}
             currentFeed={currentFeed}
             currentGroup={currentGroup}
@@ -383,7 +383,7 @@ export default function Home() {
           profiles={settings?.profiles.map((p) => p.name) ?? []}
           defaultProfile={settings ? defaultProfileName(settings) : null}
           onRemove={(a) => void toggleQueue(a)}
-          onOpen={(a) => setQueueReadIndex(queue.findIndex((q) => q.id === a.id))}
+          onOpen={(index) => setReader({ source: "queue", index })}
           onReorder={(next) => void reorderQueue(next)}
           onClear={() => {
             void api.replaceQueue([]).then(setQueue);
@@ -392,12 +392,12 @@ export default function Home() {
           onCompiled={onCompiled}
         />
       </main>
-      {queueReadIndex !== null && queueReadIndex >= 0 && queueReadIndex < queue.length && (
+      {reader !== null && reader.index < (reader.source === "list" ? articles : queue).length && (
         <TriageReader
-          articles={queue}
-          index={queueReadIndex}
-          onIndex={setQueueReadIndex}
-          onClose={() => setQueueReadIndex(null)}
+          articles={reader.source === "list" ? articles : queue}
+          index={reader.index}
+          onIndex={(index) => setReader({ ...reader, index })}
+          onClose={() => setReader(null)}
           markReadOnExpand={settings?.mark_read_on_expand ?? true}
           onRead={onRead}
         />

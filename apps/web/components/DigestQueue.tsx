@@ -16,7 +16,8 @@ type Props = {
   /** Resolved default profile name from settings; null = no profiles exist. */
   defaultProfile: string | null;
   onRemove: (article: Article) => void;
-  onOpen: (article: Article) => void;
+  /** Open the page-level reader at this index into `queue`. */
+  onOpen: (index: number) => void;
   onReorder: (next: Article[]) => void;
   onClear: () => void;
   onAddLink: (url: string, title?: string) => Promise<void>;
@@ -204,7 +205,7 @@ export function DigestQueue({
               <button
                 type="button"
                 className="q-title"
-                onClick={() => onOpen(a)}
+                onClick={() => onOpen(i)}
                 title={`Read ${a.title}`}
               >
                 {a.title}

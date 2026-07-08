@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 import trafilatura
 from lxml import html as lxml_html
 
@@ -61,11 +63,15 @@ def extract_html(raw: bytes, url: str) -> str | None:
     instead of the article body. Recall mode is kept only as the rescue pass
     for sparse pages where the default finds nothing.
     """
-    text = raw.decode("utf-8", errors="replace")
+    # Parse once; trafilatura mutates the tree it extracts from, so the first
+    # pass works on a copy and the rescue pass consumes the original.
+    tree = trafilatura.load_html(raw.decode("utf-8", errors="replace"))
+    if tree is None:
+        return None
 
-    def run(favor_recall: bool) -> str | None:
+    def run(source: object, favor_recall: bool) -> str | None:
         return trafilatura.extract(
-            text,
+            source,
             url=url,
             output_format="html",
             include_links=True,
@@ -73,7 +79,7 @@ def extract_html(raw: bytes, url: str) -> str | None:
             favor_recall=favor_recall,
         )
 
-    extracted = run(favor_recall=False) or run(favor_recall=True)
+    extracted = run(deepcopy(tree), favor_recall=False) or run(tree, favor_recall=True)
     if not extracted:
         return None
     return sanitize_or_none(_tei_to_html(extracted))

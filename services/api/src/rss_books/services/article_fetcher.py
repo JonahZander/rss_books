@@ -66,7 +66,9 @@ async def fetch_article_content(url: str, settings: AppSettings) -> str | None:
     content: str | None = None
     try:
         raw = await fetch_url_bytes(url)
-        content = extract_html(raw, url=url)
+        # extraction is CPU-bound (lxml + trafilatura + sanitize) — keep it
+        # off the event loop so concurrent fetches aren't stalled behind it
+        content = await asyncio.to_thread(extract_html, raw, url)
     except (HTTPError, RequestException, SSRFBlockedError):
         content = None
     if not content:
