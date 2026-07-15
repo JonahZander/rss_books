@@ -8,6 +8,9 @@ updates:
       compatible-updates:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: uv
     directory: /services/api
@@ -17,6 +20,9 @@ updates:
       compatible-updates:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
@@ -26,3 +32,6 @@ updates:
       compatible-updates:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
