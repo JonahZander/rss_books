@@ -5,7 +5,7 @@ description = "FastAPI backend for RSS Books."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.116.0,<1.0.0",
-    "pydantic-settings>=2.6.0,<3.0.0",
+    "pydantic-settings>=2.14.2,<3.0.0",
     "uvicorn>=0.35.0,<1.0.0",
     "aiosqlite>=0.20.0,<1.0.0",
     "feedparser>=6.0.11,<7.0.0",
