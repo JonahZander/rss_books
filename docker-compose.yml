@@ -1,7 +1,6 @@
 services:
   rss-books:
-    image: ghcr.io/jonahzander/rss_books:latest
-    build: .   # compose builds locally under this tag; or `docker compose pull` the published image
+    build: .
     ports:
       - "8765:8765"   # plain HTTP: same-origin web UI
       - "8443:8443"   # HTTPS: for OPDS clients that only speak TLS (e.g. Crosspoint)

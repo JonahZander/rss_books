@@ -67,34 +67,12 @@ flow. The full "why not KindleEar / KTool / Calibre?" answer lives in
 
 ## Quickstart
 
-Run the prebuilt image (amd64/arm64) without cloning the repository:
-
-```yaml
-# docker-compose.yml
-services:
-  rss-books:
-    image: ghcr.io/jonahzander/rss_books:latest
-    ports:
-      - "8765:8765"   # web UI + OPDS (plain HTTP, same-origin)
-      - "8443:8443"   # HTTPS, for OPDS clients that require TLS
-    volumes:
-      - rss_kindle_data:/data
-    restart: unless-stopped
-
-volumes:
-  rss_kindle_data:
-```
-
-```bash
-docker compose up -d
-```
-
-Or build from source:
+Build and run the app from source:
 
 ```bash
 git clone https://github.com/JonahZander/rss_books.git
 cd rss_books
-docker compose up -d   # builds the image locally
+docker compose up -d
 ```
 
 Open <http://localhost:8765>, import
