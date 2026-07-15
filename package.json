@@ -2,8 +2,15 @@
   "name": "rss-books",
   "private": true,
   "packageManager": "npm@11.11.0",
-  "engines": { "node": "20.19.6" },
-  "workspaces": ["apps/web"],
+  "engines": {
+    "node": "20.19.6"
+  },
+  "workspaces": [
+    "apps/web"
+  ],
+  "overrides": {
+    "postcss": "8.5.19"
+  },
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev -- -p 3737",
     "build:web": "npm --workspace apps/web run build",
@@ -15,5 +22,8 @@
     "lint:api": "uv run --directory services/api --extra dev ruff check .",
     "typecheck:api": "uv run --directory services/api --extra dev mypy src",
     "test": "npm run typecheck:web && npm run test:api"
+  },
+  "devDependencies": {
+    "postcss": "8.5.19"
   }
 }

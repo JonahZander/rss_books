@@ -7,7 +7,7 @@ for the reasoning.
 
 ## Dev setup
 
-Requirements: Node 20.19.6, [uv](https://docs.astral.sh/uv/), Python 3.12+.
+Requirements: Node 20.19.6, [uv](https://docs.astral.sh/uv/), Python 3.12.
 
 ```bash
 npm install          # web workspace
@@ -20,8 +20,22 @@ npm run dev:web      # Next.js on :3737
 Run these before pushing; CI runs exactly the same set:
 
 ```bash
-npm run typecheck:web && npm run lint:web && npm run build:web
-npm run lint:api && npm run typecheck:api && npm run test:api
+npm ci
+npm audit --audit-level=moderate
+npm run typecheck:web
+npm run lint:web
+npm run build:web
+
+uv sync --directory services/api --locked --extra dev
+uv run --directory services/api --locked --extra dev ruff check .
+uv run --directory services/api --locked --extra dev mypy src
+uv run --directory services/api --locked --extra dev pytest
+
+docker build --tag rss-books:local .
+docker run --rm --detach --name rss-books-smoke \
+  --publish 127.0.0.1:8765:8765 rss-books:local
+curl --fail http://127.0.0.1:8765/health
+docker rm --force rss-books-smoke
 ```
 
 Run a single backend test:
@@ -57,7 +71,7 @@ EPUBCHECK_JAR=/path/to/epubcheck-5.3.0/epubcheck.jar \
 - **Style:** ruff (rules `E,F,W,I,UP,B`, line length 100) and strict-ish mypy
   on the API; eslint + `tsc --noEmit` on the web app. Frontend follows
   [docs/design-language.md](docs/design-language.md): paper/ink tokens with the
-  dual blue/pink accent (`--amber` is a deprecated alias — don't use it in new
+  dual blue/pink accent (`--amber` is a deprecated alias; don't use it in new
   code), sharp corners, mono eyebrows.
 - **Commits:** conventional style (`feat:`, `fix:`, `chore:`, `docs:`...).
 
