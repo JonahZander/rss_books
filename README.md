@@ -25,11 +25,12 @@ careful EPUB edition: emailed to a Kindle, pulled over OPDS by everything else.
 
 ## Why this exists
 
-Every self-hosted RSS-to-ereader tool auto-sends whole feeds. Every
-hand-pick-your-articles tool is paid SaaS, and the free options died in
-2024–2025 (Pocket, Omnivore, Instapaper's free Kindle tier). The combination
-*self-hosted* × *you choose each article* simply didn't exist. This fills that
-gap. The full "why not KindleEar / KTool / Calibre?" answer lives in
+The tools I found split into two camps: self-hosted services that send whole
+feeds, and paid services that let you pick individual articles. Several free
+options also closed or removed Kindle delivery in 2024 and 2025, including
+Omnivore, Pocket, and Instapaper's free Kindle tier. I built RSS Books because
+I could not find a maintained self-hosted tool with this particular curation
+flow. The full "why not KindleEar / KTool / Calibre?" answer lives in
 [the landscape analysis](docs/landscape-and-options.md).
 
 ## Features
@@ -41,11 +42,11 @@ gap. The full "why not KindleEar / KTool / Calibre?" answer lives in
 - **Editions, not streams.** Output is a finite, dated EPUB issue with a
   cover, a sectioned table of contents, bylines, reading times, embedded
   images (downscaled for e-ink), real tables and code blocks, and a
-  stylesheet tuned for 6–7″ greyscale screens.
+  stylesheet tuned for 6 to 7 inch greyscale screens.
 - **Render profiles per device.** Tell it your reader's screen size and it
   fits the content to the glass: tables and code blocks are rasterized at the
   device's resolution, rotated 90° when they're wider than the screen, and
-  split into screen-sized pages when they're taller — so even a budget e-ink
+  split into screen-sized pages when they're taller. Even a budget e-ink
   engine that ignores CSS renders them readably. Photos are downscaled to
   what the screen can actually show. Downloaded images are cached on disk, so
   recompiling an edition never re-fetches.
@@ -66,7 +67,7 @@ gap. The full "why not KindleEar / KTool / Calibre?" answer lives in
 
 ## Quickstart
 
-Run the prebuilt image (amd64/arm64) — no clone needed:
+Run the prebuilt image (amd64/arm64) without cloning the repository:
 
 ```yaml
 # docker-compose.yml
@@ -106,7 +107,7 @@ rebuilds and image updates.
 ### Proxmox / home-lab deploys
 
 The container is a single self-contained process (SQLite inside, no external
-services), so it runs anywhere Docker does — including a Docker LXC or VM on
+services), so it runs anywhere Docker does, including a Docker LXC or VM on
 Proxmox (e.g. one created with the
 [community helper scripts](https://community-scripts.github.io/ProxmoxVE/)).
 Drop the compose file above into the container/VM and `docker compose up -d`.
@@ -119,13 +120,13 @@ Notes for LAN deploys:
   `TLS_SAN_IPS: <lan-ip>` in the compose `environment:` so hostname-verifying
   clients accept it, and re-download the cert from Settings if the IP changes.
 - Back up `/data` (the named volume): it holds the SQLite database, editions,
-  the image cache and the TLS cert — everything.
+  the image cache and the TLS cert.
 - The app has no login screen; keep it on the LAN/VPN side of your firewall
   (see [Security posture](#security-posture)).
 
 ### Development mode
 
-Requirements: Node 20.19.6, [uv](https://docs.astral.sh/uv/), Python 3.12+.
+Requirements: Node 20.19.6, [uv](https://docs.astral.sh/uv/), Python 3.12.
 
 ```bash
 npm install
