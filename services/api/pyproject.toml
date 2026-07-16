@@ -52,7 +52,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
 markers = [
-    "epubcheck: validates the fixture edition against the real epubcheck tool; needs EPUBCHECK_JAR + java (self-skips otherwise, see CONTRIBUTING.md)",
+    "epubcheck: validates the fixture edition against the real epubcheck tool; needs EPUBCHECK_JAR + java and self-skips otherwise",
 ]
 
 [tool.mypy]

@@ -7,8 +7,8 @@ then validates the result against the real epubcheck tool.
 
 Self-skipping: the epubcheck test needs a Java runtime and the epubcheck jar
 (EPUBCHECK_JAR env var), neither of which is required for a normal local
-test run. See CONTRIBUTING.md for how to fetch the jar; CI wires both up via
-actions/setup-java and a checksum-pinned download (.github/workflows/ci.yml).
+test run. CI wires both up via actions/setup-java and a checksum-pinned
+download (.github/workflows/ci.yml).
 """
 
 from __future__ import annotations
