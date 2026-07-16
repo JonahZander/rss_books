@@ -78,13 +78,84 @@ async def test_alpha_stays_png() -> None:
     assert f'<img src="{img.filename}"' in rewritten[0]
 
 
-async def test_failed_fetch_strips_tag() -> None:
+async def test_failed_fetch_replaces_tag_with_note() -> None:
     html = '<p>before</p><img src="https://site.example/missing.png" alt="gone"><p>after</p>'
     async with _client() as client:
         rewritten, images = await prepare_images([(html, "https://site.example/post")], client)
     assert images == {}
     assert "<img" not in rewritten[0]
+    assert '<em class="missing-image">[image unavailable: gone]</em>' in rewritten[0]
     assert "before" in rewritten[0] and "after" in rewritten[0]
+
+
+async def test_fallback_fetch_rescues_blocked_image(tmp_path: Path) -> None:
+    """A 403 from the plain httpx client (bot wall) retries through the
+    impersonated fallback; the rescued bytes are packed and cached like any
+    direct download."""
+    png = _png(300, 200)
+    fallback_calls: list[str] = []
+
+    def refuse(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403)
+
+    async def impersonated(url: str) -> bytes:
+        fallback_calls.append(url)
+        return png
+
+    html = '<img src="https://site.example/walled.png" alt="photo">'
+    async with httpx.AsyncClient(transport=httpx.MockTransport(refuse)) as client:
+        rewritten, images = await prepare_images(
+            [(html, "https://site.example/post")],
+            client,
+            cache_dir=tmp_path,
+            fallback_fetch=impersonated,
+        )
+    assert fallback_calls == ["https://site.example/walled.png"]
+    assert len(images) == 1
+    img = next(iter(images.values()))
+    assert f'<img src="{img.filename}" alt="photo"/>' in rewritten[0]
+    assert len(list(tmp_path.iterdir())) == 1  # rescued original cached
+
+
+async def test_fallback_not_tried_on_success() -> None:
+    fallback_calls: list[str] = []
+
+    async def impersonated(url: str) -> bytes:
+        fallback_calls.append(url)
+        return b""
+
+    html = '<img src="https://site.example/big.png" alt="">'
+    async with _client() as client:
+        _, images = await prepare_images(
+            [(html, "https://site.example/post")], client, fallback_fetch=impersonated
+        )
+    assert fallback_calls == []
+    assert len(images) == 1
+
+
+async def test_fallback_failure_still_drops_with_note() -> None:
+    async def impersonated(url: str) -> bytes:
+        raise RuntimeError("bot wall wins")
+
+    html = '<img src="https://site.example/missing.png" alt="">'
+    async with _client() as client:
+        rewritten, images = await prepare_images(
+            [(html, "https://site.example/post")], client, fallback_fetch=impersonated
+        )
+    assert images == {}
+    assert '<em class="missing-image">[image unavailable]</em>' in rewritten[0]
+
+
+async def test_fallback_bytes_over_cap_dropped() -> None:
+    async def impersonated(url: str) -> bytes:
+        return b"\x00" * (MAX_IMAGE_DOWNLOAD_BYTES + 1)
+
+    html = '<img src="https://site.example/missing.png" alt="">'
+    async with _client() as client:
+        _, images = await prepare_images(
+            [(html, "https://site.example/post")], client, fallback_fetch=impersonated
+        )
+    assert images == {}
 
 
 async def test_dedup_across_articles() -> None:
@@ -247,3 +318,4 @@ async def test_per_article_budget_drops_overflow() -> None:
         )
     assert images == {}
     assert "<img" not in rewritten[0]
+    assert '<em class="missing-image">[image unavailable: too big]</em>' in rewritten[0]

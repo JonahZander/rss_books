@@ -11,7 +11,7 @@ from typing import Any
 from rss_books.config import make_http_client
 from rss_books.db import Database, placeholders
 from rss_books.models import AppSettings, FetchStatus, RenderProfile
-from rss_books.services.article_fetcher import fetch_many
+from rss_books.services.article_fetcher import fetch_many, fetch_url_bytes
 from rss_books.services.cover import render_cover
 from rss_books.services.emailer import send_digest_and_record
 from rss_books.services.epub_builder import DigestArticle, LinkQr, build_digest_epub
@@ -296,6 +296,11 @@ async def _render_bodies(
             client,
             max_width=max_width,
             cache_dir=image_cache_dir(epub_dir),
+            # Retry refused downloads with the same browser-impersonating
+            # fetch articles use; sites that TLS-fingerprint clients accept
+            # the article but 403 httpx's image requests, and without this
+            # every photo quietly vanished from the edition.
+            fallback_fetch=fetch_url_bytes,
         )
     for art, new_html in zip(articles, rewritten, strict=True):
         art.html = new_html

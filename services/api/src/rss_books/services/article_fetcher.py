@@ -11,6 +11,7 @@ domain.
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 from urllib.parse import urljoin, urlsplit
 
@@ -23,6 +24,8 @@ from rss_books.services.content_extractor import extract_html
 from rss_books.services.net_guard import SSRFBlockedError, check_target, guard_config_from_settings
 from rss_books.services.readers import ReaderError, build_reader
 from rss_books.services.sanitizer import sanitize_or_none
+
+logger = logging.getLogger(__name__)
 
 # Politeness window between two requests to the SAME host during a batch compile.
 # Jitter (uniform 0..JITTER) avoids a lockstep cadence a WAF could pattern-match.
@@ -69,14 +72,19 @@ async def fetch_article_content(url: str, settings: AppSettings) -> str | None:
         # extraction is CPU-bound (lxml + trafilatura + sanitize) — keep it
         # off the event loop so concurrent fetches aren't stalled behind it
         content = await asyncio.to_thread(extract_html, raw, url)
-    except (HTTPError, RequestException, SSRFBlockedError):
+    except (HTTPError, RequestException, SSRFBlockedError) as exc:
+        # Degrading to the feed summary is deliberate, but the reason must
+        # land in the log - a bot-walled article otherwise compiles into a
+        # near-empty edition with no trace of why.
+        logger.warning("article fetch failed (%s): %s", url, exc)
         content = None
     if not content:
         reader = build_reader(settings)
         if reader is not None:
             try:
                 extracted = await reader.fetch_html(url)
-            except ReaderError:
+            except ReaderError as exc:
+                logger.warning("reader fallback failed (%s): %s", url, exc)
                 extracted = None
             if extracted:
                 content = sanitize_or_none(extracted)

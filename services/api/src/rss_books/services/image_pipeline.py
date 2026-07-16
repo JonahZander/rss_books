@@ -8,6 +8,7 @@ import os
 import re
 import stat
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -37,6 +38,22 @@ class DigestImage:
     filename: str
     media_type: str
     data: bytes
+
+
+# Second-chance fetcher for image URLs the plain httpx client can't retrieve
+# (typically a TLS-fingerprinting bot wall that 403s non-browser clients while
+# the browser-impersonated article fetch sails through). Takes the URL,
+# returns the raw bytes; digest builds wire in article_fetcher.fetch_url_bytes.
+FallbackFetch = Callable[[str], Awaitable[bytes]]
+
+
+def _missing_image_note(alt: str) -> str:
+    """Visible stand-in for an image that couldn't ship, so a dropped photo
+    reads as "the site refused us", not as a silently mangled article. The
+    alt text is already attribute-escaped by the sanitizer, so it can be
+    reused as element text as-is."""
+    label = f"image unavailable: {alt}" if alt else "image unavailable"
+    return f'<em class="missing-image">[{label}]</em>'
 
 
 def image_cache_dir(epub_dir: Path) -> Path:
@@ -120,13 +137,21 @@ async def prepare_images(
     jpeg_quality: int = 75,
     per_article_budget: int = 10 * 2**20,
     cache_dir: Path | None = None,
+    fallback_fetch: FallbackFetch | None = None,
 ) -> tuple[list[str], dict[str, DigestImage]]:
     """Download, downscale and pack the images referenced by digest articles.
 
     Takes (sanitized_html, article_url) pairs; returns the HTML with image
     sources rewritten to packed `images/img_NNN.*` paths, plus the images
     keyed by resolved source URL. Images that fail to fetch/decode or blow
-    the per-article byte budget are dropped (their tags removed).
+    the per-article byte budget are dropped, their tags replaced with a
+    visible "[image unavailable]" note.
+
+    With `fallback_fetch`, a download the httpx client fails is retried once
+    through it (the browser-impersonating article fetcher) before giving up -
+    articles and images otherwise fetch with different TLS stacks, and a bot
+    wall that passes the impersonated article fetch would silently strip
+    every photo.
 
     With `cache_dir`, original image bytes are cached on disk keyed by URL,
     so recompiling an edition needs no network. Cache hits refresh the file
@@ -161,6 +186,23 @@ async def prepare_images(
         except OSError as exc:
             logger.warning("image cache write failed (%s): %s", url, exc)
 
+    async def download(url: str) -> bytes:
+        try:
+            return await _download_capped(client, url)
+        except httpx.HTTPError as exc:
+            if fallback_fetch is None:
+                raise
+            logger.info("image fetch retrying impersonated (%s): %s", url, exc)
+            data = await fallback_fetch(url)
+            # The impersonated client buffers the whole body, so the byte cap
+            # is enforced after the fact; the decode caps still bound the
+            # expensive work either way.
+            if len(data) > MAX_IMAGE_DOWNLOAD_BYTES:
+                raise ValueError(
+                    f"image over {MAX_IMAGE_DOWNLOAD_BYTES} byte download cap: {url}"
+                ) from None
+            return data
+
     async def fetch(url: str) -> tuple[bytes, str, str] | None:
         if url in fetched:
             return fetched[url]
@@ -169,7 +211,7 @@ async def prepare_images(
             original = read_cache(url)
             downloaded = original is None
             if original is None:
-                original = await _download_capped(client, url)
+                original = await download(url)
             # Decode/resize/re-encode is CPU-bound; off the event loop so a
             # compile with many images doesn't stall polling and other requests.
             result = await asyncio.to_thread(
@@ -198,8 +240,11 @@ async def prepare_images(
             resolved = urljoin(base_url, html_lib.unescape(src_match.group(1)))
             if not resolved.startswith(("http://", "https://")):
                 continue
+            alt_match = ALT_RE.search(tag)
+            alt = alt_match.group(1) if alt_match else ""
             result = await fetch(resolved)
             if result is None:
+                parts.append(_missing_image_note(alt))
                 continue
             data, ext, media_type = result
             if len(data) > budget:
@@ -209,6 +254,7 @@ async def prepare_images(
                     len(data),
                     budget,
                 )
+                parts.append(_missing_image_note(alt))
                 continue
             budget -= len(data)
             if resolved not in packed:
@@ -217,8 +263,6 @@ async def prepare_images(
                     media_type=media_type,
                     data=data,
                 )
-            alt_match = ALT_RE.search(tag)
-            alt = alt_match.group(1) if alt_match else ""
             parts.append(f'<img src="{packed[resolved].filename}" alt="{alt}"/>')
         parts.append(html[cursor:])
         rewritten.append("".join(parts))

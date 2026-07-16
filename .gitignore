@@ -65,7 +65,4 @@ services/api/data/
 # Internal working notes (kept local, not published)
 CLAUDE.md
 AGENTS.md
-docs/superpowers/
-docs/edition-preview-ux-review.md
-docs/ux-and-optimization-review.md
-docs/ux-triage-streamline-review.md
+docs/
