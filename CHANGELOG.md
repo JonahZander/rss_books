@@ -66,6 +66,18 @@ first-run path.
 
 ### Fixed
 
+- **Editions no longer silently lose their photos on bot-walled sites.**
+  Article text is fetched with browser TLS impersonation, but images went out
+  through a plain HTTP client — so a site that fingerprints clients would
+  serve the article and 403 every image, and the edition compiled with the
+  photos quietly stripped. Refused image downloads now retry once through the
+  same impersonating fetcher articles use, and an image that still can't be
+  retrieved leaves a visible *[image unavailable]* note in the edition
+  instead of vanishing without a trace.
+- Article fetch failures are logged (they degraded to the feed summary with
+  no trace of the upstream refusal), as are reader-fallback failures.
+- Saved-link titles no longer carry the URL's file extension ("… the new
+  bottleneck.html" → "… the new bottleneck").
 - **Every cover-bearing EPUB was technically non-conformant** (epubcheck
   OPF-096: the cover page sat in the spine unreferenced); editions now emit
   a cover landmark. Found by the new CI gate on day one.
