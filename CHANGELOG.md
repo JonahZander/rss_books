@@ -275,7 +275,6 @@ The 1.0 release: milestones M1–M6.
 - Toast notifications; motion pass (staggered rows, readout pops, button
   micro-interactions) under `prefers-reduced-motion`; mobile triage via
   tabbed panels; focus-visible outlines and ≥24px hit targets
-- `docs/design-language.md`
 
 ### Added: always fresh (M4, v0.5)
 

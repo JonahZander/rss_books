@@ -30,8 +30,7 @@ feeds, and paid services that let you pick individual articles. Several free
 options also closed or removed Kindle delivery in 2024 and 2025, including
 Omnivore, Pocket, and Instapaper's free Kindle tier. I built RSS Books because
 I could not find a maintained self-hosted tool with this particular curation
-flow. The full "why not KindleEar / KTool / Calibre?" answer lives in
-[the landscape analysis](docs/landscape-and-options.md).
+flow.
 
 ## Features
 
@@ -180,20 +179,6 @@ feeds → poller (etag/backoff) → articles → [you pick] → queue
   → digest service → extract/sanitize → images (cached, device-fit) → EPUB (cover/TOC/css)
   → download · OPDS catalog · SMTP → your reader
 ```
-
-## How it compares
-
-See [docs/landscape-and-options.md](docs/landscape-and-options.md) for the
-full market analysis (KindleEar, Calibre, KTool, Push to Kindle, Reabble,
-EpubPress, …) and the
-[research catalog](docs/research/2026-06-11-rss-to-ereader-services.md)
-behind it.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the
-[design language](docs/design-language.md). Changes are tracked in the
-[CHANGELOG](CHANGELOG.md).
 
 ## License
 

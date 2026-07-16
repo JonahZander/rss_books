@@ -2,8 +2,7 @@
 
 Thanks for considering a contribution. This is a small, opinionated project;
 the scope is deliberate (explicit non-goals: no multi-user, no AI summaries,
-no hosted service); see [docs/landscape-and-options.md](docs/landscape-and-options.md)
-for the reasoning.
+no hosted service).
 
 ## Dev setup
 
@@ -69,10 +68,9 @@ EPUBCHECK_JAR=/path/to/epubcheck-5.3.0/epubcheck.jar \
   no decorators. HTTP is mocked (`unittest.mock.patch` / httpx MockTransport);
   tests never hit the network.
 - **Style:** ruff (rules `E,F,W,I,UP,B`, line length 100) and strict-ish mypy
-  on the API; eslint + `tsc --noEmit` on the web app. Frontend follows
-  [docs/design-language.md](docs/design-language.md): paper/ink tokens with the
-  dual blue/pink accent (`--amber` is a deprecated alias; don't use it in new
-  code), sharp corners, mono eyebrows.
+  on the API; eslint + `tsc --noEmit` on the web app. Frontend uses paper/ink
+  tokens with a dual blue/pink accent (`--amber` is a deprecated alias; don't
+  use it in new code), sharp corners, and mono eyebrows.
 - **Commits:** conventional style (`feat:`, `fix:`, `chore:`, `docs:`...).
 
 ## Filing issues
