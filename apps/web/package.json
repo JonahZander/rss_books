@@ -9,16 +9,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "^16.2.10",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "next": "^16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@types/node": "25.9.5",
-    "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "eslint": "9.39.5",
-    "eslint-config-next": "^16.2.10",
+    "eslint-config-next": "^16.2.12",
     "typescript": "6.0.3"
   }
 }

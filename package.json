@@ -9,7 +9,7 @@
     "apps/web"
   ],
   "overrides": {
-    "postcss": "8.5.19"
+    "postcss": "8.5.25"
   },
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev -- -p 3737",
@@ -24,6 +24,6 @@
     "test": "npm run typecheck:web && npm run test:api"
   },
   "devDependencies": {
-    "postcss": "8.5.19"
+    "postcss": "8.5.25"
   }
 }
