@@ -20,7 +20,7 @@ dependencies = [
     "aiosmtplib>=5.1.1,<6.0.0",
     "python-multipart>=0.0.9,<1.0.0",
     "lxml>=5.0.0,<7.0.0",
-    "cryptography>=48.0.1,<49.0.0",
+    "cryptography>=50.0.0,<51.0.0",
     "segno>=1.6.0,<2.0.0",
 ]
 
